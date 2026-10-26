@@ -48,6 +48,12 @@
   --color-alert: var(--alert);
 }
 
+.theme-switching *,
+.theme-switching *::before,
+.theme-switching *::after {
+  transition: none !important;
+}
+
 html,
 body {
   background-color: var(--bg);

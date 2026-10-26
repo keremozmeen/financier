@@ -11,7 +11,17 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   });
 
   useLayoutEffect(() => {
-    document.documentElement.dataset.theme = theme;
+    const root = document.documentElement;
+    if (root.dataset.theme === theme) return;
+    // Suspend transitions so every color flips at once instead of fading.
+    root.classList.add('theme-switching');
+    root.dataset.theme = theme;
+    void root.offsetHeight; // Flush styles while transitions are off.
+    const frame = requestAnimationFrame(() => root.classList.remove('theme-switching'));
+    return () => {
+      cancelAnimationFrame(frame);
+      root.classList.remove('theme-switching');
+    };
   }, [theme]);
 
   const setTheme = useCallback((next: Theme) => {
