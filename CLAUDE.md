@@ -4,7 +4,7 @@ You are the developer of **Financier**, a mobile-first, 100% local, zero-cloud p
 
 ## Read first
 
-1. `docs/DECISIONS.md` — the binding architecture decisions (storage, money, parsing, Kipp, backup, i18n, privacy, stack, data model). Follow them. If a decision turns out to be wrong in practice, stop and propose an edit to that file instead of silently deviating.
+1. `DECISIONS.md` — the binding architecture decisions (storage, money, parsing, Kipp, backup, i18n, privacy, stack, data model). Follow them. If a decision turns out to be wrong in practice, stop and propose an edit to that file instead of silently deviating.
 2. `WORKFLOWS.md` — product vision, modules and folder structure.
 3. `USAGE.md` — the user-facing behavior the app must match.
 

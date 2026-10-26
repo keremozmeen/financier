@@ -29,7 +29,7 @@ You are acting as the **Lead Autonomous AI Developer** for Financier.
 | **App Type / Target** | Hybrid PWA (Progressive Web App) → Native via Tauri v2 Mobile (post-v1) |
 | **Deployment** | GitHub Pages (Static Client-Side Hosting) |
 
-The binding details behind these choices are in [`docs/DECISIONS.md`](docs/DECISIONS.md).
+The binding details behind these choices are in [`DECISIONS.md`](DECISIONS.md).
 
 ---
 
@@ -70,7 +70,7 @@ financier/
 │   ├── App.tsx          # Main React Application shell
 │   └── main.tsx         # Entry point
 ├── public/              # PWA Manifest, Service Worker
-├── docs/DECISIONS.md    # Binding architecture decisions
+├── DECISIONS.md         # Binding architecture decisions
 ├── CLAUDE.md            # Build instructions and phased plan for the AI developer
 ├── WORKFLOWS.md         # Workflow and developer roles document
 └── README.md            # Public project overview & Zero-Cloud manifesto
