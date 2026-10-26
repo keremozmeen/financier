@@ -1,4 +1,4 @@
-import type { RouteObject } from 'react-router';
+import { Navigate, type RouteObject } from 'react-router';
 import { AppShell } from '../components/AppShell';
 import { PlaceholderScreen } from '../components/PlaceholderScreen';
 import { SettingsScreen } from './SettingsScreen';
@@ -13,7 +13,7 @@ export const routes: RouteObject[] = [
       { path: 'import', element: <PlaceholderScreen title="nav.import" /> },
       { path: 'sub-radar', element: <PlaceholderScreen title="nav.subRadar" /> },
       { path: 'settings', element: <SettingsScreen /> },
-      { path: '*', element: <PlaceholderScreen title="nav.dashboard" /> },
+      { path: '*', element: <Navigate to="/" replace /> },
     ],
   },
 ];

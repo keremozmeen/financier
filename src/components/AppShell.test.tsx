@@ -28,6 +28,12 @@ describe('AppShell', () => {
     expect(screen.getByRole('heading', { name: 'Cards' })).toBeInTheDocument();
   });
 
+  it('redirects unknown routes to the Dashboard', () => {
+    renderApp('/does-not-exist');
+    expect(screen.getByRole('heading', { name: 'Dashboard' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Dashboard' })).toHaveAttribute('aria-current', 'page');
+  });
+
   it('switches language and theme from Settings', async () => {
     renderApp('/settings');
 
