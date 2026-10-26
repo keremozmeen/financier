@@ -1,0 +1,67 @@
+@import '@fontsource-variable/inter';
+@import 'tailwindcss';
+
+/* Theme tokens. Dark is the default; [data-theme] is set on <html> by ThemeProvider. */
+:root,
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #0b1120;
+  --surface: #131c2e;
+  --surface-raised: #1b2740;
+  --border: #26334d;
+  --fg: #e6ebf5;
+  --muted: #94a3b8;
+  --accent: #34d399;
+  --accent-fg: #06291d;
+  --success: #34d399;
+  --warn: #fbbf24;
+  --alert: #f87171;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg: #f6f8fb;
+  --surface: #ffffff;
+  --surface-raised: #eef2f7;
+  --border: #d6dde8;
+  --fg: #0f172a;
+  --muted: #526077;
+  --accent: #047857;
+  --accent-fg: #ffffff;
+  --success: #047857;
+  --warn: #a16207;
+  --alert: #b91c1c;
+}
+
+@theme inline {
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-border: var(--border);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-success: var(--success);
+  --color-warn: var(--warn);
+  --color-alert: var(--alert);
+}
+
+.theme-switching *,
+.theme-switching *::before,
+.theme-switching *::after {
+  transition: none !important;
+}
+
+html,
+body {
+  background-color: var(--bg);
+  color: var(--fg);
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
