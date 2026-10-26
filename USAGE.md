@@ -1,8 +1,3 @@
----
-
-### 3. `USAGE.md`
-
-```markdown
 # 📖 Financier User Guide
 
 Welcome to **Financier**! Guided by **Kipp the Chameleon**, this guide explains how to install, import data, and get the most out of your private, local-first finance companion.
@@ -42,7 +37,7 @@ All processing happens **on your phone**. No file is ever uploaded anywhere.
 
 * **Card Gauges:** View your total limit vs. current spent amount across all registered cards in real time.
 * **Cash Flow Forecast:** Check the **Installment Projection** chart to see your exact fixed liabilities for the next 3 to 12 months.
-* **Statement Dates:** Set your cards' closing dates to get local alerts before your payment is due.
+* **Statement Dates:** Set your cards' closing and due dates. Kipp reminds you in the app when a payment is due within 7 days, and **Export to Calendar** adds the due dates to your phone's calendar so it can alert you even when Financier is closed.
 
 ---
 
@@ -66,6 +61,6 @@ Tap the **Kipp Chat Bar** at the bottom of the dashboard to ask questions in pla
 ## 🔒 Data Backups & Reset
 
 Since Financier stores everything locally inside your browser's storage:
-* **Export Backup:** Go to **Settings $\rightarrow$ Export Backup** to download an encrypted `.json` file of your local database.
-* **Restore:** Import your `.json` backup file on a new device to transfer your data offline.
+* **Export Backup:** Go to **Settings → Export Backup**, choose a passphrase, and download an encrypted `.json` file of your local database. Keep the passphrase safe: it cannot be recovered.
+* **Restore:** Import your `.json` backup file and enter its passphrase on a new device to transfer your data offline. You can replace the existing data or merge with it.
 * **Clear Data:** Tap **Clear All Data** in settings to instantly wipe your local database.

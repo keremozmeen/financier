@@ -1,14 +1,9 @@
----
-
-### 2. `WORKFLOWS.md`
-
-```markdown
 # `WORKFLOWS.md` — Agent Roles & Execution Guidelines
 
 ## 1. Project Overview & Vision
 **Financier** is a **Mobile-First, 100% Local, Zero-Cloud Personal Finance Tracker**.
 * **Mascot:** **Kipp the Chameleon** (Your local finance buddy that keeps an eye on credit card limits, monthly cash flow, recurring subscriptions, and hidden fees).
-* **Core Value:** **Privacy-First & Complete Data Sovereignty**. All bank statements (PDF/CSV), invoices, and transactions are processed strictly on the client's device using local storage (`IndexedDB` / `SQLite-Wasm`). **No financial data ever leaves the user's phone or computer.**
+* **Core Value:** **Privacy-First & Complete Data Sovereignty**. All bank statements (PDF/CSV), invoices, and transactions are processed strictly on the client's device using local storage (`IndexedDB` via Dexie). **No financial data ever leaves the user's phone or computer.**
 
 ---
 
@@ -29,10 +24,12 @@ You are acting as the **Lead Autonomous AI Developer** for Financier.
 | :--- | :--- |
 | **Framework / Bundler** | React 18+ / Vite / TypeScript |
 | **Styling & UI** | Tailwind CSS / Lucide React / Framer Motion |
-| **Local Storage** | `IndexedDB` (via `idb` or `dexie`) / `SQLite-Wasm` |
+| **Local Storage** | `IndexedDB` via Dexie |
 | **Parsing Engine** | Client-Side PDF (`pdfjs-dist`) & CSV (`PapaParse`) |
-| **App Type / Target** | Hybrid PWA (Progressive Web App) $\rightarrow$ Native via Tauri v2 Mobile |
-| **Deployment** | GitHub Pages / Vercel (Static Client-Side Hosting) |
+| **App Type / Target** | Hybrid PWA (Progressive Web App) → Native via Tauri v2 Mobile (post-v1) |
+| **Deployment** | GitHub Pages (Static Client-Side Hosting) |
+
+The binding details behind these choices are in [`docs/DECISIONS.md`](docs/DECISIONS.md).
 
 ---
 
@@ -73,5 +70,8 @@ financier/
 │   ├── App.tsx          # Main React Application shell
 │   └── main.tsx         # Entry point
 ├── public/              # PWA Manifest, Service Worker
+├── docs/DECISIONS.md    # Binding architecture decisions
+├── CLAUDE.md            # Build instructions and phased plan for the AI developer
 ├── WORKFLOWS.md         # Workflow and developer roles document
 └── README.md            # Public project overview & Zero-Cloud manifesto
+```
