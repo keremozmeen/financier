@@ -53,7 +53,7 @@ npm run dev
 
 * [`USAGE.md`](USAGE.md) — user guide
 * [`WORKFLOWS.md`](WORKFLOWS.md) — product modules and developer workflow
-* [`docs/DECISIONS.md`](docs/DECISIONS.md) — architecture decisions
+* [`DECISIONS.md`](DECISIONS.md) — architecture decisions
 
 ## 📄 License
 
