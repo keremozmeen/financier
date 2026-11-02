@@ -44,9 +44,7 @@ export function TransactionForm({
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [installments, setInstallments] = useState(1);
-  const [errors, setErrors] = useState<{ date?: string; description?: string; amount?: string }>(
-    {},
-  );
+  const [errors, setErrors] = useState<{ date?: string; amount?: string }>({});
 
   const parsedAmount = parseMoneyInput(amount, card.currency, locale);
   const count = kind === 'charge' ? installments : 1;
@@ -57,13 +55,13 @@ export function TransactionForm({
 
   function submit(event: FormEvent) {
     event.preventDefault();
+    // Only amount and date are required, so a quick entry is: amount → Save.
     const next = {
       date: isIsoDate(date) ? undefined : t('tx.error.date'),
-      description: description.trim() ? undefined : t('tx.error.description'),
       amount: parsedAmount ? undefined : t('tx.error.amount'),
     };
     setErrors(next);
-    if (next.date || next.description || !parsedAmount || !spend.allowed) return;
+    if (next.date || !parsedAmount || !spend.allowed) return;
     onSubmit({
       kind,
       date,
@@ -75,6 +73,18 @@ export function TransactionForm({
 
   return (
     <form onSubmit={submit} noValidate className="space-y-4">
+      <TextField
+        label={t('tx.field.amount')}
+        error={errors.amount}
+        value={amount}
+        onChange={setAmount}
+        inputMode="decimal"
+        placeholder={locale === 'tr' ? '1.250,00' : '1,250.00'}
+        autoComplete="off"
+        // The amount is the only thing a quick entry needs, so it gets focus on open.
+        autoFocus
+        className="text-lg font-semibold"
+      />
       <Segmented
         label={t('tx.kind')}
         value={kind}
@@ -86,30 +96,19 @@ export function TransactionForm({
       />
       <TextField
         label={t('tx.field.description')}
-        error={errors.description}
+        hint={t('common.optional')}
         value={description}
         onChange={setDescription}
         maxLength={80}
         autoComplete="off"
       />
-      <div className="grid grid-cols-2 gap-3">
-        <TextField
-          label={t('tx.field.amount')}
-          error={errors.amount}
-          value={amount}
-          onChange={setAmount}
-          inputMode="decimal"
-          placeholder={locale === 'tr' ? '1.250,00' : '1,250.00'}
-          autoComplete="off"
-        />
-        <TextField
-          label={t('tx.field.date')}
-          error={errors.date}
-          type="date"
-          value={date}
-          onChange={setDate}
-        />
-      </div>
+      <TextField
+        label={t('tx.field.date')}
+        error={errors.date}
+        type="date"
+        value={date}
+        onChange={setDate}
+      />
       {kind === 'charge' && (
         <SelectField
           label={t('tx.field.installments')}

@@ -20,6 +20,7 @@ import { Dialog } from '../components/ui/Dialog';
 import { ScreenHeader } from '../components/ui/ScreenHeader';
 import type { CardUsage } from '../core/finance';
 import { balanceOverridesRepo, cardsRepo, transactionsRepo } from '../db';
+import { useEntryLabel } from '../hooks/useEntryLabel';
 import { useCardDetail } from '../hooks/useFinance';
 import { useFormat } from '../hooks/useFormat';
 import { useT } from '../i18n';
@@ -30,6 +31,7 @@ export function CardDetailScreen() {
   const navigate = useNavigate();
   const id = useParams().id ?? '';
   const detail = useCardDetail(id);
+  const entryLabel = useEntryLabel();
   const [editingBalance, setEditingBalance] = useState(false);
   const [deleteCounts, setDeleteCounts] = useState<{ transactions: number; overrides: number }>();
   const [pendingDelete, setPendingDelete] = useState<Transaction>();
@@ -142,7 +144,7 @@ export function CardDetailScreen() {
         <Dialog title={t('tx.delete.title')} onClose={() => setPendingDelete(undefined)}>
           <p className="text-sm">
             {t(pendingDelete.installmentPlanId ? 'tx.delete.bodyPlan' : 'tx.delete.body', {
-              description: pendingDelete.description,
+              description: entryLabel(pendingDelete),
             })}
           </p>
           <div className="flex justify-end gap-2">

@@ -108,6 +108,27 @@ describe('transactionsRepo', () => {
     expect((await db.transactions.get(id))?.amount).toBe(-5_000);
   });
 
+  it('saves identical manual entries without deduplicating them (D3)', async () => {
+    const card = await createCard();
+    const dinner = {
+      card,
+      date: '2026-11-02',
+      description: '',
+      amount: 85_000,
+      kind: 'charge',
+      installments: 1,
+    } as const;
+    const first = await transactionsRepo.addManual(dinner);
+    const second = await transactionsRepo.addManual(dinner);
+
+    expect(first).not.toBe(second);
+    const saved = await transactionsRepo.listByCard(card.id);
+    expect(saved).toHaveLength(2);
+    // Same fingerprint: dedup by fingerprint is for imports only.
+    expect(saved[0]?.fingerprint).toBe(saved[1]?.fingerprint);
+    expect(saved[0]).toMatchObject({ description: '', normalizedMerchant: '' });
+  });
+
   it('stores an installment purchase as a plan plus a linked transaction', async () => {
     const card = await createCard();
     const id = await transactionsRepo.addManual({
