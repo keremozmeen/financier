@@ -6,6 +6,7 @@ import {
   formatDate,
   isIsoDate,
   monthOf,
+  nextStatementDates,
   todayIso,
 } from './dates';
 
@@ -62,6 +63,75 @@ describe('firstDueMonth', () => {
 
   it('handles a closing day past the end of a short month', () => {
     expect(firstDueMonth('2026-02-28', 31, 10)).toBe('2026-03');
+  });
+});
+
+describe('nextStatementDates', () => {
+  it('uses this month when the closing day has not passed, including today', () => {
+    expect(nextStatementDates('2026-11-02', 10, 20)).toEqual({
+      statementDate: '2026-11-10',
+      dueDate: '2026-11-20',
+    });
+    expect(nextStatementDates('2026-11-10', 10, 20)).toMatchObject({ statementDate: '2026-11-10' });
+  });
+
+  it('moves to next month once the closing day has passed', () => {
+    expect(nextStatementDates('2026-11-11', 10, 20)).toEqual({
+      statementDate: '2026-12-10',
+      dueDate: '2026-12-20',
+    });
+  });
+
+  it('puts the due date in the next month when it comes before the closing day', () => {
+    expect(nextStatementDates('2026-11-02', 25, 5)).toEqual({
+      statementDate: '2026-11-25',
+      dueDate: '2026-12-05',
+    });
+    expect(nextStatementDates('2026-12-26', 25, 5)).toEqual({
+      statementDate: '2027-01-25',
+      dueDate: '2027-02-05',
+    });
+  });
+
+  it('puts equal days one month apart', () => {
+    expect(nextStatementDates('2026-11-02', 15, 15)).toEqual({
+      statementDate: '2026-11-15',
+      dueDate: '2026-12-15',
+    });
+  });
+
+  it('clamps a 31st to the last day of a 30-day month', () => {
+    expect(nextStatementDates('2026-11-02', 31, 10)).toEqual({
+      statementDate: '2026-11-30',
+      dueDate: '2026-12-10',
+    });
+    // Due on the 31st, after a closing in a 30-day month.
+    expect(nextStatementDates('2026-04-02', 20, 31)).toEqual({
+      statementDate: '2026-04-20',
+      dueDate: '2026-04-30',
+    });
+  });
+
+  it('clamps to February in common and leap years', () => {
+    expect(nextStatementDates('2026-02-10', 31, 10)).toEqual({
+      statementDate: '2026-02-28',
+      dueDate: '2026-03-10',
+    });
+    expect(nextStatementDates('2028-02-10', 30, 10)).toMatchObject({
+      statementDate: '2028-02-29',
+    });
+    // Closing on the 15th in January, due on the 31st → February's last day.
+    expect(nextStatementDates('2027-01-20', 15, 31)).toEqual({
+      statementDate: '2027-02-15',
+      dueDate: '2027-02-28',
+    });
+  });
+
+  it('treats the last day of February as the clamped closing day', () => {
+    // On 28 Feb 2026 a 31st closing day closes today, not in March.
+    expect(nextStatementDates('2026-02-28', 31, 10)).toMatchObject({
+      statementDate: '2026-02-28',
+    });
   });
 });
 
