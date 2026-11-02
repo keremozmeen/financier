@@ -55,11 +55,40 @@ export function firstDueMonth(
   statementDay: number,
   dueDay: number,
 ): IsoMonth {
-  const purchaseMonth = monthOf(purchaseDate);
-  const day = Number(purchaseDate.slice(8, 10));
-  const statementMonth =
-    day <= clampDay(purchaseMonth, statementDay) ? purchaseMonth : addMonths(purchaseMonth, 1);
+  return dueMonthFor(statementMonthFor(purchaseDate, statementDay), statementDay, dueDay);
+}
+
+/**
+ * The next statement closing date (on or after `today`) and its payment due date.
+ * Day settings are clamped to short months: a 31st closing day closes on the 30th
+ * in a 30-day month and on the 28th or 29th in February.
+ */
+export function nextStatementDates(
+  today: IsoDate,
+  statementDay: number,
+  dueDay: number,
+): { statementDate: IsoDate; dueDate: IsoDate } {
+  const statementMonth = statementMonthFor(today, statementDay);
+  const dueMonth = dueMonthFor(statementMonth, statementDay, dueDay);
+  return {
+    statementDate: dayOf(statementMonth, statementDay),
+    dueDate: dayOf(dueMonth, dueDay),
+  };
+}
+
+/** Month of the statement that closes on or after `date`. */
+function statementMonthFor(date: IsoDate, statementDay: number): IsoMonth {
+  const month = monthOf(date);
+  return Number(date.slice(8, 10)) <= clampDay(month, statementDay) ? month : addMonths(month, 1);
+}
+
+/** The payment is due in the statement's month when the due day comes later, else the next month. */
+function dueMonthFor(statementMonth: IsoMonth, statementDay: number, dueDay: number): IsoMonth {
   return dueDay > statementDay ? statementMonth : addMonths(statementMonth, 1);
+}
+
+function dayOf(month: IsoMonth, day: number): IsoDate {
+  return `${month}-${String(clampDay(month, day)).padStart(2, '0')}`;
 }
 
 /** Formats an ISO date for display without time-zone shifts. */

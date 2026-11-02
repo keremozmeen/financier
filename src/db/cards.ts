@@ -1,7 +1,8 @@
-import type { Card } from '../types/domain';
+import type { Card, CreditCard, DebitCard } from '../types/domain';
 import { db, newId } from './database';
 
-export type CardInput = Omit<Card, 'id' | 'archived'>;
+/** A card as entered in the form; keeps the credit/debit union intact. */
+export type CardInput = Omit<CreditCard, 'id' | 'archived'> | Omit<DebitCard, 'id' | 'archived'>;
 
 export const cardsRepo = {
   /** Active cards by default, sorted by name. */
@@ -22,8 +23,16 @@ export const cardsRepo = {
     return id;
   },
 
-  async update(id: string, changes: Partial<CardInput>): Promise<void> {
-    await db.cards.update(id, changes);
+  /**
+   * Replaces the card's fields with the form input. A full replace (not a merge) so a
+   * card changed from credit to debit does not keep a stale limit or statement day.
+   */
+  async update(id: string, input: CardInput): Promise<void> {
+    await db.transaction('rw', db.cards, async () => {
+      const existing = await db.cards.get(id);
+      if (!existing) throw new Error(`Card ${id} not found`);
+      await db.cards.put({ ...input, id, archived: existing.archived });
+    });
   },
 
   async setArchived(id: string, archived: boolean): Promise<void> {

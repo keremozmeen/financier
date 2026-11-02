@@ -4,6 +4,7 @@ interface SegmentedProps<T extends string> {
   value: T;
   onChange: (value: T) => void;
   framed?: boolean;
+  disabled?: boolean;
 }
 
 /** A small group of toggle buttons where exactly one is pressed. */
@@ -13,9 +14,13 @@ export function Segmented<T extends string>({
   value,
   onChange,
   framed = false,
+  disabled = false,
 }: SegmentedProps<T>) {
   return (
-    <fieldset className={framed ? 'rounded-xl border border-border bg-surface p-4' : ''}>
+    <fieldset
+      disabled={disabled}
+      className={`disabled:opacity-60 ${framed ? 'rounded-xl border border-border bg-surface p-4' : ''}`}
+    >
       <legend className={`text-sm font-medium ${framed ? 'px-1 text-muted' : 'mb-1'}`}>
         {label}
       </legend>

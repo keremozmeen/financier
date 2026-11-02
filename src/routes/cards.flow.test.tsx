@@ -101,6 +101,7 @@ describe('cards flow', () => {
 
   it('shows gauges on the dashboard', async () => {
     await cardsRepo.create({
+      type: 'credit',
       name: 'World',
       bank: 'Yapı Kredi',
       last4: '',

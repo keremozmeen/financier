@@ -1,16 +1,28 @@
+import { CalendarDays, Info } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
-import { formatMoneyInput, parseMoneyInput, SUPPORTED_CURRENCIES } from '../../core/finance';
+import {
+  formatMoneyInput,
+  nextStatementDates,
+  parseMoneyInput,
+  SUPPORTED_CURRENCIES,
+} from '../../core/finance';
 import type { CardInput } from '../../db';
+import { useToday } from '../../hooks/useFinance';
+import { useFormat } from '../../hooks/useFormat';
 import { useI18n, type MessageKey } from '../../i18n';
-import type { Card } from '../../types/domain';
+import type { Card, CardType } from '../../types/domain';
 import { Button } from '../ui/Button';
+import { Segmented } from '../ui/Segmented';
 import { SelectField, TextField } from '../ui/TextField';
 import { CARD_COLORS, DEFAULT_CARD_COLOR } from './colors';
 
 interface CardFormProps {
   initial?: Card;
-  /** The currency is fixed once a card has entries, because usage only counts its currency. */
-  currencyLocked?: boolean;
+  /**
+   * Type and currency are fixed once a card has entries: usage only counts the card's
+   * currency, and debit entries have no installments (D13).
+   */
+  hasEntries?: boolean;
   onSubmit: (input: CardInput) => void;
   onCancel: () => void;
 }
@@ -18,52 +30,72 @@ interface CardFormProps {
 type Errors = Partial<Record<'name' | 'last4' | 'limit' | 'statementDay' | 'dueDay', string>>;
 
 function parseDay(value: string): number | null {
-  const day = Number(value);
-  return /^\d{1,2}$/.test(value) && day >= 1 && day <= 31 ? day : null;
+  const day = Number(value.trim());
+  return /^\d{1,2}$/.test(value.trim()) && day >= 1 && day <= 31 ? day : null;
 }
 
-export function CardForm({ initial, currencyLocked = false, onSubmit, onCancel }: CardFormProps) {
+export function CardForm({ initial, hasEntries = false, onSubmit, onCancel }: CardFormProps) {
   const { t, locale } = useI18n();
+  const credit = initial?.type === 'credit' ? initial : undefined;
+  const [type, setType] = useState<CardType>(initial?.type ?? 'credit');
   const [name, setName] = useState(initial?.name ?? '');
   const [bank, setBank] = useState(initial?.bank ?? '');
   const [last4, setLast4] = useState(initial?.last4 ?? '');
   const [currency, setCurrency] = useState(initial?.currency ?? 'TRY');
   const [limit, setLimit] = useState(
-    initial ? formatMoneyInput(initial.limit, initial.currency, locale) : '',
+    credit ? formatMoneyInput(credit.limit, credit.currency, locale) : '',
   );
-  const [statementDay, setStatementDay] = useState(String(initial?.statementDay ?? ''));
-  const [dueDay, setDueDay] = useState(String(initial?.dueDay ?? ''));
+  const [statementDay, setStatementDay] = useState(String(credit?.statementDay ?? ''));
+  const [dueDay, setDueDay] = useState(String(credit?.dueDay ?? ''));
   const [color, setColor] = useState(initial?.color ?? DEFAULT_CARD_COLOR);
   const [errors, setErrors] = useState<Errors>({});
 
   function submit(event: FormEvent) {
     event.preventDefault();
-    const parsedLimit = parseMoneyInput(limit, currency, locale);
-    const parsedStatement = parseDay(statementDay.trim());
-    const parsedDue = parseDay(dueDay.trim());
+    const common = { name: name.trim(), bank: bank.trim(), last4, currency, color };
     const next: Errors = {};
-    if (!name.trim()) next.name = t('cards.error.name');
+    if (!common.name) next.name = t('cards.error.name');
     if (last4 && !/^\d{4}$/.test(last4)) next.last4 = t('cards.error.last4');
+
+    if (type === 'debit') {
+      setErrors(next);
+      if (Object.keys(next).length === 0) onSubmit({ ...common, type: 'debit' });
+      return;
+    }
+
+    const parsedLimit = parseMoneyInput(limit, currency, locale);
+    const parsedStatement = parseDay(statementDay);
+    const parsedDue = parseDay(dueDay);
     if (!parsedLimit) next.limit = t('cards.error.limit');
     if (!parsedStatement) next.statementDay = t('cards.error.day');
     if (!parsedDue) next.dueDay = t('cards.error.day');
     setErrors(next);
     if (Object.keys(next).length > 0 || !parsedLimit || !parsedStatement || !parsedDue) return;
-
     onSubmit({
-      name: name.trim(),
-      bank: bank.trim(),
-      last4,
-      currency,
+      ...common,
+      type: 'credit',
       limit: parsedLimit,
       statementDay: parsedStatement,
       dueDay: parsedDue,
-      color,
     });
   }
 
   return (
     <form onSubmit={submit} noValidate className="space-y-4">
+      <div className="space-y-1">
+        <Segmented
+          label={t('cards.type')}
+          value={type}
+          onChange={setType}
+          options={[
+            { value: 'credit', label: t('cards.type.credit') },
+            { value: 'debit', label: t('cards.type.debit') },
+          ]}
+          disabled={hasEntries}
+        />
+        {hasEntries && <p className="text-xs text-muted">{t('cards.type.locked')}</p>}
+        {type === 'debit' && <p className="text-xs text-muted">{t('debit.note')}</p>}
+      </div>
       <TextField
         label={t('cards.field.name')}
         hint={t('cards.field.name.hint')}
@@ -81,7 +113,27 @@ export function CardForm({ initial, currencyLocked = false, onSubmit, onCancel }
         maxLength={40}
         autoComplete="off"
       />
-      <div className="grid grid-cols-2 gap-3">
+      {type === 'credit' ? (
+        <div className="grid grid-cols-2 gap-3">
+          <TextField
+            label={t('cards.field.last4')}
+            hint={t('common.optional')}
+            error={errors.last4}
+            value={last4}
+            onChange={(value) => setLast4(value.replace(/\D/g, '').slice(0, 4))}
+            inputMode="numeric"
+            autoComplete="off"
+          />
+          <SelectField
+            label={t('cards.field.currency')}
+            value={currency}
+            onChange={setCurrency}
+            disabled={hasEntries}
+            hint={hasEntries ? t('cards.field.currency.locked') : undefined}
+            options={SUPPORTED_CURRENCIES.map((code) => ({ value: code, label: code }))}
+          />
+        </div>
+      ) : (
         <TextField
           label={t('cards.field.last4')}
           hint={t('common.optional')}
@@ -91,44 +143,43 @@ export function CardForm({ initial, currencyLocked = false, onSubmit, onCancel }
           inputMode="numeric"
           autoComplete="off"
         />
-        <SelectField
-          label={t('cards.field.currency')}
-          value={currency}
-          onChange={setCurrency}
-          disabled={currencyLocked}
-          hint={currencyLocked ? t('cards.field.currency.locked') : undefined}
-          options={SUPPORTED_CURRENCIES.map((code) => ({ value: code, label: code }))}
-        />
-      </div>
-      <TextField
-        label={t('cards.field.limit')}
-        error={errors.limit}
-        value={limit}
-        onChange={setLimit}
-        inputMode="decimal"
-        placeholder={locale === 'tr' ? '50.000,00' : '50,000.00'}
-        autoComplete="off"
-      />
-      <div className="grid grid-cols-2 gap-3">
-        <TextField
-          label={t('cards.field.statementDay')}
-          hint={t('cards.field.day.hint')}
-          error={errors.statementDay}
-          value={statementDay}
-          onChange={setStatementDay}
-          inputMode="numeric"
-          maxLength={2}
-        />
-        <TextField
-          label={t('cards.field.dueDay')}
-          hint={t('cards.field.day.hint')}
-          error={errors.dueDay}
-          value={dueDay}
-          onChange={setDueDay}
-          inputMode="numeric"
-          maxLength={2}
-        />
-      </div>
+      )}
+      {type === 'credit' && (
+        <>
+          <TextField
+            label={t('cards.field.limit')}
+            error={errors.limit}
+            value={limit}
+            onChange={setLimit}
+            inputMode="decimal"
+            placeholder={locale === 'tr' ? '50.000,00' : '50,000.00'}
+            autoComplete="off"
+          />
+          <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-3">
+              <TextField
+                label={t('cards.field.statementDay')}
+                hint={t('cards.field.day.hint')}
+                error={errors.statementDay}
+                value={statementDay}
+                onChange={setStatementDay}
+                inputMode="numeric"
+                maxLength={2}
+              />
+              <TextField
+                label={t('cards.field.dueDay')}
+                hint={t('cards.field.day.hint')}
+                error={errors.dueDay}
+                value={dueDay}
+                onChange={setDueDay}
+                inputMode="numeric"
+                maxLength={2}
+              />
+            </div>
+            <StatementPreview statementDay={statementDay} dueDay={dueDay} />
+          </div>
+        </>
+      )}
       <fieldset>
         <legend className="mb-2 text-sm font-medium">{t('cards.field.color')}</legend>
         <div className="flex flex-wrap gap-2">
@@ -160,5 +211,41 @@ export function CardForm({ initial, currencyLocked = false, onSubmit, onCancel }
         </Button>
       </div>
     </form>
+  );
+}
+
+/** Live "Next statement · Payment due" preview, plus a soft hint when the days are equal. */
+function StatementPreview({ statementDay, dueDay }: { statementDay: string; dueDay: string }) {
+  const { t } = useI18n();
+  const format = useFormat();
+  const today = useToday();
+  const statement = parseDay(statementDay);
+  const due = parseDay(dueDay);
+
+  return (
+    <div aria-live="polite" className="space-y-1 text-sm">
+      {statement && due && (
+        <>
+          <p className="flex gap-2 rounded-lg bg-surface-raised px-3 py-2">
+            <CalendarDays aria-hidden="true" size={16} className="mt-0.5 shrink-0 text-muted" />
+            <span>
+              {(() => {
+                const dates = nextStatementDates(today, statement, due);
+                return t('cards.preview', {
+                  statement: format.date(dates.statementDate),
+                  due: format.date(dates.dueDate),
+                });
+              })()}
+            </span>
+          </p>
+          {statement === due && (
+            <p className="flex gap-2 px-3 text-muted">
+              <Info aria-hidden="true" size={16} className="mt-0.5 shrink-0" />
+              {t('cards.sameDayHint')}
+            </p>
+          )}
+        </>
+      )}
+    </div>
   );
 }

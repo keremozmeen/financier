@@ -7,6 +7,7 @@ const user = userEvent.setup();
 
 async function seedCard() {
   const id = await cardsRepo.create({
+    type: 'credit',
     name: 'Bonus',
     bank: '',
     last4: '',

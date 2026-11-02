@@ -181,11 +181,28 @@ Turkish banks decline purchases that exceed the available limit, so a recorded c
 
 ---
 
-## Data model (v1)
+## D13. Card types
+
+**Decision:** Cards have a type, `'credit' | 'debit'`.
+
+- **Credit (kredi kartı):** unchanged. Limit, statement day, due day, installments, D11 usage and D12 spend blocking all apply.
+- **Debit (banka kartı):** no limit, no statement or due day, no installments, no balance override and no spend blocking, because the app does not know the account balance. Debit spending counts toward spending totals, imports and Sub-Radar.
+- Tracking bank account balances stays out of scope for v1.
+
+**Implementation notes:**
+- `Card` is a discriminated union on `type`: `limit`, `statementDay` and `dueDay` exist only on credit cards, so code cannot read a debit card's limit by mistake.
+- Dexie schema v2 adds the type; its upgrade sets `type = 'credit'` on every existing card (D1: never edit an existing version).
+- The card form asks for the type first. The type cannot change once the card has entries, like the currency.
+- Debit cards show this month's spending (charges minus refunds, never below zero) instead of a limit gauge.
+- The credit card form previews the next statement and payment due dates as the days are typed. Equal statement and due days are allowed, with a soft hint that Turkish cards are usually due about 10 days after the statement.
+
+---
+
+## Data model (v2)
 
 | Table | Key fields |
 | :--- | :--- |
-| `cards` | `id`, `name`, `bank`, `last4`, `currency`, `limit`, `statementDay`, `dueDay`, `color`, `archived` |
+| `cards` | `id`, `type` (`credit` / `debit`), `name`, `bank`, `last4`, `currency`, `color`, `archived`; credit only: `limit`, `statementDay`, `dueDay` |
 | `transactions` | `id`, `cardId`, `date`, `description`, `normalizedMerchant`, `amount`, `currency`, `category`, `installmentPlanId?`, `fingerprint`, `source` (`manual` / `csv` / `pdf`), `importId?` |
 | `installmentPlans` | `id`, `cardId`, `description`, `totalAmount`, `count`, `purchaseDate`, `firstDueMonth`, `currency` |
 | `balanceOverrides` | `id`, `cardId`, `balance`, `currency`, `asOf`, `createdAt` (history of bank balances entered by the user, D11) |

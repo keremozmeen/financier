@@ -21,7 +21,7 @@ export const en = {
   'common.loading': 'Loading…',
   'common.optional': 'optional',
 
-  'dashboard.gaugesTitle': 'Card limits',
+  'dashboard.gaugesTitle': 'Your cards',
   'dashboard.empty.title': 'No cards yet',
   'dashboard.empty.body': 'Add a credit card and Kipp will keep an eye on its limit.',
 
@@ -40,6 +40,15 @@ export const en = {
   'cards.notFound': 'This card does not exist anymore.',
   'cards.newTitle': 'New card',
   'cards.editTitle': 'Edit card',
+  'cards.type': 'Card type',
+  'cards.type.credit': 'Credit card',
+  'cards.type.debit': 'Debit card',
+  'cards.type.locked': 'The card type cannot change once the card has entries.',
+  'cards.preview': 'Next statement: {statement} · Payment due: {due}',
+  'cards.sameDayHint': 'Turkish cards are usually due about 10 days after the statement.',
+  'debit.thisMonth': "This month's spending",
+  'debit.note':
+    'Debit card spending counts toward your totals. The account balance is not tracked.',
 
   'cards.field.name': 'Card name',
   'cards.field.name.hint': 'For example "Bonus" or "World".',

@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { isIsoDate, parseMoneyInput } from '../../core/finance';
 import { useToday } from '../../hooks/useFinance';
 import { useI18n } from '../../i18n';
-import type { Card, IsoDate } from '../../types/domain';
+import type { CreditCard, IsoDate } from '../../types/domain';
 import { Button } from '../ui/Button';
 import { TextField } from '../ui/TextField';
 
@@ -11,7 +11,7 @@ export function BalanceOverrideForm({
   onSubmit,
   onCancel,
 }: {
-  card: Card;
+  card: CreditCard;
   onSubmit: (balance: number, asOf: IsoDate) => void;
   onCancel: () => void;
 }) {
