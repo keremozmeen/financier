@@ -44,7 +44,9 @@ This file records the decisions that turn the open questions in `WORKFLOWS.md` i
 
 **Rules that apply to every import path:**
 - Nothing is saved until the user confirms the **review screen**, which shows each parsed row with a confidence flag and lets the user edit or drop it.
-- **Duplicate protection:** each transaction gets a fingerprint (`cardId + date + amount + normalized description`); re-importing the same statement does not create duplicates.
+- **Duplicate protection:** each transaction gets a fingerprint (`cardId + date + amount + normalized description`); re-importing the same statement does not create duplicates. Fingerprint dedup applies to imports only: manual entries are never deduplicated, so two identical dinners on the same card and day both save.
+- **Imports vs. manual entries:** at import review (Phase 3), an imported charge that matches a manual entry (same card, same amount, date within ±3 days) is flagged "Already logged" and merged by default, taking the bank's description if the manual entry has none. The user can unmerge it on the review screen.
+- **Manual descriptions are optional.** An entry without one is shown as "Charge", "Refund" or "Installment purchase" (from `src/i18n/`).
 - The PDF.js worker is **bundled locally** (no CDN), and password-protected PDFs prompt for the password locally.
 - Itemized receipt splitting (Module 2's invoice feature) is **deferred to after v1**. It is a large feature and not needed for the core value.
 
@@ -137,13 +139,56 @@ The promise is enforced by the build, not just by convention:
 
 ---
 
+## D11. Card "used" amount and limit blocking
+
+Turkish banks block the full value of an installment purchase against the card limit and release it as each installment is billed and paid. A 12,000 ₺ purchase in 6 installments blocks 12,000 ₺ on day one.
+
+- used = unpaid single-payment charges + remaining unpaid balance of all installment plans
+- available = limit − used, never negative. When used exceeds the limit, the card is treated as full; see D12.
+- utilization = used / limit, shown with the D4 colors: under 30% healthy, 30–70% warning, over 70% alert.
+
+**Balance override:**
+- The user can enter the card's current balance from their banking app, saved with the date it was entered ("as of" date).
+- When an override exists: used = override balance + single charges dated after the as-of date + the full remaining value of installment plans created after the as-of date. Everything before the as-of date is assumed to be included in the override.
+- Without an override, used is calculated from the recorded transactions alone.
+- Updating the override (for example after paying the bill) replaces the previous one. Keep a history of past overrides so later phases can use it.
+- The card screen shows whether used is "calculated" or "from your bank balance on <date>", and suggests updating it if the as-of date is more than 30 days old.
+
+Payments and statements are tracked from Phase 2 on. Until then, the override is how the user reflects a paid bill.
+
+**Implementation notes:**
+- Refunds are transactions with a negative amount; they lower used. Installment plans are charges only.
+- An installment purchase is stored as one `installmentPlans` row plus one transaction (the purchase, full amount, linked by `installmentPlanId`). Only the plan counts toward used, so the purchase is not counted twice.
+- "Remaining unpaid balance" is `totalAmount` minus the installments paid. Until Phase 2 records payments, no installment counts as paid.
+- "After the as-of date" is strict: entries dated on the as-of day are assumed to be in the override. The current override is the most recently entered one; older entries stay as history.
+- Only amounts in the card's currency count toward used (D2: no FX conversion).
+- Utilization boundaries: below 30% healthy, 30% to 70% inclusive warning, above 70% alert. A card whose used exceeds its limit follows D12.
+
+---
+
+## D12. No over-limit spending (Türkiye)
+
+Turkish banks decline purchases that exceed the available limit, so a recorded charge above the available limit means the app's data is out of date, not that the user overspent.
+
+- Manual charges and new installment purchases larger than the card's current available limit are blocked in the entry form, with a message like "Your bank would decline this: only <available> is available." and two actions: "Update bank balance" and "Edit card limit". Refunds are never blocked. Editing an existing entry checks against the available limit without that entry.
+- `core/finance` exposes a pure function (`checkSpendAllowed`) with tests for exact-limit, one-kuruş-over, installment total, refund and edit cases.
+- If used still exceeds the limit (interest, fees, a limit reduced by the bank, or Phase 3 imports), treat the card as full: gauge at 100%, available 0, alert color, with a hint "Your recorded spending is higher than your limit. Update your bank balance or limit." There is no separate "over limit" wording in the UI.
+
+**Implementation notes:**
+- A charge exactly equal to the available limit is allowed; one kuruş more is blocked. An installment purchase is checked by its full total, since the bank blocks the whole amount (D11).
+- When the card is already full, available is 0 and every new charge is blocked until the balance or limit is updated.
+- Manual entries cannot be edited yet; the edit case is implemented in `checkSpendAllowed` (it leaves the edited entry, and its installment plan, out of the calculation) for when entry editing is added.
+
+---
+
 ## Data model (v1)
 
 | Table | Key fields |
 | :--- | :--- |
 | `cards` | `id`, `name`, `bank`, `last4`, `currency`, `limit`, `statementDay`, `dueDay`, `color`, `archived` |
 | `transactions` | `id`, `cardId`, `date`, `description`, `normalizedMerchant`, `amount`, `currency`, `category`, `installmentPlanId?`, `fingerprint`, `source` (`manual` / `csv` / `pdf`), `importId?` |
-| `installmentPlans` | `id`, `cardId`, `description`, `totalAmount`, `count`, `firstDueMonth`, `currency` |
+| `installmentPlans` | `id`, `cardId`, `description`, `totalAmount`, `count`, `purchaseDate`, `firstDueMonth`, `currency` |
+| `balanceOverrides` | `id`, `cardId`, `balance`, `currency`, `asOf`, `createdAt` (history of bank balances entered by the user, D11) |
 | `statements` | `id`, `cardId`, `periodStart`, `periodEnd`, `dueDate`, `totalDue`, `minimumDue`, `paid` |
 | `subscriptions` | `id`, `normalizedMerchant`, `cadenceDays`, `lastAmount`, `previousAmount`, `status` (`active` / `ignored` / `cancelled`), `confirmedByUser` |
 | `importProfiles` | `id`, `name`, `bank`, `kind` (`csv` / `pdf`), `headerSignature`, `columnMap` |

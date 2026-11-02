@@ -1,5 +1,5 @@
 import { en } from './en';
-import { dictionaries, isLocale, matchLocale, LOCALES } from './locales';
+import { dictionaries, isLocale, matchLocale, LOCALES, translate } from './locales';
 
 describe('matchLocale', () => {
   it('picks Turkish for any tr tag', () => {
@@ -18,6 +18,22 @@ describe('matchLocale', () => {
   it('falls back to English', () => {
     expect(matchLocale([])).toBe('en');
     expect(matchLocale(['fr-FR'])).toBe('en');
+  });
+});
+
+describe('translate', () => {
+  it('fills placeholders and leaves unknown ones untouched', () => {
+    expect(translate('en', 'cards.source.override', { date: 'Nov 2, 2026' })).toBe(
+      'From your bank balance on Nov 2, 2026',
+    );
+    expect(translate('en', 'cards.source.override')).toContain('{date}');
+  });
+});
+
+describe('dictionary placeholders', () => {
+  it.each(Object.keys(en) as (keyof typeof en)[])('%s uses the same placeholders in tr', (key) => {
+    const names = (s: string) => [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort();
+    expect(names(dictionaries.tr[key])).toEqual(names(en[key]));
   });
 });
 

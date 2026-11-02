@@ -19,6 +19,13 @@ export function matchLocale(preferred: readonly string[]): Locale {
   return 'en';
 }
 
-export function translate(locale: Locale, key: MessageKey): string {
-  return dictionaries[locale][key];
+export type MessageParams = Record<string, string | number>;
+
+/** Looks up a message and fills `{name}` placeholders from `params`. */
+export function translate(locale: Locale, key: MessageKey, params?: MessageParams): string {
+  const message = dictionaries[locale][key];
+  if (!params) return message;
+  return message.replace(/\{(\w+)\}/g, (match, name: string) =>
+    name in params ? String(params[name]) : match,
+  );
 }

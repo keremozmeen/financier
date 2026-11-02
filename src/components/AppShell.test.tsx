@@ -1,20 +1,6 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { createMemoryRouter, RouterProvider } from 'react-router';
-import { I18nProvider } from '../i18n';
-import { routes } from '../routes';
-import { ThemeProvider } from '../theme/ThemeProvider';
-
-function renderApp(path = '/') {
-  const router = createMemoryRouter(routes, { initialEntries: [path] });
-  return render(
-    <ThemeProvider>
-      <I18nProvider>
-        <RouterProvider router={router} />
-      </I18nProvider>
-    </ThemeProvider>,
-  );
-}
+import { renderApp } from '../test/renderApp';
 
 describe('AppShell', () => {
   it('shows the five tabs and navigates between them', async () => {
