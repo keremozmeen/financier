@@ -16,6 +16,7 @@ import { CardUsagePanel } from '../components/cards/CardUsagePanel';
 import { DeleteCardDialog } from '../components/cards/DeleteCardDialog';
 import { NextBill } from '../components/cards/NextBill';
 import { PaymentForm } from '../components/cards/PaymentForm';
+import { PaymentList } from '../components/cards/PaymentList';
 import { TransactionList } from '../components/cards/TransactionList';
 import { Button, ButtonLink } from '../components/ui/Button';
 import { Dialog } from '../components/ui/Dialog';
@@ -26,7 +27,7 @@ import { useEntryLabel } from '../hooks/useEntryLabel';
 import { useCardDetail } from '../hooks/useFinance';
 import { useFormat } from '../hooks/useFormat';
 import { useT } from '../i18n';
-import type { Transaction } from '../types/domain';
+import type { Payment, Transaction } from '../types/domain';
 
 export function CardDetailScreen() {
   const t = useT();
@@ -38,6 +39,8 @@ export function CardDetailScreen() {
   const [paying, setPaying] = useState(false);
   const [deleteCounts, setDeleteCounts] = useState<{ transactions: number; overrides: number }>();
   const [pendingDelete, setPendingDelete] = useState<Transaction>();
+  const [pendingPaymentDelete, setPendingPaymentDelete] = useState<Payment>();
+  const format = useFormat();
 
   if (detail === undefined) return <p className="text-muted">{t('common.loading')}</p>;
   if (detail === null) {
@@ -49,7 +52,7 @@ export function CardDetailScreen() {
     );
   }
 
-  const { summary, transactions, plans } = detail;
+  const { summary, transactions, plans, payments } = detail;
   const { card } = summary;
 
   async function archive(archived: boolean) {
@@ -130,6 +133,8 @@ export function CardDetailScreen() {
         </div>
       )}
 
+      <PaymentList payments={payments} onDelete={setPendingPaymentDelete} />
+
       <div>
         <h2 className="mb-2 text-sm font-medium text-muted">{t('tx.title')}</h2>
         <TransactionList transactions={transactions} plans={plans} onDelete={setPendingDelete} />
@@ -165,6 +170,34 @@ export function CardDetailScreen() {
             navigate('/cards', { replace: true });
           }}
         />
+      )}
+
+      {pendingPaymentDelete && (
+        <Dialog
+          title={t('payments.delete.title')}
+          onClose={() => setPendingPaymentDelete(undefined)}
+        >
+          <p className="text-sm">
+            {t('payments.delete.body', {
+              amount: format.money(pendingPaymentDelete.amount, pendingPaymentDelete.currency),
+              date: format.date(pendingPaymentDelete.date),
+            })}
+          </p>
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" onClick={() => setPendingPaymentDelete(undefined)}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              variant="danger"
+              onClick={async () => {
+                await paymentsRepo.remove(pendingPaymentDelete.id);
+                setPendingPaymentDelete(undefined);
+              }}
+            >
+              {t('common.delete')}
+            </Button>
+          </div>
+        </Dialog>
       )}
 
       {pendingDelete && (

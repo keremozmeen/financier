@@ -42,7 +42,8 @@ Financier tracks two kinds of cards. You pick the type when you add a card, and 
 
 * **Card Gauges:** View your total limit vs. current spent amount across all your credit cards in real time.
 * **Cash Flow Forecast:** Check the **Installment Projection** chart to see your exact fixed liabilities for the next 3 to 12 months (credit cards).
-* **Statement Dates:** Set your credit cards' closing and due dates. Kipp reminds you in the app when a payment is due within 7 days, and **Export to Calendar** adds the due dates to your phone's calendar so it can alert you even when Financier is closed.
+* **Upcoming Payments:** The dashboard lists each credit card's next bill with its due date (moved to Monday when it falls on a weekend). Tap **Mark as paid** to record the full amount, or change it for a minimum or partial payment. A full payment releases the installments in that statement from your limit. Payments you record are listed on the card's screen, where you can delete one entered by mistake.
+* **Statement Dates:** Set your credit cards' closing and due dates. Kipp reminds you in the app when a payment is due within 7 days, and **Add to calendar** downloads a calendar file with your due dates and a reminder 3 days before each, so your phone can alert you even when Financier is closed. The file holds only card names; your calendar app may sync it to its own cloud.
 
 ---
 
