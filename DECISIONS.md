@@ -198,6 +198,18 @@ Turkish banks decline purchases that exceed the available limit, so a recorded c
 
 ---
 
+## D14. Statements and bill payments
+
+D11 deferred payments to Phase 2. Credit cards only (D13).
+
+- A statement covers one period, from the day after the previous statement day to this statement day (month-end clamped). Its total = single charges and refunds in the period + the installments falling due in that statement. It is computed from data, and stored in `statements` only when the user records a payment.
+- The upcoming payments list shows each credit card's next bill with its due date and amount. "Mark as paid" opens a payment form prefilled with the full statement amount, which the user can edit (minimum payment or any partial amount).
+- Effect on used (extends D11): a payment dated after the override as-of date reduces used by its amount. A full payment also marks the installments in that statement as paid, so the limit they blocked is released. A partial payment reduces used but marks no installments as paid. Interest on unpaid balances is out of scope; the user reflects it with the bank balance override.
+- Due dates: if the computed due date falls on a Saturday or Sunday, show the next Monday, labelled as moved. Public holidays are out of scope for now.
+- Debit cards have no statements or payments; their spending counts only in spending totals.
+
+---
+
 ## Data model (v2)
 
 | Table | Key fields |

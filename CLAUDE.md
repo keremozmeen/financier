@@ -49,6 +49,7 @@ Work phase by phase. Finish each phase with passing checks and a pull request (o
 - Card limit gauges (SVG) on the dashboard: limit, used, available, utilization color.
 
 ### Phase 2 — Finance core and cash flow
+- Statements and bill payments per `DECISIONS.md` D14: computed statements, upcoming payments with "Mark as paid", full vs. partial payment effect on used and installments, weekend due-date shift.
 - `core/finance`: available limit, utilization, total debt, statement period for a date, due-date calculation, installment schedule, 3/6/12-month liability projection, fixed vs. variable monthly spend.
 - Dashboard: cash-flow bar chart (Recharts) with 3/6/12 toggle, upcoming payments list, recent activity.
 - Due-soon banner, app badge, and `.ics` calendar export for due dates.
