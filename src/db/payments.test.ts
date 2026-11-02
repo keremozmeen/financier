@@ -133,7 +133,7 @@ describe('paymentsRepo (D14)', () => {
     await expect(paymentsRepo.record(card, bill, 0, today)).rejects.toThrow(RangeError);
     await expect(paymentsRepo.record(card, bill, 1.5, today)).rejects.toThrow(RangeError);
     await expect(
-      paymentsRepo.record(card, { ...bill, total: 0, remaining: 0 }, 100, today),
+      paymentsRepo.record(card, { ...bill, amountDue: 0, remaining: 0 }, 100, today),
     ).rejects.toThrow(RangeError);
     expect(await db.payments.count()).toBe(0);
   });

@@ -14,7 +14,8 @@ export const paymentsRepo = {
   /**
    * Records a payment towards a computed bill (D14). The statement is stored on its
    * first payment, as a snapshot of the bill; it is marked paid, which releases its
-   * installments, once the payments cover the full statement.
+   * installments, once the payments cover the amount due. Paying more than that is
+   * allowed: the excess becomes a credit balance (D15).
    */
   async record(
     card: Pick<Card, 'id' | 'type' | 'currency'>,
@@ -29,7 +30,7 @@ export const paymentsRepo = {
     if (!Number.isSafeInteger(amount) || amount <= 0) {
       throw new RangeError('Payment must be a positive integer in minor units');
     }
-    if (bill.total <= 0) throw new RangeError('This statement has nothing to pay');
+    if (bill.amountDue <= 0) throw new RangeError('This statement has nothing to pay');
 
     const id = newId();
     await db.transaction('rw', db.statements, db.payments, async () => {
@@ -46,8 +47,9 @@ export const paymentsRepo = {
         periodStart: bill.periodStart,
         periodEnd: bill.periodEnd,
         dueDate: bill.dueDate,
-        totalDue: bill.total,
-        paid: isFullyPaid(bill.total, paidAmount),
+        // What the bank asked for after credit (D15); covering it settles the statement.
+        totalDue: bill.amountDue,
+        paid: isFullyPaid(bill.amountDue, paidAmount),
         installments: bill.installments,
       });
       await db.payments.add({

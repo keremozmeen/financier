@@ -31,6 +31,9 @@ export function PaymentForm({
   const [date, setDate] = useState(today);
   const [errors, setErrors] = useState<{ amount?: string; date?: string }>({});
 
+  const typed = parseMoneyInput(amount, card.currency, locale);
+  const excess = typed !== null ? typed - bill.remaining : 0;
+
   function submit(event: FormEvent) {
     event.preventDefault();
     const paid = parseMoneyInput(amount, card.currency, locale);
@@ -54,6 +57,11 @@ export function PaymentForm({
       <p className="text-sm">
         {t('payment.statementTotal', { amount: format.money(bill.total, card.currency) })}
       </p>
+      {bill.creditApplied > 0 && (
+        <p className="text-sm text-success">
+          {t('bill.creditApplied', { amount: format.money(bill.creditApplied, card.currency) })}
+        </p>
+      )}
       <p className="text-sm text-muted">{t('payment.help')}</p>
       <TextField
         label={t('payment.field.amount')}
@@ -62,6 +70,11 @@ export function PaymentForm({
         onChange={setAmount}
         inputMode="decimal"
         autoComplete="off"
+        hint={
+          excess > 0
+            ? t('payment.creditHint', { amount: format.money(excess, card.currency) })
+            : undefined
+        }
       />
       <TextField
         label={t('payment.field.date')}

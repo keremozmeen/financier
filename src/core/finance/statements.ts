@@ -1,4 +1,5 @@
 import type {
+  BalanceOverride,
   Card,
   CreditCard,
   InstallmentPlan,
@@ -19,6 +20,7 @@ import {
   statementMonthFor,
 } from './dates';
 import { splitInstallments } from './installments';
+import { currentOverride } from './overrides';
 
 type CycleDays = Pick<CreditCard, 'statementDay' | 'dueDay'>;
 
@@ -91,28 +93,94 @@ export interface BillingInput {
   /** Statements stored when payments were recorded. */
   statements: readonly BillingStatement[];
   payments: readonly BillingPayment[];
+  /** Bank balance overrides (D11). A negative one is a credit balance (D15). */
+  overrides?: readonly Pick<BalanceOverride, 'balance' | 'currency' | 'asOf' | 'createdAt'>[];
 }
 
 export interface Bill extends StatementPeriod {
   /** Single charges minus refunds in the period. */
   singles: number;
   installments: InstallmentRef[];
-  /** singles + installments, never below zero. */
+  /** singles + installments; negative when refunds exceed charges (D15). */
   total: number;
+  /** Credit carried in from earlier statements and used against this one (D15). */
+  creditApplied: number;
+  /** What the bank asks for: total minus the credit applied, never below zero. */
+  amountDue: number;
   /** Payments recorded against this statement. */
   paidAmount: number;
-  /** total − paidAmount, never below zero. */
+  /** amountDue − paidAmount, never below zero. */
   remaining: number;
+  /** Credit left after this statement, carried into the next one (D15). */
+  creditAfter: number;
   /** The stored statement, once a payment has been recorded. */
   statementId?: string;
 }
 
+/** The statement after `period`. */
+export function nextStatementPeriod(
+  period: StatementPeriod,
+  days: Pick<CreditCard, 'statementDay' | 'dueDay'>,
+): StatementPeriod {
+  return statementPeriodFor(addDays(period.periodEnd, 1), days);
+}
+
+/**
+ * The card's statements in order from the first one with data through `until`, with
+ * credit carried from each statement into the next (D15): overpayments, refunds above
+ * the charges and a negative bank balance override all become credit that reduces the
+ * following bills. With an override, the chain starts at the first statement after its
+ * as-of date and carries the override's credit; earlier statements are covered by it.
+ */
+export function billsThrough(input: BillingInput, until: StatementPeriod): Bill[] {
+  const start = chainStart(input);
+  if (!start || start.period.periodEnd > until.periodEnd) return [settle(until, 0, input)];
+
+  const bills: Bill[] = [];
+  let period = start.period;
+  let credit = start.credit;
+  while (period.periodEnd <= until.periodEnd) {
+    const bill = settle(period, credit, input);
+    bills.push(bill);
+    credit = bill.creditAfter;
+    period = nextStatementPeriod(period, input.card);
+  }
+  return bills;
+}
+
 /**
  * A statement computed from the data (D14): single charges and refunds dated in the
- * period, plus the installments due in its month, minus the payments recorded for it.
- * Only amounts in the card's currency count (D2).
+ * period, plus the installments due in its month, less the credit carried in (D15) and
+ * the payments recorded for it. Only amounts in the card's currency count (D2).
  */
 export function computeBill(period: StatementPeriod, input: BillingInput): Bill {
+  return billsThrough(input, period).at(-1)!;
+}
+
+function chainStart(input: BillingInput): { period: StatementPeriod; credit: number } | null {
+  const { currency } = input.card;
+  const override = currentOverride(
+    (input.overrides ?? []).filter((item) => item.currency === currency),
+  );
+  if (override) {
+    return {
+      period: statementPeriodFor(addDays(override.asOf, 1), input.card),
+      credit: Math.max(-override.balance, 0),
+    };
+  }
+  const dates = [
+    ...input.transactions.filter((tx) => tx.currency === currency).map((tx) => tx.date),
+    ...input.payments.filter((p) => p.currency === currency).map((p) => p.date),
+  ];
+  // A plan's first installment is billed in the statement due in its first due month.
+  const planPeriods = input.plans
+    .filter((plan) => plan.currency === currency)
+    .map((plan) => statementPeriodDueIn(plan.firstDueMonth, input.card).periodStart);
+  const first = [...dates, ...planPeriods].sort()[0];
+  return first ? { period: statementPeriodFor(first, input.card), credit: 0 } : null;
+}
+
+function settle(period: StatementPeriod, creditIn: number, input: BillingInput): Bill {
   const { currency } = input.card;
   const singles = input.transactions
     .filter(
@@ -122,7 +190,7 @@ export function computeBill(period: StatementPeriod, input: BillingInput): Bill 
         tx.date >= period.periodStart &&
         tx.date <= period.periodEnd,
     )
-    .reduce((sum, tx) => sum + tx.amount, 0);
+    .reduce((total, tx) => total + tx.amount, 0);
 
   const installments = input.plans
     .filter((plan) => plan.currency === currency)
@@ -130,7 +198,9 @@ export function computeBill(period: StatementPeriod, input: BillingInput): Bill 
     .filter((item) => item.dueMonth === period.dueMonth)
     .map(({ planId, index, amount }) => ({ planId, index, amount }));
 
-  const total = Math.max(singles + sum(installments), 0);
+  const total = singles + sum(installments);
+  const creditApplied = Math.min(creditIn, Math.max(total, 0));
+  const amountDue = Math.max(total, 0) - creditApplied;
   const stored = input.statements.find((s) => s.periodEnd === period.periodEnd);
   const paidAmount = stored
     ? sum(input.payments.filter((p) => p.statementId === stored.id && p.currency === currency))
@@ -141,8 +211,13 @@ export function computeBill(period: StatementPeriod, input: BillingInput): Bill 
     singles,
     installments,
     total,
+    creditApplied,
+    amountDue,
     paidAmount,
-    remaining: Math.max(total - paidAmount, 0),
+    remaining: Math.max(amountDue - paidAmount, 0),
+    // Unused credit, refunds above the charges and any overpayment carry forward.
+    creditAfter:
+      creditIn - creditApplied + Math.max(-total, 0) + Math.max(paidAmount - amountDue, 0),
     statementId: stored?.id,
   };
 }

@@ -87,3 +87,41 @@ describe('bill payments (D14)', () => {
     expect(screen.queryByRole('button', { name: 'Mark as paid' })).not.toBeInTheDocument();
   });
 });
+
+describe('credit balance (D15)', () => {
+  const figure = (label: string) =>
+    screen.getByText(label, { selector: 'dt' }).nextElementSibling?.textContent;
+
+  it('warns that an overpayment becomes credit and shows it in the figures', async () => {
+    const card = await seedCreditCard();
+    renderApp(`/cards/${card.id}`);
+
+    await user.click(await screen.findByRole('button', { name: 'Mark as paid' }));
+    const amount = screen.getByLabelText('Amount paid');
+    expect(screen.queryByText(/will be added to your card as credit/)).not.toBeInTheDocument();
+    await user.clear(amount);
+    await user.type(amount, '1500');
+    expect(screen.getByText('₺500.00 will be added to your card as credit')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await screen.findByText('Credit', { selector: 'dt' });
+    expect(figure('Credit')).toBe('+₺500.00');
+    expect(figure('Used')).toBe('₺0.00');
+    expect(figure('Available')).toBe('₺50,500.00');
+    expect(screen.getByRole('meter')).toHaveAttribute('aria-valuenow', '0');
+  });
+
+  it('records a credit balance from the bank balance form', async () => {
+    const card = await seedCreditCard();
+    renderApp(`/cards/${card.id}`);
+
+    await user.click(await screen.findByRole('button', { name: 'Update balance' }));
+    await user.type(screen.getByLabelText('Current balance'), '300');
+    await user.click(screen.getByRole('checkbox', { name: 'The card has a credit balance' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await screen.findByText('Credit', { selector: 'dt' });
+    expect(figure('Credit')).toBe('+₺300.00');
+    expect(figure('Available')).toBe('₺50,300.00');
+  });
+});

@@ -1,4 +1,5 @@
-import { computeCardUsage, currentOverride, utilizationLevel, type CardUsageInput } from './usage';
+import { currentOverride } from './overrides';
+import { computeCardUsage, utilizationLevel, type CardUsageInput } from './usage';
 
 const TL = (lira: number) => lira * 100;
 const card = { limit: TL(50_000), currency: 'TRY' };
@@ -30,6 +31,7 @@ describe('computeCardUsage without an override', () => {
   it('is all limit available for an empty card', () => {
     expect(usage({})).toEqual({
       used: 0,
+      credit: 0,
       available: TL(50_000),
       overLimit: false,
       utilization: 0,

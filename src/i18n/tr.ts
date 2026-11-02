@@ -63,6 +63,7 @@ export const tr: Record<MessageKey, string> = {
   'gauge.label': '{name}: limitin {percent} kullanıldı',
   'gauge.used': 'Kullanılan',
   'gauge.available': 'Kullanılabilir',
+  'gauge.credit': 'Fazla ödeme',
   'gauge.limit': 'Limit',
 
   'cards.full.hint':
@@ -120,6 +121,9 @@ export const tr: Record<MessageKey, string> = {
   'balance.help':
     'Bankacılık uygulamanın bu kart için gösterdiği borcu gir. Bu tarih ve öncesindeki kayıtlar bu tutara dahil sayılır.',
   'balance.field.amount': 'Güncel borç',
+  'balance.field.credit': 'Kartta alacak var',
+  'balance.field.credit.hint':
+    'Bankacılık uygulaman kartta alacak gösteriyorsa (borcundan fazla ödediysen) işaretle.',
   'balance.field.asOf': 'Tarih',
   'balance.error.amount': 'Bakiyeyi gir, örneğin 7.500,00 (ödendiyse 0).',
   'balance.error.asOf': 'Gelecekte olmayan bir tarih seç.',
@@ -128,6 +132,7 @@ export const tr: Record<MessageKey, string> = {
   'bill.due': 'Son ödeme {date}',
   'bill.moved': 'Hafta sonundan pazartesiye kaydı',
   'bill.period': 'Ekstre dönemi {start} – {end}',
+  'bill.creditApplied': '{amount} alacağınla karşılandı',
   'bill.paidSoFar': '{amount} ödendi',
   'bill.nothingDue': 'Bu ekstrede ödenecek bir tutar yok.',
   'bill.markPaid': 'Ödendi olarak işaretle',
@@ -137,6 +142,7 @@ export const tr: Record<MessageKey, string> = {
     'Ekstre tutarının tamamı yazıldı. Asgari ya da kısmi bir ödeme için değiştirebilirsin. Bu ekstredeki taksitler yalnızca tamamı ödendiğinde ödenmiş sayılır.',
   'payment.statementTotal': 'Ekstre tutarı: {amount}',
   'payment.field.amount': 'Ödenen tutar',
+  'payment.creditHint': '{amount} kartına alacak olarak eklenecek',
   'payment.field.date': 'Ödeme tarihi',
   'payment.error.amount': 'Ödediğin tutarı gir, örneğin 1.250,00.',
   'payment.error.date': 'Gelecekte olmayan bir tarih seç.',

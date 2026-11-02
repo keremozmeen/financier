@@ -210,9 +210,13 @@ describe('balanceOverridesRepo', () => {
     expect(history.map((o) => o.balance)).toEqual([0, 750_000]);
   });
 
-  it('rejects negative balances', async () => {
+  it('stores a negative balance as a credit balance and rejects fractions (D15)', async () => {
     const card = await createCard();
-    await expect(balanceOverridesRepo.add(card, -1, '2026-11-01')).rejects.toThrow(RangeError);
+    await balanceOverridesRepo.add(card, -300_000, '2026-11-01');
+    expect((await balanceOverridesRepo.listByCard(card.id))[0]).toMatchObject({
+      balance: -300_000,
+    });
+    await expect(balanceOverridesRepo.add(card, 1.5, '2026-11-01')).rejects.toThrow(RangeError);
   });
 });
 

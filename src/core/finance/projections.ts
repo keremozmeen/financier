@@ -1,6 +1,6 @@
 import type { Card, CurrencyCode, IsoMonth } from '../../types/domain';
 import { addMonths } from './dates';
-import { computeBill, statementPeriodDueIn, type BillingInput } from './statements';
+import { billsThrough, computeBill, statementPeriodDueIn, type BillingInput } from './statements';
 import type { CardUsage } from './usage';
 
 export interface MonthAmount {
@@ -11,7 +11,8 @@ export interface MonthAmount {
 /**
  * What a credit card will ask for in each of `months` due months from `fromMonth`:
  * the unpaid remainder of the statement due that month, which holds the installments
- * due then plus any single charges already recorded in its period (D14). Months are
+ * due then plus any single charges already recorded in its period (D14), less credit
+ * carried in from earlier months (D15). Months are
  * the scheduled due months, before the weekend shift.
  */
 export function projectLiabilities(
@@ -19,10 +20,16 @@ export function projectLiabilities(
   fromMonth: IsoMonth,
   months: number,
 ): MonthAmount[] {
-  return Array.from({ length: months }, (_, i) => {
-    const month = addMonths(fromMonth, i);
-    return { month, amount: computeBill(statementPeriodDueIn(month, input.card), input).remaining };
-  });
+  if (months <= 0) return [];
+  const periods = Array.from({ length: months }, (_, i) =>
+    statementPeriodDueIn(addMonths(fromMonth, i), input.card),
+  );
+  // One credit chain through the last month, so credit carries into later months (D15).
+  const chain = new Map(billsThrough(input, periods.at(-1)!).map((bill) => [bill.periodEnd, bill]));
+  return periods.map((period) => ({
+    month: period.dueMonth,
+    amount: (chain.get(period.periodEnd) ?? computeBill(period, input)).remaining,
+  }));
 }
 
 /** Liability projection across all credit cards, per currency (D2). Debit cards owe nothing (D13). */

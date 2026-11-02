@@ -18,8 +18,9 @@ export const balanceOverridesRepo = {
     if (card.type !== 'credit') {
       throw new RangeError('Only credit cards have a bank balance override (D13)');
     }
-    if (!Number.isSafeInteger(balance) || balance < 0) {
-      throw new RangeError('Balance must be a non-negative integer in minor units');
+    // A negative balance is a credit balance on the card (D15).
+    if (!Number.isSafeInteger(balance)) {
+      throw new RangeError('Balance must be an integer in minor units');
     }
     const id = newId();
     await db.balanceOverrides.add({

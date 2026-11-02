@@ -61,6 +61,7 @@ export const en = {
   'gauge.label': '{name}: {percent} of limit used',
   'gauge.used': 'Used',
   'gauge.available': 'Available',
+  'gauge.credit': 'Credit',
   'gauge.limit': 'Limit',
 
   'cards.full.hint':
@@ -118,6 +119,9 @@ export const en = {
   'balance.help':
     'Enter the debt your banking app shows for this card. Entries dated on or before this day are treated as part of it.',
   'balance.field.amount': 'Current balance',
+  'balance.field.credit': 'The card has a credit balance',
+  'balance.field.credit.hint':
+    'Tick this when your banking app shows money owed to you (you paid more than you owed).',
   'balance.field.asOf': 'As of',
   'balance.error.amount': 'Enter the balance, e.g. 7.500,00 (0 if paid off).',
   'balance.error.asOf': 'Pick a date that is not in the future.',
@@ -126,6 +130,7 @@ export const en = {
   'bill.due': 'Due {date}',
   'bill.moved': 'Moved from the weekend to Monday',
   'bill.period': 'Statement {start} – {end}',
+  'bill.creditApplied': '{amount} covered by your credit',
   'bill.paidSoFar': '{amount} paid so far',
   'bill.nothingDue': 'Nothing to pay on this statement.',
   'bill.markPaid': 'Mark as paid',
@@ -135,6 +140,7 @@ export const en = {
     'The full statement amount is filled in. Change it to record a minimum or partial payment. Only a full payment marks the installments in this statement as paid.',
   'payment.statementTotal': 'Statement total: {amount}',
   'payment.field.amount': 'Amount paid',
+  'payment.creditHint': '{amount} will be added to your card as credit',
   'payment.field.date': 'Payment date',
   'payment.error.amount': 'Enter the amount you paid, e.g. 1.250,00.',
   'payment.error.date': 'Pick a date that is not in the future.',

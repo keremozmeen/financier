@@ -4,6 +4,7 @@ export * from './dates';
 export * from './fingerprint';
 export * from './installments';
 export * from './money';
+export * from './overrides';
 export * from './projections';
 export * from './spend';
 export * from './spending';

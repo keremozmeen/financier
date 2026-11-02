@@ -41,6 +41,11 @@ export function NextBill({
             end: format.date(bill.periodEnd),
           })}
         </p>
+        {bill.creditApplied > 0 && (
+          <p className="text-success">
+            {t('bill.creditApplied', { amount: format.money(bill.creditApplied, card.currency) })}
+          </p>
+        )}
         {bill.paidAmount > 0 && (
           <p className="text-muted">
             {t('bill.paidSoFar', { amount: format.money(bill.paidAmount, card.currency) })}

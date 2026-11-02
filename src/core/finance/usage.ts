@@ -6,6 +6,7 @@ import type {
   Transaction,
 } from '../../types/domain';
 import { daysBetween } from './dates';
+import { currentOverride } from './overrides';
 import { paidInstallments, sum, type BillingPayment, type BillingStatement } from './statements';
 
 /** An override older than this many days should be refreshed (D11). */
@@ -17,8 +18,11 @@ export type UsageSource =
   { kind: 'calculated' } | { kind: 'override'; asOf: IsoDate; stale: boolean };
 
 export interface CardUsage {
+  /** Debt on the card, never below zero. */
   used: number;
-  /** Never negative: 0 when the card is full. */
+  /** Credit balance from overpayments or refunds, never below zero (D15). */
+  credit: number;
+  /** limit − used + credit; never negative: 0 when the card is full. */
   available: number;
   /** Used exceeds the limit: the data is out of date and the card is shown as full (D12). */
   overLimit: boolean;
@@ -48,17 +52,6 @@ export type UsagePlan = Pick<
   InstallmentPlan,
   'purchaseDate' | 'totalAmount' | 'count' | 'currency'
 > & { id?: string };
-
-/** The current override is the most recently entered one; older ones are history. */
-export function currentOverride<T extends Pick<BalanceOverride, 'createdAt'>>(
-  overrides: readonly T[],
-): T | undefined {
-  let latest: T | undefined;
-  for (const override of overrides) {
-    if (!latest || override.createdAt > latest.createdAt) latest = override;
-  }
-  return latest;
-}
 
 /** Card limit usage per D11, including installment blocking and the balance override. */
 export function computeCardUsage(input: CardUsageInput): CardUsage {
@@ -95,13 +88,16 @@ export function computeCardUsage(input: CardUsageInput): CardUsage {
     }
   }
 
-  // Refunds can exceed charges; a credit balance still means nothing is used.
-  const used = Math.max((override?.balance ?? 0) + singles + plans - paid, 0);
-  const overLimit = used > card.limit;
+  // The signed balance: below zero the bank owes the user a credit balance, which adds
+  // to the spending power without changing the limit (D15).
+  const balance = (override?.balance ?? 0) + singles + plans - paid;
+  const used = Math.max(balance, 0);
+  const overLimit = balance > card.limit;
 
   return {
     used,
-    available: overLimit ? 0 : card.limit - used,
+    credit: Math.max(-balance, 0),
+    available: overLimit ? 0 : card.limit - balance,
     overLimit,
     utilization: card.limit > 0 ? Math.min(used / card.limit, 1) : null,
     level: utilizationLevel(used, card.limit),

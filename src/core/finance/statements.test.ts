@@ -187,12 +187,17 @@ describe('computeBill', () => {
     expect(bill).toMatchObject({ statementId: 's1', paidAmount: TL(300), remaining: TL(900) });
   });
 
-  it('never goes below zero when refunds exceed charges', () => {
+  it('turns refunds above the charges into credit instead of a negative amount due (D15)', () => {
     const bill = computeBill(
       period,
       billing({ transactions: [charge('2026-11-01', -500)], plans: [] }),
     );
-    expect(bill.total).toBe(0);
+    expect(bill).toMatchObject({
+      total: TL(-500),
+      amountDue: 0,
+      remaining: 0,
+      creditAfter: TL(500),
+    });
   });
 
   it('ignores other currencies', () => {

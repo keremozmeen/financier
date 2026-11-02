@@ -4,6 +4,7 @@ import { useToday } from '../../hooks/useFinance';
 import { useI18n } from '../../i18n';
 import type { CreditCard, IsoDate } from '../../types/domain';
 import { Button } from '../ui/Button';
+import { Checkbox } from '../ui/Checkbox';
 import { TextField } from '../ui/TextField';
 
 export function BalanceOverrideForm({
@@ -19,6 +20,7 @@ export function BalanceOverrideForm({
   const today = useToday();
   const [amount, setAmount] = useState('');
   const [asOf, setAsOf] = useState(today);
+  const [isCredit, setIsCredit] = useState(false);
   const [errors, setErrors] = useState<{ amount?: string; asOf?: string }>({});
 
   function submit(event: FormEvent) {
@@ -30,7 +32,8 @@ export function BalanceOverrideForm({
     };
     setErrors(next);
     if (balance === null || next.asOf) return;
-    onSubmit(balance, asOf);
+    // A credit balance is stored as a negative balance (D15).
+    onSubmit(isCredit ? -balance : balance, asOf);
   }
 
   return (
@@ -50,6 +53,12 @@ export function BalanceOverrideForm({
         inputMode="decimal"
         placeholder={locale === 'tr' ? '7.500,00' : '7,500.00'}
         autoComplete="off"
+      />
+      <Checkbox
+        label={t('balance.field.credit')}
+        hint={t('balance.field.credit.hint')}
+        checked={isCredit}
+        onChange={setIsCredit}
       />
       <TextField
         label={t('balance.field.asOf')}
