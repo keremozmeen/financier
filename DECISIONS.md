@@ -44,7 +44,9 @@ This file records the decisions that turn the open questions in `WORKFLOWS.md` i
 
 **Rules that apply to every import path:**
 - Nothing is saved until the user confirms the **review screen**, which shows each parsed row with a confidence flag and lets the user edit or drop it.
-- **Duplicate protection:** each transaction gets a fingerprint (`cardId + date + amount + normalized description`); re-importing the same statement does not create duplicates.
+- **Duplicate protection:** each transaction gets a fingerprint (`cardId + date + amount + normalized description`); re-importing the same statement does not create duplicates. Fingerprint dedup applies to imports only: manual entries are never deduplicated, so two identical dinners on the same card and day both save.
+- **Imports vs. manual entries:** at import review (Phase 3), an imported charge that matches a manual entry (same card, same amount, date within ±3 days) is flagged "Already logged" and merged by default, taking the bank's description if the manual entry has none. The user can unmerge it on the review screen.
+- **Manual descriptions are optional.** An entry without one is shown as "Charge", "Refund" or "Installment purchase" (from `src/i18n/`).
 - The PDF.js worker is **bundled locally** (no CDN), and password-protected PDFs prompt for the password locally.
 - Itemized receipt splitting (Module 2's invoice feature) is **deferred to after v1**. It is a large feature and not needed for the core value.
 
