@@ -1,0 +1,32 @@
+import type { BalanceOverride, Card, IsoDate } from '../types/domain';
+import { db, newId } from './database';
+
+export const balanceOverridesRepo = {
+  /** Full history, newest entry first. The first one is the current override (D11). */
+  async listByCard(cardId: string): Promise<BalanceOverride[]> {
+    const rows = await db.balanceOverrides.where('cardId').equals(cardId).toArray();
+    return rows.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  },
+
+  /** Records a new bank balance; it replaces the previous one as the current override. */
+  async add(
+    card: Pick<Card, 'id' | 'currency'>,
+    balance: number,
+    asOf: IsoDate,
+    now: Date = new Date(),
+  ): Promise<string> {
+    if (!Number.isSafeInteger(balance) || balance < 0) {
+      throw new RangeError('Balance must be a non-negative integer in minor units');
+    }
+    const id = newId();
+    await db.balanceOverrides.add({
+      id,
+      cardId: card.id,
+      balance,
+      currency: card.currency,
+      asOf,
+      createdAt: now.toISOString(),
+    });
+    return id;
+  },
+};
