@@ -14,7 +14,7 @@ describe('minorUnitDigits', () => {
 describe('formatMoney', () => {
   it('formats per locale (D2)', () => {
     expect(plain(formatMoney(123456, 'TRY', 'tr'))).toBe('₺1.234,56');
-    expect(plain(formatMoney(123456, 'TRY', 'en'))).toBe('TRY 1,234.56');
+    expect(plain(formatMoney(123456, 'TRY', 'en'))).toBe('₺1,234.56');
     expect(plain(formatMoney(123456, 'USD', 'en'))).toBe('$1,234.56');
   });
 

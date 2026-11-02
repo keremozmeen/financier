@@ -18,9 +18,11 @@ export function minorUnitDigits(currency: CurrencyCode): number {
 /** Formats minor units for display, e.g. 123456 TRY → "₺1,234.56" (en) or "₺1.234,56" (tr). */
 export function formatMoney(amount: number, currency: CurrencyCode, locale: string): string {
   assertMinorUnits(amount);
-  return new Intl.NumberFormat(locale, { style: 'currency', currency }).format(
-    toDecimalString(amount, currency) as unknown as number,
-  );
+  return new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency,
+    currencyDisplay: 'narrowSymbol',
+  }).format(toDecimalString(amount, currency) as unknown as number);
 }
 
 /** Formats minor units as a plain number for an input field, e.g. 123456 → "1234,56" (tr). */

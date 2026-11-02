@@ -1,11 +1,11 @@
 import { createContext, useContext } from 'react';
 import type { MessageKey } from './en';
-import type { Locale } from './locales';
+import type { Locale, MessageParams } from './locales';
 
 export interface I18nValue {
   locale: Locale;
   setLocale: (locale: Locale) => void;
-  t: (key: MessageKey) => string;
+  t: (key: MessageKey, params?: MessageParams) => string;
 }
 
 export const I18nContext = createContext<I18nValue | null>(null);
