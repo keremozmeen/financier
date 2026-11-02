@@ -1,25 +1,38 @@
 import { TriangleAlert } from 'lucide-react';
-import type { CardUsage } from '../../core/finance';
+import type { CardSummary } from '../../db';
+import { useFormat } from '../../hooks/useFormat';
 import { useT } from '../../i18n';
-import type { Card } from '../../types/domain';
 import { LimitGauge } from './LimitGauge';
 import { UsageFigures } from './UsageFigures';
 
 /**
- * Gauge plus figures, laid out by the panel's own width (a container query), so it
- * works the same in the dashboard grid and on the card screen: figures sit beside the
- * gauge when there is room and stack under it when the card is narrow.
+ * A card at a glance. Credit cards show the limit gauge plus figures, laid out by the
+ * panel's own width (a container query): figures beside the gauge when there is room,
+ * stacked under it when the card is narrow. Debit cards have no limit, so they show
+ * this month's spending instead (D13).
  */
 export function CardUsagePanel({
-  card,
-  usage,
+  summary,
   gaugeSize = 112,
 }: {
-  card: Card;
-  usage: CardUsage;
+  summary: CardSummary;
   gaugeSize?: number;
 }) {
   const t = useT();
+  const format = useFormat();
+
+  if (!('usage' in summary)) {
+    return (
+      <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
+        <p className="text-sm text-muted">{t('debit.thisMonth')}</p>
+        <p className="text-2xl font-semibold whitespace-nowrap tabular-nums">
+          {format.money(summary.monthSpending, summary.card.currency)}
+        </p>
+      </div>
+    );
+  }
+
+  const { card, usage } = summary;
   return (
     <div className="@container">
       <div className="flex flex-col items-center gap-4 @min-[23rem]:flex-row @min-[23rem]:gap-6">

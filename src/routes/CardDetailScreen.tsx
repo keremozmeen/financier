@@ -46,7 +46,8 @@ export function CardDetailScreen() {
     );
   }
 
-  const { card, usage, transactions, plans } = detail;
+  const { summary, transactions, plans } = detail;
+  const { card } = summary;
 
   async function archive(archived: boolean) {
     await cardsRepo.setArchived(card.id, archived);
@@ -76,26 +77,33 @@ export function CardDetailScreen() {
       <div className="rounded-xl border border-border bg-surface p-4">
         <CardTitle card={card} showName={false} />
         <div className="mt-3">
-          <CardUsagePanel card={card} usage={usage} gaugeSize={128} />
+          <CardUsagePanel summary={summary} gaugeSize={128} />
         </div>
-        <UsageSource usage={usage} />
+        {'usage' in summary ? (
+          <UsageSource usage={summary.usage} />
+        ) : (
+          <p className="mt-3 text-xs text-muted">{t('debit.note')}</p>
+        )}
       </div>
 
-      {editingBalance ? (
+      {'usage' in summary && editingBalance ? (
         <BalanceOverrideForm
-          card={card}
+          card={summary.card}
           onCancel={() => setEditingBalance(false)}
           onSubmit={async (balance, asOf) => {
-            await balanceOverridesRepo.add(card, balance, asOf);
+            await balanceOverridesRepo.add(summary.card, balance, asOf);
             setEditingBalance(false);
           }}
         />
       ) : (
-        <div className="grid grid-cols-2 gap-2">
-          <Button onClick={() => setEditingBalance(true)}>
-            <RefreshCw aria-hidden="true" size={18} />
-            {t('balance.update')}
-          </Button>
+        <div className={`grid gap-2 ${card.type === 'credit' ? 'grid-cols-2' : ''}`}>
+          {/* Debit cards have no bank balance override (D13). */}
+          {card.type === 'credit' && (
+            <Button onClick={() => setEditingBalance(true)}>
+              <RefreshCw aria-hidden="true" size={18} />
+              {t('balance.update')}
+            </Button>
+          )}
           <ButtonLink to={`/cards/${card.id}/add`} variant="primary">
             <Plus aria-hidden="true" size={18} />
             {t('tx.add')}

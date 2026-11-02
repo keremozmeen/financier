@@ -48,7 +48,7 @@ export function EditCardScreen() {
       ) : (
         <CardForm
           initial={data.card}
-          currencyLocked={data.hasRecords}
+          hasEntries={data.hasRecords}
           onSubmit={save}
           onCancel={() => navigate(-1)}
         />

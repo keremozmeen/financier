@@ -22,7 +22,7 @@ export const tr: Record<MessageKey, string> = {
   'common.loading': 'Yükleniyor…',
   'common.optional': 'isteğe bağlı',
 
-  'dashboard.gaugesTitle': 'Kart limitleri',
+  'dashboard.gaugesTitle': 'Kartların',
   'dashboard.empty.title': 'Henüz kart yok',
   'dashboard.empty.body': 'Bir kredi kartı ekle, Kipp limitini senin için takip etsin.',
 
@@ -41,6 +41,15 @@ export const tr: Record<MessageKey, string> = {
   'cards.notFound': 'Bu kart artık mevcut değil.',
   'cards.newTitle': 'Yeni kart',
   'cards.editTitle': 'Kartı düzenle',
+  'cards.type': 'Kart türü',
+  'cards.type.credit': 'Kredi kartı',
+  'cards.type.debit': 'Banka kartı',
+  'cards.type.locked': 'Kartta kayıt olduğu için kart türü değiştirilemez.',
+  'cards.preview': 'Sonraki hesap kesim: {statement} · Son ödeme: {due}',
+  'cards.sameDayHint':
+    "Türkiye'de son ödeme günü genellikle hesap kesimden yaklaşık 10 gün sonradır.",
+  'debit.thisMonth': 'Bu ayki harcama',
+  'debit.note': 'Banka kartı harcamaları toplamlarına dahil edilir. Hesap bakiyesi takip edilmez.',
 
   'cards.field.name': 'Kart adı',
   'cards.field.name.hint': 'Örneğin "Bonus" ya da "World".',

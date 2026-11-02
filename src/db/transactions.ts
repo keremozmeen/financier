@@ -3,7 +3,7 @@ import type { Card, InstallmentPlan, IsoDate, Transaction } from '../types/domai
 import { db, newId } from './database';
 
 export interface ManualEntry {
-  card: Pick<Card, 'id' | 'currency' | 'statementDay' | 'dueDay'>;
+  card: Card;
   date: IsoDate;
   description: string;
   /** Positive minor units. */
@@ -55,6 +55,9 @@ export const transactionsRepo = {
     if (installments === 1) {
       await db.transactions.add(transaction);
       return transaction.id;
+    }
+    if (card.type !== 'credit') {
+      throw new RangeError('Debit cards have no installments (D13)');
     }
 
     const plan: InstallmentPlan = {

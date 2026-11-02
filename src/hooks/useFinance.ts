@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useState } from 'react';
 import { todayIso } from '../core/finance';
-import { cardsRepo, loadCardsWithUsage, loadUsageInputs, transactionsRepo } from '../db';
+import { cardsRepo, loadCardSummaries, loadUsageInputs, transactionsRepo } from '../db';
 
 // Live queries re-run whenever the tables they read change.
 // `undefined` means still loading; `null` means not found.
@@ -15,10 +15,10 @@ export function useCards({ includeArchived = false } = {}) {
   return useLiveQuery(() => cardsRepo.list({ includeArchived }), [includeArchived]);
 }
 
-/** Active cards with their D11 usage. */
-export function useCardsWithUsage() {
+/** Active cards with their summary: limit usage for credit, this month's spending for debit. */
+export function useCardSummaries() {
   const today = useToday();
-  return useLiveQuery(async () => loadCardsWithUsage(await cardsRepo.list(), today), [today]);
+  return useLiveQuery(async () => loadCardSummaries(await cardsRepo.list(), today), [today]);
 }
 
 export function useCardDetail(id: string) {
@@ -26,21 +26,22 @@ export function useCardDetail(id: string) {
   return useLiveQuery(async () => {
     const card = await cardsRepo.get(id);
     if (!card) return null;
-    const [[withUsage], transactions, plans] = await Promise.all([
-      loadCardsWithUsage([card], today),
+    const [[summary], transactions, plans] = await Promise.all([
+      loadCardSummaries([card], today),
       transactionsRepo.listByCard(id),
       transactionsRepo.listPlansByCard(id),
     ]);
-    return { card, usage: withUsage!.usage, transactions, plans };
+    return { summary: summary!, transactions, plans };
   }, [id, today]);
 }
 
-/** A card plus the usage input D12 checks new entries against. */
+/** A card plus, for credit cards, the usage input D12 checks new entries against. */
 export function useCardForEntry(id: string) {
   const today = useToday();
   return useLiveQuery(async () => {
     const card = await cardsRepo.get(id);
     if (!card) return null;
+    if (card.type === 'debit') return { card, usageInput: undefined };
     const [usageInput] = await loadUsageInputs([card], today);
     return { card, usageInput: usageInput! };
   }, [id, today]);

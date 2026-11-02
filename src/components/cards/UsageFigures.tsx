@@ -1,14 +1,14 @@
 import type { CardUsage } from '../../core/finance';
 import { useFormat } from '../../hooks/useFormat';
 import { useT } from '../../i18n';
-import type { Card } from '../../types/domain';
+import type { CreditCard } from '../../types/domain';
 import { LEVEL_TEXT } from './colors';
 
 /**
  * Used / available / limit figures. Amounts never truncate or overflow: when a row is
  * too narrow for label and amount side by side, the amount wraps under its label.
  */
-export function UsageFigures({ card, usage }: { card: Card; usage: CardUsage }) {
+export function UsageFigures({ card, usage }: { card: CreditCard; usage: CardUsage }) {
   const t = useT();
   const format = useFormat();
   const rows = [

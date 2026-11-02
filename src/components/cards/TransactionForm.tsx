@@ -20,19 +20,22 @@ import { SelectField, TextField } from '../ui/TextField';
 type Entry = Omit<ManualEntry, 'card'>;
 type Kind = Entry['kind'];
 
+/** D12 for credit cards: whether the bank would accept a charge, and how to fix stale data. */
+export interface SpendGuard {
+  check: (request: SpendRequest) => SpendCheck;
+  onUpdateBalance: () => void;
+  editLimitTo: string;
+}
+
 export function TransactionForm({
   card,
-  checkSpend,
-  onUpdateBalance,
-  editLimitTo,
+  spendGuard,
   onSubmit,
   onCancel,
 }: {
   card: Card;
-  /** D12: whether the bank would accept this charge given the current available limit. */
-  checkSpend: (request: SpendRequest) => SpendCheck;
-  onUpdateBalance: () => void;
-  editLimitTo: string;
+  /** Credit cards only. Debit cards have no limit, so nothing is blocked (D13). */
+  spendGuard?: SpendGuard;
   onSubmit: (entry: Entry) => void;
   onCancel: () => void;
 }) {
@@ -47,11 +50,14 @@ export function TransactionForm({
   const [errors, setErrors] = useState<{ date?: string; amount?: string }>({});
 
   const parsedAmount = parseMoneyInput(amount, card.currency, locale);
-  const count = kind === 'charge' ? installments : 1;
+  // Installments exist only on credit cards, and only for charges (D11, D13).
+  const canSplit = card.type === 'credit' && kind === 'charge';
+  const count = canSplit ? installments : 1;
   // An installment purchase is checked by its full total: the bank blocks all of it (D11).
-  const spend: SpendCheck = parsedAmount
-    ? checkSpend({ kind, amount: parsedAmount })
-    : { allowed: true };
+  const spend: SpendCheck =
+    spendGuard && parsedAmount
+      ? spendGuard.check({ kind, amount: parsedAmount })
+      : { allowed: true };
 
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -109,7 +115,7 @@ export function TransactionForm({
         value={date}
         onChange={setDate}
       />
-      {kind === 'charge' && (
+      {canSplit && (
         <SelectField
           label={t('tx.field.installments')}
           value={String(installments)}
@@ -131,15 +137,15 @@ export function TransactionForm({
           }))}
         />
       )}
-      {!spend.allowed && (
+      {!spend.allowed && spendGuard && (
         <div role="alert" className="space-y-3 rounded-xl border border-alert/40 bg-alert/10 p-4">
           <p className="flex gap-2 text-sm font-medium">
             <Ban aria-hidden="true" size={18} className="mt-0.5 shrink-0 text-alert" />
             {t('spend.blocked', { available: format.money(spend.available, card.currency) })}
           </p>
           <div className="grid gap-2 sm:grid-cols-2">
-            <Button onClick={onUpdateBalance}>{t('spend.updateBalance')}</Button>
-            <ButtonLink to={editLimitTo}>{t('spend.editLimit')}</ButtonLink>
+            <Button onClick={spendGuard.onUpdateBalance}>{t('spend.updateBalance')}</Button>
+            <ButtonLink to={spendGuard.editLimitTo}>{t('spend.editLimit')}</ButtonLink>
           </div>
         </div>
       )}

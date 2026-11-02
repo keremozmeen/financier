@@ -4,14 +4,14 @@ import { CardTitle } from '../components/cards/CardTitle';
 import { LEVEL_TEXT } from '../components/cards/colors';
 import { ButtonLink } from '../components/ui/Button';
 import { ScreenHeader } from '../components/ui/ScreenHeader';
-import { useCards, useCardsWithUsage } from '../hooks/useFinance';
+import { useCards, useCardSummaries } from '../hooks/useFinance';
 import { useFormat } from '../hooks/useFormat';
 import { useT } from '../i18n';
 
 export function CardsScreen() {
   const t = useT();
   const format = useFormat();
-  const active = useCardsWithUsage();
+  const active = useCardSummaries();
   const archived = useCards({ includeArchived: true })?.filter((card) => card.archived);
 
   return (
@@ -33,20 +33,32 @@ export function CardsScreen() {
         </p>
       ) : (
         <ul className="divide-y divide-border rounded-xl border border-border bg-surface">
-          {active.map(({ card, usage }) => (
-            <li key={card.id}>
-              <Link to={`/cards/${card.id}`} className="flex min-h-16 items-center gap-3 px-4 py-3">
+          {active.map((summary) => (
+            <li key={summary.card.id}>
+              <Link
+                to={`/cards/${summary.card.id}`}
+                className="flex min-h-16 items-center gap-3 px-4 py-3"
+              >
                 <div className="min-w-0 flex-1">
-                  <CardTitle card={card} />
+                  <CardTitle card={summary.card} />
                 </div>
-                <div className="text-right text-sm">
-                  <p className={`font-semibold tabular-nums ${LEVEL_TEXT[usage.level]}`}>
-                    {format.money(usage.used, card.currency)}
-                  </p>
-                  <p className="text-xs text-muted tabular-nums">
-                    / {format.money(card.limit, card.currency)}
-                  </p>
-                </div>
+                {'usage' in summary ? (
+                  <div className="text-right text-sm">
+                    <p className={`font-semibold tabular-nums ${LEVEL_TEXT[summary.usage.level]}`}>
+                      {format.money(summary.usage.used, summary.card.currency)}
+                    </p>
+                    <p className="text-xs text-muted tabular-nums">
+                      / {format.money(summary.card.limit, summary.card.currency)}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="text-right text-sm">
+                    <p className="font-semibold tabular-nums">
+                      {format.money(summary.monthSpending, summary.card.currency)}
+                    </p>
+                    <p className="text-xs text-muted">{t('debit.thisMonth')}</p>
+                  </div>
+                )}
                 <ChevronRight aria-hidden="true" size={18} className="text-muted" />
               </Link>
             </li>

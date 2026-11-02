@@ -1,6 +1,7 @@
+import { useT } from '../../i18n';
 import type { Card } from '../../types/domain';
 
-/** Card name with its color dot and "Bank •••• 1234" subtitle. */
+/** Card name with its color dot and "Bank · •••• 1234" subtitle; debit cards say so (D13). */
 export function CardTitle({
   card,
   as: Tag = 'h2',
@@ -11,7 +12,14 @@ export function CardTitle({
   /** False where the screen heading already shows the name. */
   showName?: boolean;
 }) {
-  const subtitle = [card.bank, card.last4 && `•••• ${card.last4}`].filter(Boolean).join(' · ');
+  const t = useT();
+  const subtitle = [
+    card.bank,
+    card.last4 && `•••• ${card.last4}`,
+    card.type === 'debit' && t('cards.type.debit'),
+  ]
+    .filter(Boolean)
+    .join(' · ');
   if (!showName && !subtitle) return null;
   return (
     <div className="flex min-w-0 items-center gap-3">

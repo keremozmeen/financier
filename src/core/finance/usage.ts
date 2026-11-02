@@ -1,6 +1,6 @@
 import type {
   BalanceOverride,
-  Card,
+  CreditCard,
   InstallmentPlan,
   IsoDate,
   Transaction,
@@ -29,7 +29,7 @@ export interface CardUsage {
 }
 
 export interface CardUsageInput {
-  card: Pick<Card, 'limit' | 'currency'>;
+  card: Pick<CreditCard, 'limit' | 'currency'>;
   transactions: readonly UsageTransaction[];
   plans: readonly UsagePlan[];
   overrides: readonly Pick<BalanceOverride, 'balance' | 'currency' | 'asOf' | 'createdAt'>[];

@@ -12,20 +12,34 @@ export type IsoTimestamp = string;
 
 export type TransactionSource = 'manual' | 'csv' | 'pdf';
 
-export interface Card {
+export type CardType = 'credit' | 'debit';
+
+interface CardBase {
   id: string;
   name: string;
   bank: string;
   last4: string;
   currency: CurrencyCode;
+  color: string;
+  archived: boolean;
+}
+
+/** Kredi kartı: has a limit and a monthly statement (D11, D12). */
+export interface CreditCard extends CardBase {
+  type: 'credit';
   limit: number;
   /** Day of month the statement closes (1–31, clamped to month length). */
   statementDay: number;
   /** Day of month the payment is due (1–31, clamped to month length). */
   dueDay: number;
-  color: string;
-  archived: boolean;
 }
+
+/** Banka kartı: spends straight from an account whose balance the app does not know (D13). */
+export interface DebitCard extends CardBase {
+  type: 'debit';
+}
+
+export type Card = CreditCard | DebitCard;
 
 export interface Transaction {
   id: string;

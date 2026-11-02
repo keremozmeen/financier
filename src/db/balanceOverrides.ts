@@ -10,11 +10,14 @@ export const balanceOverridesRepo = {
 
   /** Records a new bank balance; it replaces the previous one as the current override. */
   async add(
-    card: Pick<Card, 'id' | 'currency'>,
+    card: Pick<Card, 'id' | 'currency' | 'type'>,
     balance: number,
     asOf: IsoDate,
     now: Date = new Date(),
   ): Promise<string> {
+    if (card.type !== 'credit') {
+      throw new RangeError('Only credit cards have a bank balance override (D13)');
+    }
     if (!Number.isSafeInteger(balance) || balance < 0) {
       throw new RangeError('Balance must be a non-negative integer in minor units');
     }

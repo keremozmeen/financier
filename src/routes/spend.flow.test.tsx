@@ -9,6 +9,7 @@ const TL = (lira: number) => lira * 100;
 
 async function seedCard(usedLira = 0) {
   const id = await cardsRepo.create({
+    type: 'credit',
     name: 'Bonus',
     bank: 'Garanti BBVA',
     last4: '',
