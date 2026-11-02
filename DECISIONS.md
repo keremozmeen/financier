@@ -210,7 +210,7 @@ D11 deferred payments to Phase 2. Credit cards only (D13).
 
 ---
 
-## Data model (v2)
+## Data model (v3)
 
 | Table | Key fields |
 | :--- | :--- |
@@ -218,7 +218,8 @@ D11 deferred payments to Phase 2. Credit cards only (D13).
 | `transactions` | `id`, `cardId`, `date`, `description`, `normalizedMerchant`, `amount`, `currency`, `category`, `installmentPlanId?`, `fingerprint`, `source` (`manual` / `csv` / `pdf`), `importId?` |
 | `installmentPlans` | `id`, `cardId`, `description`, `totalAmount`, `count`, `purchaseDate`, `firstDueMonth`, `currency` |
 | `balanceOverrides` | `id`, `cardId`, `balance`, `currency`, `asOf`, `createdAt` (history of bank balances entered by the user, D11) |
-| `statements` | `id`, `cardId`, `periodStart`, `periodEnd`, `dueDate`, `totalDue`, `minimumDue`, `paid` |
+| `statements` | `id`, `cardId`, `periodStart`, `periodEnd`, `dueDate`, `totalDue`, `minimumDue?`, `paid`, `installments` (stored when a payment is recorded, D14) |
+| `payments` | `id`, `cardId`, `statementId`, `date`, `amount`, `currency`, `createdAt` (bill payments, credit cards only, D14; added in schema v3) |
 | `subscriptions` | `id`, `normalizedMerchant`, `cadenceDays`, `lastAmount`, `previousAmount`, `status` (`active` / `ignored` / `cancelled`), `confirmedByUser` |
 | `importProfiles` | `id`, `name`, `bank`, `kind` (`csv` / `pdf`), `headerSignature`, `columnMap` |
 | `imports` | `id`, `fileName`, `importedAt`, `rowCount`, `profileId?` (lets the user undo a whole import) |

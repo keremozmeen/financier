@@ -5,6 +5,7 @@ import type {
   ImportProfile,
   ImportRecord,
   InstallmentPlan,
+  Payment,
   SettingRow,
   Statement,
   Subscription,
@@ -44,12 +45,15 @@ export class FinancierDatabase extends Dexie {
   imports!: EntityTable<ImportRecord, 'id'>;
   settings!: EntityTable<SettingRow, 'key'>;
   balanceOverrides!: EntityTable<BalanceOverride, 'id'>;
+  payments!: EntityTable<Payment, 'id'>;
 
   constructor(name = 'financier') {
     super(name);
     // Never edit an existing version; add version(n + 1) with an upgrade instead (D1).
     this.version(1).stores(SCHEMA_V1);
     this.version(2).stores({ cards: 'id' }).upgrade(upgradeToV2);
+    // v3 (D14): bill payments. Nothing to migrate: no statements were stored before.
+    this.version(3).stores({ payments: 'id, cardId, statementId' });
   }
 }
 

@@ -118,7 +118,9 @@ describe('D12 full card', () => {
         'Your recorded spending is higher than your limit. Update your bank balance or limit.',
       ),
     ).toBeInTheDocument();
-    expect(screen.getByText('₺0.00')).toBeInTheDocument();
+    expect(screen.getByText('Available', { selector: 'dt' }).nextElementSibling).toHaveTextContent(
+      '₺0.00',
+    );
     expect(screen.queryByText(/over limit/i)).not.toBeInTheDocument();
   });
 

@@ -14,12 +14,14 @@ import { BalanceOverrideForm } from '../components/cards/BalanceOverrideForm';
 import { CardTitle } from '../components/cards/CardTitle';
 import { CardUsagePanel } from '../components/cards/CardUsagePanel';
 import { DeleteCardDialog } from '../components/cards/DeleteCardDialog';
+import { NextBill } from '../components/cards/NextBill';
+import { PaymentForm } from '../components/cards/PaymentForm';
 import { TransactionList } from '../components/cards/TransactionList';
 import { Button, ButtonLink } from '../components/ui/Button';
 import { Dialog } from '../components/ui/Dialog';
 import { ScreenHeader } from '../components/ui/ScreenHeader';
 import type { CardUsage } from '../core/finance';
-import { balanceOverridesRepo, cardsRepo, transactionsRepo } from '../db';
+import { balanceOverridesRepo, cardsRepo, paymentsRepo, transactionsRepo } from '../db';
 import { useEntryLabel } from '../hooks/useEntryLabel';
 import { useCardDetail } from '../hooks/useFinance';
 import { useFormat } from '../hooks/useFormat';
@@ -33,6 +35,7 @@ export function CardDetailScreen() {
   const detail = useCardDetail(id);
   const entryLabel = useEntryLabel();
   const [editingBalance, setEditingBalance] = useState(false);
+  const [paying, setPaying] = useState(false);
   const [deleteCounts, setDeleteCounts] = useState<{ transactions: number; overrides: number }>();
   const [pendingDelete, setPendingDelete] = useState<Transaction>();
 
@@ -85,6 +88,22 @@ export function CardDetailScreen() {
           <p className="mt-3 text-xs text-muted">{t('debit.note')}</p>
         )}
       </div>
+
+      {/* Debit cards have no statements or payments (D13, D14). */}
+      {'bill' in summary &&
+        (paying ? (
+          <PaymentForm
+            card={summary.card}
+            bill={summary.bill}
+            onCancel={() => setPaying(false)}
+            onSubmit={async (amount, date) => {
+              await paymentsRepo.record(summary.card, summary.bill, amount, date);
+              setPaying(false);
+            }}
+          />
+        ) : (
+          <NextBill card={summary.card} bill={summary.bill} onMarkPaid={() => setPaying(true)} />
+        ))}
 
       {'usage' in summary && editingBalance ? (
         <BalanceOverrideForm

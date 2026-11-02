@@ -2,32 +2,45 @@ import {
   computeCardUsage,
   monthOf,
   spendingInMonth,
+  upcomingBill,
+  type BillingInput,
+  type Bill,
   type CardUsage,
   type CardUsageInput,
 } from '../core/finance';
 import type { Card, CreditCard, DebitCard, IsoDate } from '../types/domain';
 import { db } from './database';
 
-/** What a card shows at a glance: a limit gauge for credit, this month's spending for debit (D13). */
+/**
+ * What a card shows at a glance: a limit gauge and the next bill for credit, this
+ * month's spending for debit (D13, D14).
+ */
 export type CardSummary =
-  { card: CreditCard; usage: CardUsage } | { card: DebitCard; monthSpending: number };
+  { card: CreditCard; usage: CardUsage; bill: Bill } | { card: DebitCard; monthSpending: number };
 
-/** Loads everything D11/D12 need for the given credit cards in three indexed queries. */
+/** Everything D11, D12 and D14 need for one credit card. */
+export type CreditCardInput = CardUsageInput & BillingInput & { card: CreditCard };
+
+/** Loads the usage and billing inputs for the given credit cards in five indexed queries. */
 export async function loadUsageInputs(
   cards: readonly CreditCard[],
   today: IsoDate,
-): Promise<CardUsageInput[]> {
+): Promise<CreditCardInput[]> {
   const ids = cards.map((card) => card.id);
-  const [transactions, plans, overrides] = await Promise.all([
+  const [transactions, plans, overrides, statements, payments] = await Promise.all([
     db.transactions.where('cardId').anyOf(ids).toArray(),
     db.installmentPlans.where('cardId').anyOf(ids).toArray(),
     db.balanceOverrides.where('cardId').anyOf(ids).toArray(),
+    db.statements.where('cardId').anyOf(ids).toArray(),
+    db.payments.where('cardId').anyOf(ids).toArray(),
   ]);
   return cards.map((card) => ({
     card,
     transactions: byCard(transactions, card.id),
     plans: byCard(plans, card.id),
     overrides: byCard(overrides, card.id),
+    statements: byCard(statements, card.id),
+    payments: byCard(payments, card.id),
     today,
   }));
 }
@@ -50,7 +63,8 @@ export async function loadCardSummaries(
   // Keep the caller's order (cards come sorted by name).
   return cards.map((card): CardSummary => {
     if (card.type === 'credit') {
-      return { card, usage: computeCardUsage(usageInputs[credit.indexOf(card)]!) };
+      const input = usageInputs[credit.indexOf(card)]!;
+      return { card, usage: computeCardUsage(input), bill: upcomingBill(input, today) };
     }
     return {
       card,

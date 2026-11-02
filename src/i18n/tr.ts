@@ -90,6 +90,23 @@ export const tr: Record<MessageKey, string> = {
   'balance.error.amount': 'Bakiyeyi gir, örneğin 7.500,00 (ödendiyse 0).',
   'balance.error.asOf': 'Gelecekte olmayan bir tarih seç.',
 
+  'bill.title': 'Sonraki ekstre',
+  'bill.due': 'Son ödeme {date}',
+  'bill.moved': 'Hafta sonundan pazartesiye kaydı',
+  'bill.period': 'Ekstre dönemi {start} – {end}',
+  'bill.paidSoFar': '{amount} ödendi',
+  'bill.nothingDue': 'Bu ekstrede ödenecek bir tutar yok.',
+  'bill.markPaid': 'Ödendi olarak işaretle',
+
+  'payment.title': 'Ödeme kaydet',
+  'payment.help':
+    'Ekstre tutarının tamamı yazıldı. Asgari ya da kısmi bir ödeme için değiştirebilirsin. Bu ekstredeki taksitler yalnızca tamamı ödendiğinde ödenmiş sayılır.',
+  'payment.statementTotal': 'Ekstre tutarı: {amount}',
+  'payment.field.amount': 'Ödenen tutar',
+  'payment.field.date': 'Ödeme tarihi',
+  'payment.error.amount': 'Ödediğin tutarı gir, örneğin 1.250,00.',
+  'payment.error.date': 'Gelecekte olmayan bir tarih seç.',
+
   'cards.archive': 'Arşivle',
   'cards.unarchive': 'Arşivden çıkar',
   'cards.archivedNotice': 'Bu kart arşivde. Özette görünmez ama geçmişi saklanır.',

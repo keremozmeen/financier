@@ -89,6 +89,23 @@ export const en = {
   'balance.error.amount': 'Enter the balance, e.g. 7.500,00 (0 if paid off).',
   'balance.error.asOf': 'Pick a date that is not in the future.',
 
+  'bill.title': 'Next bill',
+  'bill.due': 'Due {date}',
+  'bill.moved': 'Moved from the weekend to Monday',
+  'bill.period': 'Statement {start} – {end}',
+  'bill.paidSoFar': '{amount} paid so far',
+  'bill.nothingDue': 'Nothing to pay on this statement.',
+  'bill.markPaid': 'Mark as paid',
+
+  'payment.title': 'Record a payment',
+  'payment.help':
+    'The full statement amount is filled in. Change it to record a minimum or partial payment. Only a full payment marks the installments in this statement as paid.',
+  'payment.statementTotal': 'Statement total: {amount}',
+  'payment.field.amount': 'Amount paid',
+  'payment.field.date': 'Payment date',
+  'payment.error.amount': 'Enter the amount you paid, e.g. 1.250,00.',
+  'payment.error.date': 'Pick a date that is not in the future.',
+
   'cards.archive': 'Archive',
   'cards.unarchive': 'Unarchive',
   'cards.archivedNotice':
