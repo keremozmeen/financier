@@ -115,7 +115,7 @@ describe('D12 full card', () => {
     expect(meter).toHaveAttribute('aria-valuenow', '100');
     expect(
       screen.getByText(
-        'Your recorded spending is higher than your limit. Update your bank balance or limit.',
+        "Your balance is above your limit, usually because of interest, fees or a lowered limit. Your bank won't approve new spending until it is below the limit. If this doesn't match your bank, update your balance or limit.",
       ),
     ).toBeInTheDocument();
     expect(screen.getByText('Available', { selector: 'dt' }).nextElementSibling).toHaveTextContent(

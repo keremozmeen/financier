@@ -71,7 +71,7 @@ export const tr: Record<MessageKey, string> = {
   'gauge.limit': 'Limit',
 
   'cards.full.hint':
-    'Kayıtlı harcaman limitinden yüksek görünüyor. Banka bakiyeni ya da limitini güncelle.',
+    'Bakiyen limitinin üzerinde; bu genelde faiz, ücretler ya da düşürülen bir limit yüzünden olur. Bakiye limitin altına inene kadar bankan yeni harcamayı onaylamaz. Bankandaki bilgiyle uyuşmuyorsa bakiyeni ya da limitini güncelle.',
 
   'cards.add': 'Kart ekle',
   'cards.empty': 'Henüz kart eklemedin.',

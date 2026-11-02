@@ -69,7 +69,7 @@ export const en = {
   'gauge.limit': 'Limit',
 
   'cards.full.hint':
-    'Your recorded spending is higher than your limit. Update your bank balance or limit.',
+    "Your balance is above your limit, usually because of interest, fees or a lowered limit. Your bank won't approve new spending until it is below the limit. If this doesn't match your bank, update your balance or limit.",
 
   'cards.add': 'Add card',
   'cards.empty': 'You have not added any cards yet.',
