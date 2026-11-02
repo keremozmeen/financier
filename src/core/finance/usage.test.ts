@@ -60,11 +60,6 @@ describe('computeCardUsage without an override', () => {
     expect(result.used).toBe(TL(12_000));
   });
 
-  it('releases paid installments (from Phase 2 on)', () => {
-    const result = usage({ plans: [{ ...plan('2026-09-01', 12_000, 6), paidInstallments: 2 }] });
-    expect(result.used).toBe(TL(8_000));
-  });
-
   it('lowers used for refunds but never below zero', () => {
     expect(
       usage({ transactions: [charge('2026-10-01', 1_000), charge('2026-10-02', -400)] }).used,
@@ -171,5 +166,107 @@ describe('utilizationLevel', () => {
   it('handles a zero limit', () => {
     expect(utilizationLevel(0, 0)).toBe('healthy');
     expect(utilizationLevel(1, 0)).toBe('alert');
+  });
+});
+
+describe('computeCardUsage with bill payments (D14)', () => {
+  // A 1.000 ₺ charge and a 1.200 ₺ plan in 3 installments; the November statement
+  // bills the charge and the first 400 ₺ installment: 1.400 ₺.
+  const base = {
+    transactions: [charge('2026-10-15', 1_000)],
+    plans: [{ ...plan('2026-10-15', 1_200, 3), id: 'p1' }],
+  };
+  const statement = (paid: boolean) => ({
+    id: 's1',
+    periodEnd: '2026-11-10',
+    paid,
+    installments: [{ planId: 'p1', index: 0, amount: TL(400) }],
+  });
+  const payment = (date: string, lira: number, createdAt = `${date}T12:00:00.000Z`) => ({
+    statementId: 's1',
+    date,
+    amount: TL(lira),
+    currency: 'TRY',
+    createdAt,
+  });
+
+  it('starts from the charge plus the full plan', () => {
+    expect(usage(base).used).toBe(TL(2_200));
+  });
+
+  it('a full payment reduces used by its amount and releases the paid installment', () => {
+    const result = usage({
+      ...base,
+      statements: [statement(true)],
+      payments: [payment('2026-11-15', 1_400)],
+    });
+    // The 800 ₺ still blocked are the two unpaid installments.
+    expect(result.used).toBe(TL(800));
+  });
+
+  it('a settled statement paid in two parts releases the installment once', () => {
+    const result = usage({
+      ...base,
+      statements: [statement(true)],
+      payments: [payment('2026-11-12', 400), payment('2026-11-15', 1_000)],
+    });
+    expect(result.used).toBe(TL(800));
+  });
+
+  it('a partial payment reduces used by its amount but marks nothing paid', () => {
+    const result = usage({
+      ...base,
+      statements: [statement(false)],
+      payments: [payment('2026-11-15', 500)],
+    });
+    expect(result.used).toBe(TL(1_700));
+  });
+
+  it('ignores payments dated on or before the override as-of date', () => {
+    const result = usage({
+      ...base,
+      overrides: [override('2026-11-20', 900)],
+      statements: [statement(false)],
+      payments: [payment('2026-11-15', 500), payment('2026-11-20', 100)],
+    });
+    expect(result.used).toBe(TL(900));
+  });
+
+  it('subtracts payments dated after the override as-of date', () => {
+    const result = usage({
+      ...base,
+      overrides: [override('2026-11-20', 900)],
+      statements: [statement(false)],
+      payments: [payment('2026-11-25', 500)],
+    });
+    expect(result.used).toBe(TL(400));
+  });
+
+  it('a full payment after the override reduces used by its full amount when the plan is in the override', () => {
+    const result = usage({
+      ...base,
+      overrides: [override('2026-10-31', 2_200)],
+      statements: [statement(true)],
+      payments: [payment('2026-11-15', 1_400)],
+    });
+    expect(result.used).toBe(TL(800));
+  });
+
+  it('ignores payments in other currencies', () => {
+    const result = usage({
+      ...base,
+      statements: [statement(false)],
+      payments: [{ ...payment('2026-11-15', 500), currency: 'USD' }],
+    });
+    expect(result.used).toBe(TL(2_200));
+  });
+
+  it('never goes below zero after an overpayment', () => {
+    const result = usage({
+      transactions: [charge('2026-10-15', 100)],
+      statements: [{ ...statement(true), installments: [] }],
+      payments: [payment('2026-11-15', 500)],
+    });
+    expect(result.used).toBe(0);
   });
 });

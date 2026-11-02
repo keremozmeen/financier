@@ -23,6 +23,21 @@ export function daysBetween(from: IsoDate, to: IsoDate): number {
   return Math.round((toUtcMs(to) - toUtcMs(from)) / MS_PER_DAY);
 }
 
+export function addDays(date: IsoDate, count: number): IsoDate {
+  return new Date(toUtcMs(date) + count * MS_PER_DAY).toISOString().slice(0, 10);
+}
+
+/**
+ * A due date that falls on a weekend moves to the next Monday (D14). Public
+ * holidays are not handled yet.
+ */
+export function shiftWeekend(date: IsoDate): { date: IsoDate; moved: boolean } {
+  const weekday = new Date(toUtcMs(date)).getUTCDay();
+  if (weekday === 6) return { date: addDays(date, 2), moved: true };
+  if (weekday === 0) return { date: addDays(date, 1), moved: true };
+  return { date, moved: false };
+}
+
 export function monthOf(date: IsoDate): IsoMonth {
   return date.slice(0, 7);
 }
@@ -77,17 +92,22 @@ export function nextStatementDates(
 }
 
 /** Month of the statement that closes on or after `date`. */
-function statementMonthFor(date: IsoDate, statementDay: number): IsoMonth {
+export function statementMonthFor(date: IsoDate, statementDay: number): IsoMonth {
   const month = monthOf(date);
   return Number(date.slice(8, 10)) <= clampDay(month, statementDay) ? month : addMonths(month, 1);
 }
 
 /** The payment is due in the statement's month when the due day comes later, else the next month. */
-function dueMonthFor(statementMonth: IsoMonth, statementDay: number, dueDay: number): IsoMonth {
+export function dueMonthFor(
+  statementMonth: IsoMonth,
+  statementDay: number,
+  dueDay: number,
+): IsoMonth {
   return dueDay > statementDay ? statementMonth : addMonths(statementMonth, 1);
 }
 
-function dayOf(month: IsoMonth, day: number): IsoDate {
+/** A day setting in a given month, clamped to the month's length. */
+export function dayOf(month: IsoMonth, day: number): IsoDate {
   return `${month}-${String(clampDay(month, day)).padStart(2, '0')}`;
 }
 

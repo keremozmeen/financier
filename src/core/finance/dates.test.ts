@@ -1,4 +1,6 @@
 import {
+  addDays,
+  shiftWeekend,
   addMonths,
   clampDay,
   daysBetween,
@@ -31,6 +33,29 @@ describe('daysBetween', () => {
     expect(daysBetween('2026-10-01', '2026-11-02')).toBe(32);
     expect(daysBetween('2026-03-28', '2026-03-30')).toBe(2);
     expect(daysBetween('2026-11-02', '2026-11-01')).toBe(-1);
+  });
+});
+
+describe('addDays', () => {
+  it('crosses month, year and leap-day boundaries', () => {
+    expect(addDays('2026-10-31', 1)).toBe('2026-11-01');
+    expect(addDays('2027-01-01', -1)).toBe('2026-12-31');
+    expect(addDays('2028-02-28', 1)).toBe('2028-02-29');
+    expect(addDays('2026-02-28', 1)).toBe('2026-03-01');
+  });
+});
+
+describe('shiftWeekend', () => {
+  it('moves Saturday and Sunday to the next Monday, across month ends', () => {
+    expect(shiftWeekend('2026-11-21')).toEqual({ date: '2026-11-23', moved: true });
+    expect(shiftWeekend('2026-11-22')).toEqual({ date: '2026-11-23', moved: true });
+    expect(shiftWeekend('2026-10-31')).toEqual({ date: '2026-11-02', moved: true });
+    expect(shiftWeekend('2027-02-28')).toEqual({ date: '2027-03-01', moved: true });
+  });
+
+  it('keeps weekdays', () => {
+    expect(shiftWeekend('2026-11-20')).toEqual({ date: '2026-11-20', moved: false });
+    expect(shiftWeekend('2026-11-02')).toEqual({ date: '2026-11-02', moved: false });
   });
 });
 

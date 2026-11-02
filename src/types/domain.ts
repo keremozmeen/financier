@@ -77,15 +77,44 @@ export interface BalanceOverride {
   createdAt: IsoTimestamp;
 }
 
+/** One installment of a plan, billed in the statement due in `dueMonth`. */
+export interface InstallmentRef {
+  planId: string;
+  /** 0-based position in the plan. */
+  index: number;
+  amount: number;
+}
+
+/**
+ * A credit card statement. Statements are computed from the data and stored only
+ * when the user records a payment (D14); the stored row is a snapshot of the bill.
+ */
 export interface Statement {
   id: string;
   cardId: string;
   periodStart: IsoDate;
   periodEnd: IsoDate;
+  /** The due date shown to the user, moved off weekends. */
   dueDate: IsoDate;
   totalDue: number;
-  minimumDue: number;
+  /** Not known yet; imports may read it from the bank statement in later phases. */
+  minimumDue?: number;
+  /** Fully paid: its installments count as paid and stop blocking the limit (D14). */
   paid: boolean;
+  /** The installments billed in this statement. */
+  installments: InstallmentRef[];
+}
+
+/** A bill payment towards one statement (D14). Credit cards only. */
+export interface Payment {
+  id: string;
+  cardId: string;
+  statementId: string;
+  date: IsoDate;
+  /** Positive minor units. */
+  amount: number;
+  currency: CurrencyCode;
+  createdAt: IsoTimestamp;
 }
 
 export type SubscriptionStatus = 'active' | 'ignored' | 'cancelled';

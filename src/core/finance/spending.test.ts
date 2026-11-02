@@ -1,4 +1,4 @@
-import { spendingInMonth } from './spending';
+import { monthlySpend, spendingInMonth } from './spending';
 
 const tx = (date: string, amount: number, currency = 'TRY') => ({ date, amount, currency });
 
@@ -25,5 +25,42 @@ describe('spendingInMonth', () => {
 
   it('never goes below zero when refunds exceed charges', () => {
     expect(spendingInMonth([tx('2026-11-05', -40_000)], '2026-11', 'TRY')).toBe(0);
+  });
+});
+
+describe('monthlySpend', () => {
+  const plan = {
+    id: 'p1',
+    totalAmount: 120_000,
+    count: 3,
+    firstDueMonth: '2026-11',
+    currency: 'TRY',
+  };
+  // Credit and debit transactions together: Kipp's spending covers both card types (D13).
+  const transactions = [
+    tx('2026-11-03', 100_000), // credit single charge
+    tx('2026-11-04', 50_000), // debit card purchase
+    tx('2026-11-05', -20_000), // refund
+    { ...tx('2026-10-15', 120_000), installmentPlanId: 'p1' }, // installment purchase
+    { ...tx('2026-11-15', 60_000), installmentPlanId: 'p2' },
+  ];
+
+  it('counts installments due in the month as fixed and single charges as variable', () => {
+    expect(monthlySpend(transactions, [plan], '2026-11', 'TRY')).toEqual({
+      fixed: 40_000,
+      variable: 130_000,
+    });
+  });
+
+  it('keeps billing installments as fixed after the purchase month', () => {
+    expect(monthlySpend(transactions, [plan], '2027-01', 'TRY')).toEqual({
+      fixed: 40_000,
+      variable: 0,
+    });
+    expect(monthlySpend(transactions, [plan], '2027-02', 'TRY').fixed).toBe(0);
+  });
+
+  it('ignores other currencies', () => {
+    expect(monthlySpend(transactions, [plan], '2026-11', 'USD')).toEqual({ fixed: 0, variable: 0 });
   });
 });

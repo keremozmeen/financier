@@ -1,5 +1,6 @@
 import type { CurrencyCode, IsoMonth, Transaction } from '../../types/domain';
 import { monthOf } from './dates';
+import { installmentSchedule, type ScheduledPlan } from './statements';
 
 /**
  * Spending on a card in a calendar month: charges minus refunds dated in that month,
@@ -15,4 +16,35 @@ export function spendingInMonth(
     .filter((tx) => tx.currency === currency && monthOf(tx.date) === month)
     .reduce((sum, tx) => sum + tx.amount, 0);
   return Math.max(net, 0);
+}
+
+export interface MonthlySpend {
+  /** Installments due in the month (credit cards). */
+  fixed: number;
+  /** Single charges minus refunds dated in the month, on credit and debit cards, never below zero. */
+  variable: number;
+}
+
+/**
+ * Fixed vs. variable spend for a month in one currency, across cards of both types.
+ * Installment purchase transactions are left out: their plan's installments are the
+ * fixed part, spread over the months they are due in.
+ */
+export function monthlySpend(
+  transactions: readonly Pick<Transaction, 'date' | 'amount' | 'currency' | 'installmentPlanId'>[],
+  plans: readonly ScheduledPlan[],
+  month: IsoMonth,
+  currency: CurrencyCode,
+): MonthlySpend {
+  const fixed = plans
+    .filter((plan) => plan.currency === currency)
+    .flatMap(installmentSchedule)
+    .filter((item) => item.dueMonth === month)
+    .reduce((sum, item) => sum + item.amount, 0);
+  const variable = spendingInMonth(
+    transactions.filter((tx) => !tx.installmentPlanId),
+    month,
+    currency,
+  );
+  return { fixed, variable };
 }

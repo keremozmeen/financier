@@ -6,7 +6,7 @@ import type {
   Transaction,
 } from '../../types/domain';
 import { daysBetween } from './dates';
-import { remainingPlanBalance } from './installments';
+import { paidInstallments, sum, type BillingPayment, type BillingStatement } from './statements';
 
 /** An override older than this many days should be refreshed (D11). */
 export const OVERRIDE_STALE_DAYS = 30;
@@ -33,6 +33,9 @@ export interface CardUsageInput {
   transactions: readonly UsageTransaction[];
   plans: readonly UsagePlan[];
   overrides: readonly Pick<BalanceOverride, 'balance' | 'currency' | 'asOf' | 'createdAt'>[];
+  /** Stored statements; a fully paid one marks its installments as paid (D14). */
+  statements?: readonly BillingStatement[];
+  payments?: readonly BillingPayment[];
   today: IsoDate;
 }
 
@@ -44,11 +47,7 @@ export type UsageTransaction = Pick<
 export type UsagePlan = Pick<
   InstallmentPlan,
   'purchaseDate' | 'totalAmount' | 'count' | 'currency'
-> & {
-  id?: string;
-  /** Installments already paid. Payments are tracked from Phase 2; until then none. */
-  paidInstallments?: number;
-};
+> & { id?: string };
 
 /** The current override is the most recently entered one; older ones are history. */
 export function currentOverride<T extends Pick<BalanceOverride, 'createdAt'>>(
@@ -74,16 +73,30 @@ export function computeCardUsage(input: CardUsageInput): CardUsage {
     .filter((tx) => !tx.installmentPlanId && after(tx.date))
     .reduce((sum, tx) => sum + tx.amount, 0);
 
-  const plans = inCurrency(input.plans)
-    .filter((plan) => after(plan.purchaseDate))
-    .reduce(
-      (sum, plan) =>
-        sum + remainingPlanBalance(plan.totalAmount, plan.count, plan.paidInstallments ?? 0),
-      0,
-    );
+  // Remaining unpaid balance of the plans: installments in fully paid statements no
+  // longer block the limit (D11, D14).
+  const statements = input.statements ?? [];
+  const counted = inCurrency(input.plans).filter((plan) => after(plan.purchaseDate));
+  const countedIds = new Set(counted.map((plan) => plan.id));
+  const isCounted = (ref: { planId: string }) => countedIds.has(ref.planId);
+  const plans =
+    counted.reduce((total, plan) => total + plan.totalAmount, 0) -
+    sum(paidInstallments(statements).filter(isCounted));
+
+  // A payment after the as-of date reduces used by its amount (D14). The part of a
+  // settling payment that paid installments of counted plans was released above, so
+  // it is not subtracted twice.
+  const payments = inCurrency(input.payments ?? []);
+  let paid = sum(payments.filter((p) => after(p.date)));
+  for (const statement of statements) {
+    const settling = latestPayment(payments.filter((p) => p.statementId === statement.id));
+    if (statement.paid && settling && after(settling.date)) {
+      paid -= sum(statement.installments.filter(isCounted));
+    }
+  }
 
   // Refunds can exceed charges; a credit balance still means nothing is used.
-  const used = Math.max((override?.balance ?? 0) + singles + plans, 0);
+  const used = Math.max((override?.balance ?? 0) + singles + plans - paid, 0);
   const overLimit = used > card.limit;
 
   return {
@@ -100,6 +113,16 @@ export function computeCardUsage(input: CardUsageInput): CardUsage {
         }
       : { kind: 'calculated' },
   };
+}
+
+function latestPayment<T extends BillingPayment>(payments: readonly T[]): T | undefined {
+  return payments.reduce<T | undefined>(
+    (latest, p) =>
+      !latest || p.date > latest.date || (p.date === latest.date && p.createdAt > latest.createdAt)
+        ? p
+        : latest,
+    undefined,
+  );
 }
 
 /** Below 30% healthy, 30–70% warning, above 70% (including a full card) alert (D4, D11, D12). */
