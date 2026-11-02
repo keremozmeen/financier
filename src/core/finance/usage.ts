@@ -18,10 +18,11 @@ export type UsageSource =
 
 export interface CardUsage {
   used: number;
-  /** Never negative: 0 when the card is over its limit. */
+  /** Never negative: 0 when the card is full. */
   available: number;
+  /** Used exceeds the limit: the data is out of date and the card is shown as full (D12). */
   overLimit: boolean;
-  /** used / limit, for display only; null when the limit is 0. */
+  /** used / limit capped at 1 (a card over its limit is full, D12); null when the limit is 0. */
   utilization: number | null;
   level: UtilizationLevel;
   source: UsageSource;
@@ -29,16 +30,22 @@ export interface CardUsage {
 
 export interface CardUsageInput {
   card: Pick<Card, 'limit' | 'currency'>;
-  transactions: readonly Pick<Transaction, 'date' | 'amount' | 'currency' | 'installmentPlanId'>[];
+  transactions: readonly UsageTransaction[];
   plans: readonly UsagePlan[];
   overrides: readonly Pick<BalanceOverride, 'balance' | 'currency' | 'asOf' | 'createdAt'>[];
   today: IsoDate;
 }
 
+export type UsageTransaction = Pick<
+  Transaction,
+  'date' | 'amount' | 'currency' | 'installmentPlanId'
+> & { id?: string };
+
 export type UsagePlan = Pick<
   InstallmentPlan,
   'purchaseDate' | 'totalAmount' | 'count' | 'currency'
 > & {
+  id?: string;
   /** Installments already paid. Payments are tracked from Phase 2; until then none. */
   paidInstallments?: number;
 };
@@ -83,7 +90,7 @@ export function computeCardUsage(input: CardUsageInput): CardUsage {
     used,
     available: overLimit ? 0 : card.limit - used,
     overLimit,
-    utilization: card.limit > 0 ? used / card.limit : null,
+    utilization: card.limit > 0 ? Math.min(used / card.limit, 1) : null,
     level: utilizationLevel(used, card.limit),
     source: override
       ? {
@@ -95,7 +102,7 @@ export function computeCardUsage(input: CardUsageInput): CardUsage {
   };
 }
 
-/** Below 30% healthy, 30–70% warning, above 70% or over limit alert (D4, D11). */
+/** Below 30% healthy, 30–70% warning, above 70% (including a full card) alert (D4, D11, D12). */
 export function utilizationLevel(used: number, limit: number): UtilizationLevel {
   if (used > limit) return 'alert';
   if (limit <= 0) return 'healthy';

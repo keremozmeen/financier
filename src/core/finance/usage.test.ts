@@ -80,13 +80,14 @@ describe('computeCardUsage without an override', () => {
   });
 });
 
-describe('computeCardUsage over the limit', () => {
-  it('shows available as 0 and alerts', () => {
+describe('computeCardUsage over the limit (D12)', () => {
+  it('treats the card as full: 100% utilization, available 0, alert', () => {
     const result = usage({ transactions: [charge('2026-10-01', 52_000)] });
     expect(result).toMatchObject({
       used: TL(52_000),
       available: 0,
       overLimit: true,
+      utilization: 1,
       level: 'alert',
     });
   });
