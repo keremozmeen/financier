@@ -57,6 +57,9 @@ export const tr: Record<MessageKey, string> = {
 
   'payments.title': 'Ödemeler',
   'payments.label': 'Ödeme',
+  'payments.method.automatic': 'Otomatik ödendi',
+  'payments.delete.automatic':
+    'Financier bu otomatik ödemeyi yeniden kaydetmeyecek. Bankan ekstreyi aslında ödemediyse bunu kullan.',
   'payments.delete.title': 'Ödeme silinsin mi?',
   'payments.delete.body':
     '{date} tarihli {amount} ödeme silinecek ve kullanılan tutar yeniden artacak.',
@@ -97,6 +100,9 @@ export const tr: Record<MessageKey, string> = {
   'cards.field.statementDay': 'Hesap kesim günü',
   'cards.field.dueDay': 'Son ödeme günü',
   'cards.field.day.hint': 'Ayın günü, 1–31.',
+  'cards.field.autoPay': 'Otomatik ödeme',
+  'cards.field.autoPay.hint':
+    'Bankan her ekstreyi son ödeme gününde hesabından tamamen öder. Financier bugünden itibaren bu ödemeleri senin için kaydeder.',
   'cards.field.color': 'Renk',
   'color.0': 'Yeşil',
   'color.1': 'Mavi',
@@ -139,6 +145,7 @@ export const tr: Record<MessageKey, string> = {
   'bill.overdue': 'Gecikmiş',
   'bill.overdueTitle': 'Gecikmiş ekstre',
   'bill.paidOutside': 'Uygulama dışında ödendi',
+  'bill.autoPay': 'Otomatik ödenir',
   'bill.markPaid': 'Ödendi olarak işaretle',
 
   'payment.title': 'Ödeme kaydet',

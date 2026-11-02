@@ -73,3 +73,22 @@ export function useDueSoonBadge() {
     if (count !== undefined) setAppBadge(count);
   }, [count]);
 }
+
+/**
+ * Records auto-pay payments (D14) whenever the app opens or an auto-pay setting
+ * changes. The repository makes repeated runs safe.
+ */
+export function useAutoPay() {
+  const today = useToday();
+  const key = useLiveQuery(async () => {
+    const cards = await cardsRepo.list();
+    return cards
+      .flatMap((card) =>
+        card.type === 'credit' && card.autoPay ? [`${card.id}:${card.autoPaySince}`] : [],
+      )
+      .join(',');
+  }, []);
+  useEffect(() => {
+    if (key) void paymentsRepo.applyAutoPayments(today);
+  }, [key, today]);
+}

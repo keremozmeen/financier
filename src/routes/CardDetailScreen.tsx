@@ -193,6 +193,9 @@ export function CardDetailScreen() {
               date: format.date(pendingPaymentDelete.date),
             })}
           </p>
+          {pendingPaymentDelete.method === 'automatic' && (
+            <p className="text-sm text-muted">{t('payments.delete.automatic')}</p>
+          )}
           <div className="flex justify-end gap-2">
             <Button variant="ghost" onClick={() => setPendingPaymentDelete(undefined)}>
               {t('common.cancel')}

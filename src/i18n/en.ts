@@ -55,6 +55,9 @@ export const en = {
 
   'payments.title': 'Payments',
   'payments.label': 'Payment',
+  'payments.method.automatic': 'Paid automatically',
+  'payments.delete.automatic':
+    'Financier will not record this automatic payment again. Use this if your bank did not actually pay the bill.',
   'payments.delete.title': 'Delete payment?',
   'payments.delete.body':
     'This removes the {amount} payment from {date}, and your used amount goes back up.',
@@ -95,6 +98,9 @@ export const en = {
   'cards.field.statementDay': 'Statement closing day',
   'cards.field.dueDay': 'Payment due day',
   'cards.field.day.hint': 'Day of the month, 1–31.',
+  'cards.field.autoPay': 'Automatic payment',
+  'cards.field.autoPay.hint':
+    'Your bank pays each statement in full from your account on its due date. Financier records those payments for you from today on.',
   'cards.field.color': 'Color',
   'color.0': 'Green',
   'color.1': 'Blue',
@@ -137,6 +143,7 @@ export const en = {
   'bill.overdue': 'Overdue',
   'bill.overdueTitle': 'Overdue bill',
   'bill.paidOutside': 'Paid outside the app',
+  'bill.autoPay': 'Paid automatically',
   'bill.markPaid': 'Mark as paid',
 
   'payment.title': 'Record a payment',

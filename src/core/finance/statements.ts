@@ -80,14 +80,15 @@ export function installmentSchedule(plan: ScheduledPlan): ScheduledInstallment[]
   }));
 }
 
-export type BillingStatement = Pick<Statement, 'id' | 'periodEnd' | 'paid' | 'installments'>;
+export type BillingStatement = Pick<Statement, 'id' | 'periodEnd' | 'paid' | 'installments'> &
+  Partial<Pick<Statement, 'autoPaySkipped'>>;
 export type BillingPayment = Pick<
   Payment,
   'statementId' | 'date' | 'amount' | 'currency' | 'createdAt'
 >;
 
 export interface BillingInput {
-  card: Pick<CreditCard, 'statementDay' | 'dueDay' | 'currency'>;
+  card: Pick<CreditCard, 'statementDay' | 'dueDay' | 'currency' | 'autoPay' | 'autoPaySince'>;
   transactions: readonly Pick<Transaction, 'date' | 'amount' | 'currency' | 'installmentPlanId'>[];
   plans: readonly ScheduledPlan[];
   /** Statements stored when payments were recorded. */
@@ -226,6 +227,8 @@ export interface CardBill {
   bill: Bill;
   /** Past its due date and not fully paid (D14). */
   overdue: boolean;
+  /** The bank pays it on its due date; nothing to ask the user (D14). */
+  autoPay: boolean;
 }
 
 /**
@@ -240,9 +243,32 @@ export function cardBills(input: BillingInput, today: IsoDate): CardBill[] {
   const previous =
     chain.at(-2) ??
     computeBill(statementPeriodFor(addDays(current.periodStart, -1), input.card), input);
-  const overdue = chain.filter((bill) => bill.dueDate < today && bill.remaining > 0);
+  const autoPay = Boolean(input.card.autoPay);
+  // Overdue never applies to auto-pay cards: the bank pays on the due date.
+  const overdue = autoPay ? [] : chain.filter((bill) => bill.dueDate < today && bill.remaining > 0);
   const next = previous.dueDate >= today && previous.remaining > 0 ? previous : current;
-  return [...overdue.map((bill) => ({ bill, overdue: true })), { bill: next, overdue: false }];
+  return [
+    ...overdue.map((bill) => ({ bill, overdue: true, autoPay })),
+    { bill: next, overdue: false, autoPay },
+  ];
+}
+
+/**
+ * Bills auto-pay has paid by `today` (D14): each closed bill with something left to pay,
+ * due between the day auto-pay was turned on and today, unless the user deleted its
+ * automatic payment. Each counts as fully paid on its due date.
+ */
+export function autoPaymentsDue(input: BillingInput, today: IsoDate): Bill[] {
+  const { autoPay, autoPaySince } = input.card;
+  if (!autoPay || !autoPaySince) return [];
+  const skipped = new Set(input.statements.filter((s) => s.autoPaySkipped).map((s) => s.periodEnd));
+  return billsThrough(input, statementPeriodFor(today, input.card)).filter(
+    (bill) =>
+      bill.dueDate >= autoPaySince &&
+      bill.dueDate <= today &&
+      bill.remaining > 0 &&
+      !skipped.has(bill.periodEnd),
+  );
 }
 
 /** The bill a card asks about first: its oldest overdue bill, else its next bill. */
@@ -301,7 +327,8 @@ export const DUE_SOON_DAYS = 7;
 
 /**
  * Bills that need attention: overdue ones, and those with something left to pay due
- * today or within `days` days. Overdue first, then earliest due.
+ * today or within `days` days. Overdue first, then earliest due. Auto-pay bills need
+ * nothing from the user, so they are left out.
  */
 export function dueSoon<T extends CardBill>(
   bills: readonly T[],
@@ -309,9 +336,9 @@ export function dueSoon<T extends CardBill>(
   days = DUE_SOON_DAYS,
 ): T[] {
   return bills
-    .filter(({ bill, overdue }) => {
+    .filter(({ bill, overdue, autoPay }) => {
       const left = daysBetween(today, bill.dueDate);
-      return overdue || (bill.remaining > 0 && left >= 0 && left <= days);
+      return !autoPay && (overdue || (bill.remaining > 0 && left >= 0 && left <= days));
     })
     .sort(
       (a, b) =>

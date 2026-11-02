@@ -7,7 +7,8 @@ import { Button } from '../ui/Button';
 
 /**
  * A credit card bill with its due date and a "Mark as paid" action (D14). An overdue
- * bill is flagged and can also be settled with "Paid outside the app".
+ * bill is flagged and can also be settled with "Paid outside the app". An auto-pay card
+ * asks nothing: the bank pays on the due date.
  */
 export function NextBill({
   card,
@@ -22,7 +23,7 @@ export function NextBill({
 }) {
   const t = useT();
   const format = useFormat();
-  const { bill, overdue } = item;
+  const { bill, overdue, autoPay } = item;
   const title = overdue ? t('bill.overdueTitle') : t('bill.title');
 
   return (
@@ -64,7 +65,12 @@ export function NextBill({
           </p>
         )}
       </div>
-      {bill.remaining > 0 ? (
+      {bill.remaining > 0 && autoPay ? (
+        <p className="flex items-center gap-2 text-sm font-medium text-success">
+          <Check aria-hidden="true" size={16} />
+          {t('bill.autoPay')}
+        </p>
+      ) : bill.remaining > 0 ? (
         <div className={overdue ? 'grid gap-2 sm:grid-cols-2' : ''}>
           <Button variant="primary" className="w-full" onClick={onMarkPaid}>
             <Check aria-hidden="true" size={18} />

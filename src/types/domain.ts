@@ -32,6 +32,10 @@ export interface CreditCard extends CardBase {
   statementDay: number;
   /** Day of month the payment is due (1–31, clamped to month length). */
   dueDay: number;
+  /** The bank pays each statement in full on its due date (D14). */
+  autoPay?: boolean;
+  /** When auto-pay was turned on; bills due before it are not paid automatically. */
+  autoPaySince?: IsoDate;
 }
 
 /** Banka kartı: spends straight from an account whose balance the app does not know (D13). */
@@ -103,13 +107,15 @@ export interface Statement {
   paid: boolean;
   /** The installments billed in this statement. */
   installments: InstallmentRef[];
+  /** The user deleted this statement's automatic payment: auto-pay leaves it alone. */
+  autoPaySkipped?: boolean;
 }
 
 /**
- * How a payment was recorded (D14): entered in the form, or "Paid outside the app"
- * for an overdue bill (the full remaining amount, dated on its due date).
+ * How a payment was recorded (D14): entered in the form, "Paid outside the app" for an
+ * overdue bill, or by auto-pay (both: the full remaining amount, dated on the due date).
  */
-export type PaymentMethod = 'manual' | 'outside';
+export type PaymentMethod = 'manual' | 'outside' | 'automatic';
 
 /** A bill payment towards one statement (D14). Credit cards only. */
 export interface Payment {

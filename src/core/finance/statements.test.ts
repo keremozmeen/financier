@@ -1,4 +1,5 @@
 import {
+  autoPaymentsDue,
   cardBills,
   computeBill,
   dueSoon,
@@ -263,14 +264,23 @@ describe('cardBills: overdue bills (D14)', () => {
       {
         bill: expect.objectContaining({ periodEnd: '2026-11-10', remaining: TL(1_200) }),
         overdue: true,
+        autoPay: false,
       },
-      { bill: expect.objectContaining({ periodEnd: '2026-12-10' }), overdue: false },
+      {
+        bill: expect.objectContaining({ periodEnd: '2026-12-10' }),
+        overdue: false,
+        autoPay: false,
+      },
     ]);
   });
 
   it('is not overdue on its due date', () => {
     expect(cardBills(billing(), '2026-11-20')).toEqual([
-      { bill: expect.objectContaining({ periodEnd: '2026-11-10' }), overdue: false },
+      {
+        bill: expect.objectContaining({ periodEnd: '2026-11-10' }),
+        overdue: false,
+        autoPay: false,
+      },
     ]);
   });
 
@@ -279,13 +289,18 @@ describe('cardBills: overdue bills (D14)', () => {
     expect(items[0]).toEqual({
       bill: expect.objectContaining({ periodEnd: '2026-11-10', remaining: TL(1_000) }),
       overdue: true,
+      autoPay: false,
     });
   });
 
   it('stops being overdue once fully paid (for example "Paid outside the app")', () => {
     const items = cardBills(billing(pay('s1', '2026-11-10', 1_200, true)), '2026-11-25');
     expect(items).toEqual([
-      { bill: expect.objectContaining({ periodEnd: '2026-12-10' }), overdue: false },
+      {
+        bill: expect.objectContaining({ periodEnd: '2026-12-10' }),
+        overdue: false,
+        autoPay: false,
+      },
     ]);
   });
 
@@ -370,9 +385,10 @@ describe('paidInstallments', () => {
 });
 
 describe('dueSoon', () => {
-  const bill = (dueDate: string, remaining: number, overdue = false) => ({
+  const bill = (dueDate: string, remaining: number, overdue = false, autoPay = false) => ({
     bill: { ...computeBill(statementPeriodFor('2026-11-02', card), billing()), dueDate, remaining },
     overdue,
+    autoPay,
   });
 
   it('keeps unpaid bills due today through 7 days ahead, earliest first', () => {
@@ -395,5 +411,59 @@ describe('dueSoon', () => {
       ['2026-10-20', true],
       ['2026-11-05', false],
     ]);
+  });
+});
+
+describe('auto-pay (D14)', () => {
+  // The November statement (1.200 ₺) is due on November 20.
+  const autoCard = { ...card, autoPay: true, autoPaySince: '2026-11-01' };
+
+  it('lists closed bills due from the day auto-pay was turned on through today', () => {
+    expect(autoPaymentsDue(billing({ card: autoCard }), '2026-11-19')).toEqual([]);
+    expect(autoPaymentsDue(billing({ card: autoCard }), '2026-11-20')).toEqual([
+      expect.objectContaining({
+        periodEnd: '2026-11-10',
+        dueDate: '2026-11-20',
+        remaining: TL(1_200),
+      }),
+    ]);
+  });
+
+  it('leaves out bills due before auto-pay was turned on', () => {
+    const later = { ...autoCard, autoPaySince: '2026-11-21' };
+    expect(autoPaymentsDue(billing({ card: later }), '2026-11-25')).toEqual([]);
+  });
+
+  it('pays only what is left after earlier payments and credit', () => {
+    const input = billing({
+      card: autoCard,
+      statements: [{ id: 's1', periodEnd: '2026-11-10', paid: false, installments: [] }],
+      payments: [
+        { statementId: 's1', date: '2026-11-15', amount: TL(200), currency: 'TRY', createdAt: 'a' },
+      ],
+    });
+    expect(autoPaymentsDue(input, '2026-11-20')).toEqual([
+      expect.objectContaining({ remaining: TL(1_000) }),
+    ]);
+  });
+
+  it('skips a statement whose automatic payment the user deleted', () => {
+    const input = billing({
+      card: autoCard,
+      statements: [
+        { id: 's1', periodEnd: '2026-11-10', paid: false, installments: [], autoPaySkipped: true },
+      ],
+    });
+    expect(autoPaymentsDue(input, '2026-11-25')).toEqual([]);
+  });
+
+  it('does nothing when auto-pay is off', () => {
+    expect(autoPaymentsDue(billing(), '2026-11-25')).toEqual([]);
+  });
+
+  it('never makes an auto-pay bill overdue and keeps it out of the due-soon list', () => {
+    const items = cardBills(billing({ card: autoCard }), '2026-11-25');
+    expect(items.map(({ overdue, autoPay }) => [overdue, autoPay])).toEqual([[false, true]]);
+    expect(dueSoon(cardBills(billing({ card: autoCard }), '2026-11-15'), '2026-11-15')).toEqual([]);
   });
 });

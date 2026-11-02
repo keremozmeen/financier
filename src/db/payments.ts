@@ -1,6 +1,7 @@
-import { isFullyPaid, type Bill } from '../core/finance';
-import type { Card, IsoDate, Payment, PaymentMethod, Statement } from '../types/domain';
+import { autoPaymentsDue, isFullyPaid, type Bill } from '../core/finance';
+import type { Card, CreditCard, IsoDate, Payment, PaymentMethod, Statement } from '../types/domain';
 import { db, newId } from './database';
+import { loadUsageInputs } from './usage';
 
 export const paymentsRepo = {
   /** Newest first. */
@@ -51,6 +52,7 @@ export const paymentsRepo = {
         totalDue: bill.amountDue,
         paid: isFullyPaid(bill.amountDue, paidAmount),
         installments: bill.installments,
+        ...(stored?.autoPaySkipped ? { autoPaySkipped: true } : {}),
       });
       await db.payments.add({
         id,
@@ -74,22 +76,60 @@ export const paymentsRepo = {
     return paymentsRepo.record(card, bill, bill.remaining, bill.dueDate, { method: 'outside' });
   },
 
-  /** Removes a payment; its statement is re-settled, and dropped when no payment is left. */
+  /**
+   * Auto-pay (D14): records each closed bill of an auto-pay card as fully paid on its due
+   * date, flagged automatic. Runs in one transaction that re-reads the data, so running
+   * it twice at once (for example from two open tabs) records each payment only once.
+   * Returns how many payments were recorded.
+   */
+  async applyAutoPayments(today: IsoDate, now: Date = new Date()): Promise<number> {
+    const tables = [
+      db.cards,
+      db.transactions,
+      db.installmentPlans,
+      db.balanceOverrides,
+      db.statements,
+      db.payments,
+    ];
+    return db.transaction('rw', tables, async () => {
+      const cards = (await db.cards.toArray()).filter(
+        (card): card is CreditCard => card.type === 'credit' && !card.archived && !!card.autoPay,
+      );
+      let count = 0;
+      for (const input of await loadUsageInputs(cards, today)) {
+        for (const bill of autoPaymentsDue(input, today)) {
+          await paymentsRepo.record(input.card, bill, bill.remaining, bill.dueDate, {
+            method: 'automatic',
+            now,
+          });
+          count++;
+        }
+      }
+      return count;
+    });
+  },
+
+  /**
+   * Removes a payment; its statement is re-settled, and dropped when no payment is left.
+   * Deleting an automatic payment marks the statement so auto-pay does not record it again.
+   */
   async remove(id: string): Promise<void> {
     await db.transaction('rw', db.statements, db.payments, async () => {
       const payment = await db.payments.get(id);
       if (!payment) return;
       await db.payments.delete(id);
+      const statement = await db.statements.get(payment.statementId);
+      if (!statement) return;
       const rest = await db.payments.where('statementId').equals(payment.statementId).toArray();
-      if (rest.length === 0) {
+      const autoPaySkipped = statement.autoPaySkipped || payment.method === 'automatic';
+      if (rest.length === 0 && !autoPaySkipped) {
         await db.statements.delete(payment.statementId);
         return;
       }
-      const statement = await db.statements.get(payment.statementId);
-      if (!statement) return;
       const paidAmount = rest.reduce((sum, p) => sum + p.amount, 0);
       await db.statements.update(payment.statementId, {
         paid: isFullyPaid(statement.totalDue, paidAmount),
+        ...(autoPaySkipped ? { autoPaySkipped: true } : {}),
       } satisfies Partial<Statement>);
     });
   },

@@ -39,7 +39,7 @@ export function UpcomingPayments({ bills }: { bills: readonly UpcomingBill[] }) 
         {t('dashboard.upcoming.title')}
       </h2>
       <ul className="divide-y divide-border rounded-xl border border-border bg-surface">
-        {bills.map(({ card, bill, overdue }) => (
+        {bills.map(({ card, bill, overdue, autoPay }) => (
           <li
             key={`${card.id}:${bill.periodEnd}`}
             className="flex flex-wrap items-center gap-x-3 gap-y-2 p-4"
@@ -57,7 +57,17 @@ export function UpcomingPayments({ bills }: { bills: readonly UpcomingBill[] }) 
                 </p>
               )}
             </div>
-            {bill.remaining > 0 ? (
+            {bill.remaining > 0 && autoPay ? (
+              <>
+                <span className="shrink-0 font-semibold whitespace-nowrap tabular-nums">
+                  {format.money(bill.remaining, card.currency)}
+                </span>
+                <p className="flex w-full items-center gap-1 text-sm font-medium text-success sm:w-auto">
+                  <Check aria-hidden="true" size={16} />
+                  {t('bill.autoPay')}
+                </p>
+              </>
+            ) : bill.remaining > 0 ? (
               <>
                 <span className="shrink-0 font-semibold whitespace-nowrap tabular-nums">
                   {format.money(bill.remaining, card.currency)}

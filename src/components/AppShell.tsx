@@ -1,10 +1,11 @@
 import { Outlet } from 'react-router';
-import { useDueSoonBadge } from '../hooks/useFinance';
+import { useAutoPay, useDueSoonBadge } from '../hooks/useFinance';
 import { useT } from '../i18n';
 import { TabBar } from './TabBar';
 
 export function AppShell() {
   const t = useT();
+  useAutoPay();
   useDueSoonBadge();
   return (
     <div className="min-h-dvh bg-bg text-fg">

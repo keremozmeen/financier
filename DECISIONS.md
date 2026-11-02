@@ -208,6 +208,12 @@ D11 deferred payments to Phase 2. Credit cards only (D13).
 - Due dates: if the computed due date falls on a Saturday or Sunday, show the next Monday, labelled as moved. Public holidays are out of scope for now.
 - Debit cards have no statements or payments; their spending counts only in spending totals.
 - **Overdue bills:** a bill whose due date has passed and is not fully paid stays visible as "Overdue" / "Gecikmiş" on the card screen, in the upcoming payments list and in the due-soon banner, ahead of the open statement, until it is paid or the user marks it "Paid outside the app" / "Uygulama dışında ödendi". That records a payment of the full remaining amount dated on the due date (flagged `outside`), so it settles the statement and appears in the payment history, where it can be deleted. Statements covered by a bank balance override (closing on or before its as-of date) are never overdue.
+- **Auto-pay:** each credit card has an "Automatic payment" / "Otomatik ödeme" setting. When it is on, each closed bill counts as fully paid on its due date: the app stores a payment of the remaining amount dated on the due date, flagged `automatic`, so it appears in the payment history and can be deleted. The dashboard and card screen show "Paid automatically" instead of asking, and auto-pay bills stay out of the due-soon banner and badge. Overdue never applies to auto-pay cards.
+
+**Auto-pay implementation notes:**
+- Auto-pay counts from the day it is turned on (`autoPaySince`); older unpaid bills are not paid retroactively.
+- Payments are recorded when the app opens and when an auto-pay setting changes, in one database transaction that re-reads the data, so repeated or overlapping runs record each payment once.
+- Deleting an automatic payment marks its statement (`autoPaySkipped`) so it is not recorded again; use this when the bank did not actually pay.
 
 ---
 
@@ -234,12 +240,12 @@ Turkish banks accept payments above the bill; the excess becomes a credit balanc
 
 | Table | Key fields |
 | :--- | :--- |
-| `cards` | `id`, `type` (`credit` / `debit`), `name`, `bank`, `last4`, `currency`, `color`, `archived`; credit only: `limit`, `statementDay`, `dueDay` |
+| `cards` | `id`, `type` (`credit` / `debit`), `name`, `bank`, `last4`, `currency`, `color`, `archived`; credit only: `limit`, `statementDay`, `dueDay`, `autoPay?`, `autoPaySince?` (D14) |
 | `transactions` | `id`, `cardId`, `date`, `description`, `normalizedMerchant`, `amount`, `currency`, `category`, `installmentPlanId?`, `fingerprint`, `source` (`manual` / `csv` / `pdf`), `importId?` |
 | `installmentPlans` | `id`, `cardId`, `description`, `totalAmount`, `count`, `purchaseDate`, `firstDueMonth`, `currency` |
 | `balanceOverrides` | `id`, `cardId`, `balance` (negative for a credit balance, D15), `currency`, `asOf`, `createdAt` (history of bank balances entered by the user, D11) |
-| `statements` | `id`, `cardId`, `periodStart`, `periodEnd`, `dueDate`, `totalDue`, `minimumDue?`, `paid`, `installments` (stored when a payment is recorded, D14) |
-| `payments` | `id`, `cardId`, `statementId`, `date`, `amount`, `currency`, `createdAt`, `method?` (`manual` / `outside`; bill payments, credit cards only, D14; added in schema v3) |
+| `statements` | `id`, `cardId`, `periodStart`, `periodEnd`, `dueDate`, `totalDue`, `minimumDue?`, `paid`, `installments`, `autoPaySkipped?` (stored when a payment is recorded, D14) |
+| `payments` | `id`, `cardId`, `statementId`, `date`, `amount`, `currency`, `createdAt`, `method?` (`manual` / `outside` / `automatic`; bill payments, credit cards only, D14; added in schema v3) |
 | `subscriptions` | `id`, `normalizedMerchant`, `cadenceDays`, `lastAmount`, `previousAmount`, `status` (`active` / `ignored` / `cancelled`), `confirmedByUser` |
 | `importProfiles` | `id`, `name`, `bank`, `kind` (`csv` / `pdf`), `headerSignature`, `columnMap` |
 | `imports` | `id`, `fileName`, `importedAt`, `rowCount`, `profileId?` (lets the user undo a whole import) |

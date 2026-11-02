@@ -28,6 +28,9 @@ export function PaymentList({
                 {payment.method === 'outside' && (
                   <p className="truncate text-xs text-muted">{t('bill.paidOutside')}</p>
                 )}
+                {payment.method === 'automatic' && (
+                  <p className="truncate text-xs text-muted">{t('payments.method.automatic')}</p>
+                )}
               </div>
               <span className="shrink-0 font-semibold text-success tabular-nums">
                 {format.money(payment.amount, payment.currency)}
