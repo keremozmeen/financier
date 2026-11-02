@@ -1,8 +1,7 @@
 import { CreditCard, Plus } from 'lucide-react';
 import { Link } from 'react-router';
 import { CardTitle } from '../components/cards/CardTitle';
-import { LimitGauge } from '../components/cards/LimitGauge';
-import { UsageFigures } from '../components/cards/UsageFigures';
+import { CardUsagePanel } from '../components/cards/CardUsagePanel';
 import { ButtonLink } from '../components/ui/Button';
 import { useCardsWithUsage } from '../hooks/useFinance';
 import { useT } from '../i18n';
@@ -37,9 +36,8 @@ export function DashboardScreen() {
                   className="block rounded-xl border border-border bg-surface p-4 transition-colors hover:border-muted"
                 >
                   <CardTitle card={card} as="h3" />
-                  <div className="mt-3 flex items-center gap-4">
-                    <LimitGauge usage={usage} name={card.name} size={112} />
-                    <UsageFigures card={card} usage={usage} />
+                  <div className="mt-3">
+                    <CardUsagePanel card={card} usage={usage} />
                   </div>
                 </Link>
               </li>

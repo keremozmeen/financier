@@ -12,10 +12,9 @@ import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { BalanceOverrideForm } from '../components/cards/BalanceOverrideForm';
 import { CardTitle } from '../components/cards/CardTitle';
+import { CardUsagePanel } from '../components/cards/CardUsagePanel';
 import { DeleteCardDialog } from '../components/cards/DeleteCardDialog';
-import { LimitGauge } from '../components/cards/LimitGauge';
 import { TransactionList } from '../components/cards/TransactionList';
-import { UsageFigures } from '../components/cards/UsageFigures';
 import { Button, ButtonLink } from '../components/ui/Button';
 import { Dialog } from '../components/ui/Dialog';
 import { ScreenHeader } from '../components/ui/ScreenHeader';
@@ -74,9 +73,8 @@ export function CardDetailScreen() {
 
       <div className="rounded-xl border border-border bg-surface p-4">
         <CardTitle card={card} showName={false} />
-        <div className="mt-3 flex items-center gap-4">
-          <LimitGauge usage={usage} name={card.name} />
-          <UsageFigures card={card} usage={usage} />
+        <div className="mt-3">
+          <CardUsagePanel card={card} usage={usage} gaugeSize={128} />
         </div>
         <UsageSource usage={usage} />
       </div>

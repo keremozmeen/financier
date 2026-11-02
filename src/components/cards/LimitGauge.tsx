@@ -6,7 +6,7 @@ import { LEVEL_TEXT } from './colors';
 // A 270° arc drawn with pathLength=100, so dash lengths are percentages of the circle.
 const ARC = 75;
 
-/** Semi-circular limit gauge colored by utilization level (D4, D11). */
+/** Semi-circular limit gauge colored by utilization level; a full card shows 100% (D4, D11, D12). */
 export function LimitGauge({
   usage,
   name,
@@ -56,9 +56,7 @@ export function LimitGauge({
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center pt-1">
         <span className="text-2xl font-semibold tabular-nums">{percent}</span>
-        <span className="text-xs text-muted">
-          {usage.overLimit ? t('gauge.overLimit') : t('gauge.used')}
-        </span>
+        <span className="text-xs text-muted">{t('gauge.used')}</span>
       </div>
     </div>
   );
