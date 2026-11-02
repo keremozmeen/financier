@@ -1,3 +1,5 @@
+export * from './activity';
+export * from './calendar';
 export * from './dates';
 export * from './fingerprint';
 export * from './installments';

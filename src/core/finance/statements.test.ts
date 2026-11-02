@@ -1,5 +1,6 @@
 import {
   computeBill,
+  dueSoon,
   installmentSchedule,
   isFullyPaid,
   paidInstallments,
@@ -291,5 +292,25 @@ describe('paidInstallments', () => {
         { id: 'c', periodEnd: '2026-12-10', paid: false, installments: [{ ...ref, index: 1 }] },
       ]),
     ).toEqual([ref]);
+  });
+});
+
+describe('dueSoon', () => {
+  const bill = (dueDate: string, remaining: number) => ({
+    bill: { ...computeBill(statementPeriodFor('2026-11-02', card), billing()), dueDate, remaining },
+  });
+
+  it('keeps unpaid bills due today through 7 days ahead, earliest first', () => {
+    const bills = [
+      bill('2026-11-09', TL(10)), // 7 days: included
+      bill('2026-11-02', TL(10)), // today: included
+      bill('2026-11-10', TL(10)), // 8 days: not yet
+      bill('2026-11-01', TL(10)), // past
+      bill('2026-11-05', 0), // nothing left to pay
+    ];
+    expect(dueSoon(bills, '2026-11-02').map((b) => b.bill.dueDate)).toEqual([
+      '2026-11-02',
+      '2026-11-09',
+    ]);
   });
 });

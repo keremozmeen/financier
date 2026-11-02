@@ -9,7 +9,15 @@ import type {
   Statement,
   Transaction,
 } from '../../types/domain';
-import { addDays, addMonths, dayOf, dueMonthFor, shiftWeekend, statementMonthFor } from './dates';
+import {
+  addDays,
+  addMonths,
+  dayOf,
+  daysBetween,
+  dueMonthFor,
+  shiftWeekend,
+  statementMonthFor,
+} from './dates';
 import { splitInstallments } from './installments';
 
 type CycleDays = Pick<CreditCard, 'statementDay' | 'dueDay'>;
@@ -187,4 +195,21 @@ export function installmentKey(ref: Pick<InstallmentRef, 'planId' | 'index'>): s
 
 export function sum(items: readonly { amount: number }[]): number {
   return items.reduce((total, item) => total + item.amount, 0);
+}
+
+/** Bills due within this many days are "due soon" (D5). */
+export const DUE_SOON_DAYS = 7;
+
+/** Bills with something left to pay that are due today or within `days` days, earliest first. */
+export function dueSoon<T extends { bill: Bill }>(
+  bills: readonly T[],
+  today: IsoDate,
+  days = DUE_SOON_DAYS,
+): T[] {
+  return bills
+    .filter(({ bill }) => {
+      const left = daysBetween(today, bill.dueDate);
+      return bill.remaining > 0 && left >= 0 && left <= days;
+    })
+    .sort((a, b) => a.bill.dueDate.localeCompare(b.bill.dueDate));
 }
