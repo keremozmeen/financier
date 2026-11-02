@@ -1,5 +1,5 @@
 import { isFullyPaid, type Bill } from '../core/finance';
-import type { Card, IsoDate, Payment, Statement } from '../types/domain';
+import type { Card, IsoDate, Payment, PaymentMethod, Statement } from '../types/domain';
 import { db, newId } from './database';
 
 export const paymentsRepo = {
@@ -22,7 +22,7 @@ export const paymentsRepo = {
     bill: Bill,
     amount: number,
     date: IsoDate,
-    now: Date = new Date(),
+    { method = 'manual', now = new Date() }: { method?: PaymentMethod; now?: Date } = {},
   ): Promise<string> {
     if (card.type !== 'credit') {
       throw new RangeError('Only credit cards have statements and payments (D13, D14)');
@@ -60,9 +60,18 @@ export const paymentsRepo = {
         amount,
         currency: card.currency,
         createdAt: now.toISOString(),
+        method,
       });
     });
     return id;
+  },
+
+  /**
+   * "Paid outside the app" for an overdue bill (D14): records the full remaining amount
+   * on its due date, which settles the statement.
+   */
+  markPaidOutside(card: Pick<Card, 'id' | 'type' | 'currency'>, bill: Bill): Promise<string> {
+    return paymentsRepo.record(card, bill, bill.remaining, bill.dueDate, { method: 'outside' });
   },
 
   /** Removes a payment; its statement is re-settled, and dropped when no payment is left. */

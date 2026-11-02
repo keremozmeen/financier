@@ -222,31 +222,55 @@ function settle(period: StatementPeriod, creditIn: number, input: BillingInput):
   };
 }
 
-/**
- * The card's next bill: the last closed statement while it is due and not fully paid,
- * otherwise the statement that is still open.
- */
-export function upcomingBill(input: BillingInput, today: IsoDate): Bill {
-  const current = computeBill(statementPeriodFor(today, input.card), input);
-  const previous = computeBill(
-    statementPeriodFor(addDays(current.periodStart, -1), input.card),
-    input,
-  );
-  return previous.dueDate >= today && previous.remaining > 0 ? previous : current;
+export interface CardBill {
+  bill: Bill;
+  /** Past its due date and not fully paid (D14). */
+  overdue: boolean;
 }
 
-/** The next bill of every credit card, earliest due first. Debit cards have none (D13). */
+/**
+ * The bills a credit card shows (D14): every overdue bill, oldest first, then the next
+ * bill — the last closed statement while it is due and not fully paid, otherwise the
+ * statement that is still open. A bill stays overdue until payments cover it (including
+ * "Paid outside the app"); statements covered by a bank balance override never are.
+ */
+export function cardBills(input: BillingInput, today: IsoDate): CardBill[] {
+  const chain = billsThrough(input, statementPeriodFor(today, input.card));
+  const current = chain.at(-1)!;
+  const previous =
+    chain.at(-2) ??
+    computeBill(statementPeriodFor(addDays(current.periodStart, -1), input.card), input);
+  const overdue = chain.filter((bill) => bill.dueDate < today && bill.remaining > 0);
+  const next = previous.dueDate >= today && previous.remaining > 0 ? previous : current;
+  return [...overdue.map((bill) => ({ bill, overdue: true })), { bill: next, overdue: false }];
+}
+
+/** The bill a card asks about first: its oldest overdue bill, else its next bill. */
+export function upcomingBill(input: BillingInput, today: IsoDate): Bill {
+  return cardBills(input, today)[0]!.bill;
+}
+
+/**
+ * The bills of every credit card: overdue ones first, then by due date. Debit cards
+ * have none (D13).
+ */
 export function upcomingBills<C extends Card>(
   inputs: readonly (Omit<BillingInput, 'card'> & { card: C })[],
   today: IsoDate,
-): { card: Extract<C, CreditCard>; bill: Bill }[] {
+): ({ card: Extract<C, CreditCard> } & CardBill)[] {
   return inputs
     .flatMap(({ card, ...rest }) =>
       card.type === 'credit'
-        ? [{ card: card as Extract<C, CreditCard>, bill: upcomingBill({ ...rest, card }, today) }]
+        ? cardBills({ ...rest, card }, today).map((item) => ({
+            card: card as Extract<C, CreditCard>,
+            ...item,
+          }))
         : [],
     )
-    .sort((a, b) => a.bill.dueDate.localeCompare(b.bill.dueDate));
+    .sort(
+      (a, b) =>
+        Number(b.overdue) - Number(a.overdue) || a.bill.dueDate.localeCompare(b.bill.dueDate),
+    );
 }
 
 /** A payment settles the statement when the payments recorded for it cover its total (D14). */
@@ -275,16 +299,22 @@ export function sum(items: readonly { amount: number }[]): number {
 /** Bills due within this many days are "due soon" (D5). */
 export const DUE_SOON_DAYS = 7;
 
-/** Bills with something left to pay that are due today or within `days` days, earliest first. */
-export function dueSoon<T extends { bill: Bill }>(
+/**
+ * Bills that need attention: overdue ones, and those with something left to pay due
+ * today or within `days` days. Overdue first, then earliest due.
+ */
+export function dueSoon<T extends CardBill>(
   bills: readonly T[],
   today: IsoDate,
   days = DUE_SOON_DAYS,
 ): T[] {
   return bills
-    .filter(({ bill }) => {
+    .filter(({ bill, overdue }) => {
       const left = daysBetween(today, bill.dueDate);
-      return bill.remaining > 0 && left >= 0 && left <= days;
+      return overdue || (bill.remaining > 0 && left >= 0 && left <= days);
     })
-    .sort((a, b) => a.bill.dueDate.localeCompare(b.bill.dueDate));
+    .sort(
+      (a, b) =>
+        Number(b.overdue) - Number(a.overdue) || a.bill.dueDate.localeCompare(b.bill.dueDate),
+    );
 }

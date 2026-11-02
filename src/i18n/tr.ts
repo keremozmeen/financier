@@ -47,6 +47,7 @@ export const tr: Record<MessageKey, string> = {
   'due.inDays': '{count} gün içinde',
   'due.item': '{card}: {amount}, son ödeme {when}',
 
+  'due.overdueItem': '{card}: {amount}, {date} tarihinden beri gecikmiş',
   'calendar.add': 'Takvime ekle',
   'calendar.help':
     'Her son ödeme gününden 3 gün önce hatırlatan aylık etkinlikler içeren bir takvim dosyası indirir. Dosyada yalnızca kart adları var, ama takvim uygulaman onu kendi bulutuna eşitleyebilir.',
@@ -135,6 +136,9 @@ export const tr: Record<MessageKey, string> = {
   'bill.creditApplied': '{amount} alacağınla karşılandı',
   'bill.paidSoFar': '{amount} ödendi',
   'bill.nothingDue': 'Bu ekstrede ödenecek bir tutar yok.',
+  'bill.overdue': 'Gecikmiş',
+  'bill.overdueTitle': 'Gecikmiş ekstre',
+  'bill.paidOutside': 'Uygulama dışında ödendi',
   'bill.markPaid': 'Ödendi olarak işaretle',
 
   'payment.title': 'Ödeme kaydet',

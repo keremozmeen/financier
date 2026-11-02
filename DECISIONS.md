@@ -207,6 +207,7 @@ D11 deferred payments to Phase 2. Credit cards only (D13).
 - Effect on used (extends D11): a payment dated after the override as-of date reduces used by its amount. A full payment also marks the installments in that statement as paid, so the limit they blocked is released. A partial payment reduces used but marks no installments as paid. Interest on unpaid balances is out of scope; the user reflects it with the bank balance override.
 - Due dates: if the computed due date falls on a Saturday or Sunday, show the next Monday, labelled as moved. Public holidays are out of scope for now.
 - Debit cards have no statements or payments; their spending counts only in spending totals.
+- **Overdue bills:** a bill whose due date has passed and is not fully paid stays visible as "Overdue" / "Gecikmiş" on the card screen, in the upcoming payments list and in the due-soon banner, ahead of the open statement, until it is paid or the user marks it "Paid outside the app" / "Uygulama dışında ödendi". That records a payment of the full remaining amount dated on the due date (flagged `outside`), so it settles the statement and appears in the payment history, where it can be deleted. Statements covered by a bank balance override (closing on or before its as-of date) are never overdue.
 
 ---
 
@@ -238,7 +239,7 @@ Turkish banks accept payments above the bill; the excess becomes a credit balanc
 | `installmentPlans` | `id`, `cardId`, `description`, `totalAmount`, `count`, `purchaseDate`, `firstDueMonth`, `currency` |
 | `balanceOverrides` | `id`, `cardId`, `balance` (negative for a credit balance, D15), `currency`, `asOf`, `createdAt` (history of bank balances entered by the user, D11) |
 | `statements` | `id`, `cardId`, `periodStart`, `periodEnd`, `dueDate`, `totalDue`, `minimumDue?`, `paid`, `installments` (stored when a payment is recorded, D14) |
-| `payments` | `id`, `cardId`, `statementId`, `date`, `amount`, `currency`, `createdAt` (bill payments, credit cards only, D14; added in schema v3) |
+| `payments` | `id`, `cardId`, `statementId`, `date`, `amount`, `currency`, `createdAt`, `method?` (`manual` / `outside`; bill payments, credit cards only, D14; added in schema v3) |
 | `subscriptions` | `id`, `normalizedMerchant`, `cadenceDays`, `lastAmount`, `previousAmount`, `status` (`active` / `ignored` / `cancelled`), `confirmedByUser` |
 | `importProfiles` | `id`, `name`, `bank`, `kind` (`csv` / `pdf`), `headerSignature`, `columnMap` |
 | `imports` | `id`, `fileName`, `importedAt`, `rowCount`, `profileId?` (lets the user undo a whole import) |

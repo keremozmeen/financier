@@ -105,6 +105,12 @@ export interface Statement {
   installments: InstallmentRef[];
 }
 
+/**
+ * How a payment was recorded (D14): entered in the form, or "Paid outside the app"
+ * for an overdue bill (the full remaining amount, dated on its due date).
+ */
+export type PaymentMethod = 'manual' | 'outside';
+
 /** A bill payment towards one statement (D14). Credit cards only. */
 export interface Payment {
   id: string;
@@ -115,6 +121,8 @@ export interface Payment {
   amount: number;
   currency: CurrencyCode;
   createdAt: IsoTimestamp;
+  /** Missing on payments saved before methods existed: those are manual. */
+  method?: PaymentMethod;
 }
 
 export type SubscriptionStatus = 'active' | 'ignored' | 'cancelled';

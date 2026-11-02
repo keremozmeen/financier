@@ -36,7 +36,8 @@ export function CardDetailScreen() {
   const detail = useCardDetail(id);
   const entryLabel = useEntryLabel();
   const [editingBalance, setEditingBalance] = useState(false);
-  const [paying, setPaying] = useState(false);
+  /** The period end of the bill being paid. */
+  const [paying, setPaying] = useState<string>();
   const [deleteCounts, setDeleteCounts] = useState<{ transactions: number; overrides: number }>();
   const [pendingDelete, setPendingDelete] = useState<Transaction>();
   const [pendingPaymentDelete, setPendingPaymentDelete] = useState<Payment>();
@@ -93,20 +94,29 @@ export function CardDetailScreen() {
       </div>
 
       {/* Debit cards have no statements or payments (D13, D14). */}
-      {'bill' in summary &&
-        (paying ? (
-          <PaymentForm
-            card={summary.card}
-            bill={summary.bill}
-            onCancel={() => setPaying(false)}
-            onSubmit={async (amount, date) => {
-              await paymentsRepo.record(summary.card, summary.bill, amount, date);
-              setPaying(false);
-            }}
-          />
-        ) : (
-          <NextBill card={summary.card} bill={summary.bill} onMarkPaid={() => setPaying(true)} />
-        ))}
+      {'bills' in summary &&
+        summary.bills.map((item) =>
+          paying === item.bill.periodEnd ? (
+            <PaymentForm
+              key={item.bill.periodEnd}
+              card={summary.card}
+              bill={item.bill}
+              onCancel={() => setPaying(undefined)}
+              onSubmit={async (amount, date) => {
+                await paymentsRepo.record(summary.card, item.bill, amount, date);
+                setPaying(undefined);
+              }}
+            />
+          ) : (
+            <NextBill
+              key={item.bill.periodEnd}
+              card={summary.card}
+              item={item}
+              onMarkPaid={() => setPaying(item.bill.periodEnd)}
+              onPaidOutside={() => void paymentsRepo.markPaidOutside(summary.card, item.bill)}
+            />
+          ),
+        )}
 
       {'usage' in summary && editingBalance ? (
         <BalanceOverrideForm

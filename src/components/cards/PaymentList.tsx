@@ -23,7 +23,12 @@ export function PaymentList({
           const label = `${t('payments.label')} ${format.date(payment.date)}`;
           return (
             <li key={payment.id} className="flex items-center gap-3 py-2 pr-1 pl-4">
-              <p className="min-w-0 flex-1 truncate">{format.date(payment.date)}</p>
+              <div className="min-w-0 flex-1">
+                <p className="truncate">{format.date(payment.date)}</p>
+                {payment.method === 'outside' && (
+                  <p className="truncate text-xs text-muted">{t('bill.paidOutside')}</p>
+                )}
+              </div>
               <span className="shrink-0 font-semibold text-success tabular-nums">
                 {format.money(payment.amount, payment.currency)}
               </span>

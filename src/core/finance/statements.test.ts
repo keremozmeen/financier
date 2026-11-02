@@ -1,4 +1,5 @@
 import {
+  cardBills,
   computeBill,
   dueSoon,
   installmentSchedule,
@@ -241,13 +242,76 @@ describe('upcomingBill', () => {
     });
   });
 
-  it('moves on to the open statement after the due date', () => {
-    expect(upcomingBill(billing(), '2026-11-21').periodEnd).toBe('2026-12-10');
+  it('does not skip a closed statement that is past due and unpaid', () => {
+    expect(upcomingBill(billing(), '2026-11-21')).toMatchObject({
+      periodEnd: '2026-11-10',
+      remaining: TL(1_200),
+    });
+  });
+});
+
+describe('cardBills: overdue bills (D14)', () => {
+  const pay = (statementId: string, periodEnd: string, lira: number, paid: boolean) => ({
+    statements: [{ id: statementId, periodEnd, paid, installments: [] }],
+    payments: [
+      { statementId, date: '2026-11-21', amount: TL(lira), currency: 'TRY', createdAt: 'a' },
+    ],
+  });
+
+  it('lists an unpaid bill past its due date as overdue, ahead of the open statement', () => {
+    expect(cardBills(billing(), '2026-11-21')).toEqual([
+      {
+        bill: expect.objectContaining({ periodEnd: '2026-11-10', remaining: TL(1_200) }),
+        overdue: true,
+      },
+      { bill: expect.objectContaining({ periodEnd: '2026-12-10' }), overdue: false },
+    ]);
+  });
+
+  it('is not overdue on its due date', () => {
+    expect(cardBills(billing(), '2026-11-20')).toEqual([
+      { bill: expect.objectContaining({ periodEnd: '2026-11-10' }), overdue: false },
+    ]);
+  });
+
+  it('stays overdue after a partial payment, with what is left', () => {
+    const items = cardBills(billing(pay('s1', '2026-11-10', 200, false)), '2026-11-25');
+    expect(items[0]).toEqual({
+      bill: expect.objectContaining({ periodEnd: '2026-11-10', remaining: TL(1_000) }),
+      overdue: true,
+    });
+  });
+
+  it('stops being overdue once fully paid (for example "Paid outside the app")', () => {
+    const items = cardBills(billing(pay('s1', '2026-11-10', 1_200, true)), '2026-11-25');
+    expect(items).toEqual([
+      { bill: expect.objectContaining({ periodEnd: '2026-12-10' }), overdue: false },
+    ]);
+  });
+
+  it('lists several overdue bills oldest first', () => {
+    // The 1.200 ₺ plan bills 400 ₺ in each of November, December and January.
+    const items = cardBills(billing(), '2027-01-02');
+    expect(items.map(({ bill, overdue }) => [bill.periodEnd, overdue])).toEqual([
+      ['2026-11-10', true],
+      ['2026-12-10', true],
+      ['2027-01-10', false],
+    ]);
+  });
+
+  it('never flags statements covered by a bank balance override', () => {
+    const items = cardBills(
+      billing({
+        overrides: [{ balance: 0, currency: 'TRY', asOf: '2026-11-20', createdAt: 'x' }],
+      }),
+      '2026-11-25',
+    );
+    expect(items.some((item) => item.overdue)).toBe(false);
   });
 });
 
 describe('upcomingBills', () => {
-  it('lists credit cards only, earliest due first', () => {
+  it('lists credit cards only, overdue first, then earliest due', () => {
     const base = { id: 'x', name: '', bank: '', last4: '', color: '', archived: false };
     const cards: Card[] = [
       {
@@ -274,7 +338,12 @@ describe('upcomingBills', () => {
       cards.map((c) => ({ ...billing(), card: c })),
       '2026-11-12',
     );
-    expect(bills.map((b) => b.card.id)).toEqual(['early', 'late']);
+    // The 25th/5th card's October statement was due on November 5: overdue comes first.
+    expect(bills.map((b) => [b.card.id, b.bill.dueDate, b.overdue])).toEqual([
+      ['late', '2026-11-05', true],
+      ['early', '2026-11-20', false],
+      ['late', '2026-12-07', false],
+    ]);
   });
 });
 
@@ -301,8 +370,9 @@ describe('paidInstallments', () => {
 });
 
 describe('dueSoon', () => {
-  const bill = (dueDate: string, remaining: number) => ({
+  const bill = (dueDate: string, remaining: number, overdue = false) => ({
     bill: { ...computeBill(statementPeriodFor('2026-11-02', card), billing()), dueDate, remaining },
+    overdue,
   });
 
   it('keeps unpaid bills due today through 7 days ahead, earliest first', () => {
@@ -316,6 +386,14 @@ describe('dueSoon', () => {
     expect(dueSoon(bills, '2026-11-02').map((b) => b.bill.dueDate)).toEqual([
       '2026-11-02',
       '2026-11-09',
+    ]);
+  });
+
+  it('always includes overdue bills, ahead of the others', () => {
+    const bills = [bill('2026-11-05', TL(10)), bill('2026-10-20', TL(10), true)];
+    expect(dueSoon(bills, '2026-11-02').map((b) => [b.bill.dueDate, b.overdue])).toEqual([
+      ['2026-10-20', true],
+      ['2026-11-05', false],
     ]);
   });
 });

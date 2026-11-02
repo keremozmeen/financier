@@ -46,6 +46,7 @@ export const en = {
   'due.inDays': 'in {count} days',
   'due.item': '{card}: {amount} due {when}',
 
+  'due.overdueItem': '{card}: {amount} overdue since {date}',
   'calendar.add': 'Add to calendar',
   'calendar.help':
     'Downloads a calendar file with a monthly reminder 3 days before each due date. It holds only card names, but your calendar app may sync it to its cloud.',
@@ -133,6 +134,9 @@ export const en = {
   'bill.creditApplied': '{amount} covered by your credit',
   'bill.paidSoFar': '{amount} paid so far',
   'bill.nothingDue': 'Nothing to pay on this statement.',
+  'bill.overdue': 'Overdue',
+  'bill.overdueTitle': 'Overdue bill',
+  'bill.paidOutside': 'Paid outside the app',
   'bill.markPaid': 'Mark as paid',
 
   'payment.title': 'Record a payment',

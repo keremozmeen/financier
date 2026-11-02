@@ -9,5 +9,6 @@ export {
   loadUsageInputs,
   type CardSummary,
   type DashboardData,
+  type UpcomingBill,
   type CreditCardInput,
 } from './usage';

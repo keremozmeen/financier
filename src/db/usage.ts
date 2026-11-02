@@ -4,11 +4,11 @@ import {
   projectTotalLiabilities,
   recentActivity,
   spendingInMonth,
-  upcomingBill,
+  cardBills,
   upcomingBills,
   type MonthAmount,
   type BillingInput,
-  type Bill,
+  type CardBill,
   type CardUsage,
   type CardUsageInput,
 } from '../core/finance';
@@ -28,11 +28,15 @@ import { cardsRepo } from './cards';
 import { db } from './database';
 
 /**
- * What a card shows at a glance: a limit gauge and the next bill for credit, this
- * month's spending for debit (D13, D14).
+ * What a card shows at a glance: a limit gauge, overdue bills and the next bill for
+ * credit, this month's spending for debit (D13, D14).
  */
 export type CardSummary =
-  { card: CreditCard; usage: CardUsage; bill: Bill } | { card: DebitCard; monthSpending: number };
+  | { card: CreditCard; usage: CardUsage; bills: CardBill[] }
+  | { card: DebitCard; monthSpending: number };
+
+/** A credit card bill as listed on the dashboard (D14). */
+export type UpcomingBill = { card: CreditCard } & CardBill;
 
 /** Everything D11, D12 and D14 need for one credit card. */
 export interface CreditCardInput extends CardUsageInput, BillingInput {
@@ -80,8 +84,8 @@ export const PROJECTION_MONTHS = 12;
 
 export interface DashboardData {
   summaries: CardSummary[];
-  /** The next bill of every credit card, earliest due first (D14). */
-  bills: { card: CreditCard; bill: Bill }[];
+  /** Overdue bills and the next bill of every credit card, overdue first (D14). */
+  bills: UpcomingBill[];
   /** Liabilities per currency for the next 12 due months, from this month (credit only). */
   projections: Record<CurrencyCode, MonthAmount[]>;
   /** Latest entries across credit and debit cards. */
@@ -127,7 +131,7 @@ async function loadCards(cards: readonly Card[], today: IsoDate) {
   const summaries = cards.map((card): CardSummary => {
     if (card.type === 'credit') {
       const input = creditInputs[credit.indexOf(card)]!;
-      return { card, usage: computeCardUsage(input), bill: upcomingBill(input, today) };
+      return { card, usage: computeCardUsage(input), bills: cardBills(input, today) };
     }
     return {
       card,
