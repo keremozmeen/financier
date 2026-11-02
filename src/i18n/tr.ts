@@ -26,6 +26,40 @@ export const tr: Record<MessageKey, string> = {
   'dashboard.empty.title': 'Henüz kart yok',
   'dashboard.empty.body': 'Bir kredi kartı ekle, Kipp limitini senin için takip etsin.',
 
+  'dashboard.upcoming.title': 'Yaklaşan ödemeler',
+  'dashboard.upcoming.none': 'Ödenecek tutar yok',
+  'dashboard.cashFlow.title': 'Nakit akışı',
+  'dashboard.cashFlow.help':
+    'Kredi kartı ekstrelerinin her ay isteyeceği tutar: taksitler ve ekstreye girmiş harcamalar.',
+  'dashboard.cashFlow.range': 'Dönem',
+  'dashboard.cashFlow.months': '{count} ay',
+  'dashboard.cashFlow.currency': 'Para birimi',
+  'dashboard.cashFlow.total': 'Önümüzdeki {count} ay: {amount}',
+  'dashboard.cashFlow.empty': 'Yaklaşan kredi kartı ödemesi yok.',
+  'dashboard.cashFlow.month': 'Ay',
+  'dashboard.cashFlow.amount': 'Ödenecek',
+  'dashboard.recent.title': 'Son hareketler',
+  'dashboard.recent.empty': 'Henüz kayıt yok.',
+
+  'due.banner.title': 'Ödemesi yaklaşanlar',
+  'due.today': 'bugün',
+  'due.tomorrow': 'yarın',
+  'due.inDays': '{count} gün içinde',
+  'due.item': '{card}: {amount}, son ödeme {when}',
+
+  'calendar.add': 'Takvime ekle',
+  'calendar.help':
+    'Her son ödeme gününden 3 gün önce hatırlatan aylık etkinlikler içeren bir takvim dosyası indirir. Dosyada yalnızca kart adları var, ama takvim uygulaman onu kendi bulutuna eşitleyebilir.',
+  'calendar.summary': '{name} son ödeme günü',
+  'calendar.description':
+    'Financier hatırlatması. Hafta sonuna denk gelen son ödeme günü pazartesiye kayar.',
+
+  'payments.title': 'Ödemeler',
+  'payments.label': 'Ödeme',
+  'payments.delete.title': 'Ödeme silinsin mi?',
+  'payments.delete.body':
+    '{date} tarihli {amount} ödeme silinecek ve kullanılan tutar yeniden artacak.',
+
   'gauge.label': '{name}: limitin {percent} kullanıldı',
   'gauge.used': 'Kullanılan',
   'gauge.available': 'Kullanılabilir',

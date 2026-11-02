@@ -25,6 +25,39 @@ export const en = {
   'dashboard.empty.title': 'No cards yet',
   'dashboard.empty.body': 'Add a credit card and Kipp will keep an eye on its limit.',
 
+  'dashboard.upcoming.title': 'Upcoming payments',
+  'dashboard.upcoming.none': 'Nothing to pay',
+  'dashboard.cashFlow.title': 'Cash flow',
+  'dashboard.cashFlow.help':
+    'What your credit card bills ask for each month: installments plus charges already on the statement.',
+  'dashboard.cashFlow.range': 'Period',
+  'dashboard.cashFlow.months': '{count} mo',
+  'dashboard.cashFlow.currency': 'Currency',
+  'dashboard.cashFlow.total': 'Next {count} months: {amount}',
+  'dashboard.cashFlow.empty': 'No upcoming credit card payments.',
+  'dashboard.cashFlow.month': 'Month',
+  'dashboard.cashFlow.amount': 'To pay',
+  'dashboard.recent.title': 'Recent activity',
+  'dashboard.recent.empty': 'No entries yet.',
+
+  'due.banner.title': 'Due soon',
+  'due.today': 'today',
+  'due.tomorrow': 'tomorrow',
+  'due.inDays': 'in {count} days',
+  'due.item': '{card}: {amount} due {when}',
+
+  'calendar.add': 'Add to calendar',
+  'calendar.help':
+    'Downloads a calendar file with a monthly reminder 3 days before each due date. It holds only card names, but your calendar app may sync it to its cloud.',
+  'calendar.summary': '{name} payment due',
+  'calendar.description': 'Reminder from Financier. A due date on a weekend moves to Monday.',
+
+  'payments.title': 'Payments',
+  'payments.label': 'Payment',
+  'payments.delete.title': 'Delete payment?',
+  'payments.delete.body':
+    'This removes the {amount} payment from {date}, and your used amount goes back up.',
+
   'gauge.label': '{name}: {percent} of limit used',
   'gauge.used': 'Used',
   'gauge.available': 'Available',

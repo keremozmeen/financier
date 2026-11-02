@@ -13,9 +13,12 @@ export function PaymentForm({
   bill,
   onSubmit,
   onCancel,
+  bare = false,
 }: {
   card: CreditCard;
   bill: Bill;
+  /** Inside a dialog, which already has the title and frame. */
+  bare?: boolean;
   onSubmit: (amount: number, date: IsoDate) => void;
   onCancel: () => void;
 }) {
@@ -45,9 +48,9 @@ export function PaymentForm({
       onSubmit={submit}
       noValidate
       aria-label={t('payment.title')}
-      className="space-y-4 rounded-xl border border-border bg-surface p-4"
+      className={bare ? 'space-y-4' : 'space-y-4 rounded-xl border border-border bg-surface p-4'}
     >
-      <h2 className="font-semibold">{t('payment.title')}</h2>
+      {!bare && <h2 className="font-semibold">{t('payment.title')}</h2>}
       <p className="text-sm">
         {t('payment.statementTotal', { amount: format.money(bill.total, card.currency) })}
       </p>

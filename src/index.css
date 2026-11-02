@@ -65,3 +65,14 @@ body {
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
 }
+
+/* Recharts draws SVG presentation attributes; theme tokens are applied here instead. */
+.cash-flow-chart .recharts-bar-rectangle path {
+  fill: var(--accent);
+}
+.cash-flow-chart .recharts-cartesian-grid line {
+  stroke: var(--border);
+}
+.cash-flow-chart .recharts-cartesian-axis-tick-value {
+  fill: var(--muted);
+}
