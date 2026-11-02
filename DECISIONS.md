@@ -137,13 +137,41 @@ The promise is enforced by the build, not just by convention:
 
 ---
 
+## D11. Card "used" amount and limit blocking
+
+Turkish banks block the full value of an installment purchase against the card limit and release it as each installment is billed and paid. A 12,000 ₺ purchase in 6 installments blocks 12,000 ₺ on day one.
+
+- used = unpaid single-payment charges + remaining unpaid balance of all installment plans
+- available = limit − used. If used exceeds the limit, show the card as over limit (alert color) and display available as 0, never negative.
+- utilization = used / limit, shown with the D4 colors: under 30% healthy, 30–70% warning, over 70% alert.
+
+**Balance override:**
+- The user can enter the card's current balance from their banking app, saved with the date it was entered ("as of" date).
+- When an override exists: used = override balance + single charges dated after the as-of date + the full remaining value of installment plans created after the as-of date. Everything before the as-of date is assumed to be included in the override.
+- Without an override, used is calculated from the recorded transactions alone.
+- Updating the override (for example after paying the bill) replaces the previous one. Keep a history of past overrides so later phases can use it.
+- The card screen shows whether used is "calculated" or "from your bank balance on <date>", and suggests updating it if the as-of date is more than 30 days old.
+
+Payments and statements are tracked from Phase 2 on. Until then, the override is how the user reflects a paid bill.
+
+**Implementation notes:**
+- Refunds are transactions with a negative amount; they lower used. Installment plans are charges only.
+- An installment purchase is stored as one `installmentPlans` row plus one transaction (the purchase, full amount, linked by `installmentPlanId`). Only the plan counts toward used, so the purchase is not counted twice.
+- "Remaining unpaid balance" is `totalAmount` minus the installments paid. Until Phase 2 records payments, no installment counts as paid.
+- "After the as-of date" is strict: entries dated on the as-of day are assumed to be in the override. The current override is the most recently entered one; older entries stay as history.
+- Only amounts in the card's currency count toward used (D2: no FX conversion).
+- Utilization boundaries: below 30% healthy, 30% to 70% inclusive warning, above 70% or over limit alert.
+
+---
+
 ## Data model (v1)
 
 | Table | Key fields |
 | :--- | :--- |
 | `cards` | `id`, `name`, `bank`, `last4`, `currency`, `limit`, `statementDay`, `dueDay`, `color`, `archived` |
 | `transactions` | `id`, `cardId`, `date`, `description`, `normalizedMerchant`, `amount`, `currency`, `category`, `installmentPlanId?`, `fingerprint`, `source` (`manual` / `csv` / `pdf`), `importId?` |
-| `installmentPlans` | `id`, `cardId`, `description`, `totalAmount`, `count`, `firstDueMonth`, `currency` |
+| `installmentPlans` | `id`, `cardId`, `description`, `totalAmount`, `count`, `purchaseDate`, `firstDueMonth`, `currency` |
+| `balanceOverrides` | `id`, `cardId`, `balance`, `currency`, `asOf`, `createdAt` (history of bank balances entered by the user, D11) |
 | `statements` | `id`, `cardId`, `periodStart`, `periodEnd`, `dueDate`, `totalDue`, `minimumDue`, `paid` |
 | `subscriptions` | `id`, `normalizedMerchant`, `cadenceDays`, `lastAmount`, `previousAmount`, `status` (`active` / `ignored` / `cancelled`), `confirmedByUser` |
 | `importProfiles` | `id`, `name`, `bank`, `kind` (`csv` / `pdf`), `headerSignature`, `columnMap` |
