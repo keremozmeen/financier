@@ -29,8 +29,9 @@ export const en = {
   'gauge.used': 'Used',
   'gauge.available': 'Available',
   'gauge.limit': 'Limit',
-  'gauge.overLimit': 'Over limit',
-  'gauge.noLimit': 'No limit set',
+
+  'cards.full.hint':
+    'Your recorded spending is higher than your limit. Update your bank balance or limit.',
 
   'cards.add': 'Add card',
   'cards.empty': 'You have not added any cards yet.',
@@ -114,6 +115,9 @@ export const en = {
   'tx.error.date': 'Pick a valid date.',
   'tx.error.description': 'Enter a description.',
   'tx.error.amount': 'Enter an amount greater than 0.',
+  'spend.blocked': 'Your bank would decline this: only {available} is available.',
+  'spend.updateBalance': 'Update bank balance',
+  'spend.editLimit': 'Edit card limit',
   'tx.delete.title': 'Delete this entry?',
   'tx.delete.body': 'This removes "{description}" from this card.',
   'tx.delete.bodyPlan': 'This removes "{description}" and its installment plan from this card.',

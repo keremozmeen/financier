@@ -30,8 +30,9 @@ export const tr: Record<MessageKey, string> = {
   'gauge.used': 'Kullanılan',
   'gauge.available': 'Kullanılabilir',
   'gauge.limit': 'Limit',
-  'gauge.overLimit': 'Limit aşıldı',
-  'gauge.noLimit': 'Limit girilmedi',
+
+  'cards.full.hint':
+    'Kayıtlı harcaman limitinden yüksek görünüyor. Banka bakiyeni ya da limitini güncelle.',
 
   'cards.add': 'Kart ekle',
   'cards.empty': 'Henüz kart eklemedin.',
@@ -114,6 +115,9 @@ export const tr: Record<MessageKey, string> = {
   'tx.error.date': 'Geçerli bir tarih seç.',
   'tx.error.description': 'Bir açıklama gir.',
   'tx.error.amount': "0'dan büyük bir tutar gir.",
+  'spend.blocked': 'Bankan bu işlemi reddeder: kullanılabilir limit yalnızca {available}.',
+  'spend.updateBalance': 'Banka bakiyesini güncelle',
+  'spend.editLimit': 'Kart limitini düzenle',
   'tx.delete.title': 'Bu kayıt silinsin mi?',
   'tx.delete.body': '"{description}" bu karttan kaldırılır.',
   'tx.delete.bodyPlan': '"{description}" ve taksit planı bu karttan kaldırılır.',
