@@ -33,11 +33,16 @@ All processing happens **on your phone**. No file is ever uploaded anywhere.
 
 ---
 
-## 💳 Managing Credit Cards & Cash Flow
+## 💳 Managing Cards & Cash Flow
 
-* **Card Gauges:** View your total limit vs. current spent amount across all registered cards in real time.
-* **Cash Flow Forecast:** Check the **Installment Projection** chart to see your exact fixed liabilities for the next 3 to 12 months.
-* **Statement Dates:** Set your cards' closing and due dates. Kipp reminds you in the app when a payment is due within 7 days, and **Export to Calendar** adds the due dates to your phone's calendar so it can alert you even when Financier is closed.
+Financier tracks two kinds of cards. You pick the type when you add a card, and it cannot change once the card has entries.
+
+* **Credit cards (kredi kartı):** have a limit, a statement day and a payment due day. They show a **limit gauge** (limit, used, available), support installment purchases, appear in upcoming payments and debt totals, and Financier stops you from recording a charge your bank would decline.
+* **Debit cards (banka kartı):** spend straight from your bank account, so they have no limit, statements, due dates or installments. They show **this month's spending** instead of a gauge, and their charges count in your spending totals, recent activity, imports and Sub-Radar.
+
+* **Card Gauges:** View your total limit vs. current spent amount across all your credit cards in real time.
+* **Cash Flow Forecast:** Check the **Installment Projection** chart to see your exact fixed liabilities for the next 3 to 12 months (credit cards).
+* **Statement Dates:** Set your credit cards' closing and due dates. Kipp reminds you in the app when a payment is due within 7 days, and **Export to Calendar** adds the due dates to your phone's calendar so it can alert you even when Financier is closed.
 
 ---
 
