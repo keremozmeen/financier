@@ -17,6 +17,7 @@ You are the developer of **Financier**, a mobile-first, 100% local, zero-cloud p
 - **Every user-visible string goes through `src/i18n/`** with both `en` and `tr` entries.
 - **Imports are never saved without the user's review**, and must be deduplicated by fingerprint.
 - **English** for code, comments and commit messages (Conventional Commits).
+- **Cards are credit or debit** (`DECISIONS.md` D11–D14). Every feature must state how it treats each type: limits, statements, payments, installments, blocking and debt apply to credit cards only; spending, imports, Sub-Radar and Kipp cover both.
 
 ## Commands
 
@@ -48,23 +49,28 @@ Work phase by phase. Finish each phase with passing checks and a pull request (o
 - Card limit gauges (SVG) on the dashboard: limit, used, available, utilization color.
 
 ### Phase 2 — Finance core and cash flow
+- Statements and bill payments per `DECISIONS.md` D14: computed statements, upcoming payments with "Mark as paid", full vs. partial payment effect on used and installments, weekend due-date shift.
 - `core/finance`: available limit, utilization, total debt, statement period for a date, due-date calculation, installment schedule, 3/6/12-month liability projection, fixed vs. variable monthly spend.
 - Dashboard: cash-flow bar chart (Recharts) with 3/6/12 toggle, upcoming payments list, recent activity.
 - Due-soon banner, app badge, and `.ics` calendar export for due dates.
+- Debit: liabilities, statements, payments and due dates are credit-only; debit counts in spending and recent activity.
 
 ### Phase 3 — CSV import
 - Import screen with file picker and drag-and-drop.
 - PapaParse parsing, Turkish number/date utilities, column-mapping wizard, saved import profiles matched by header signature.
 - Review screen (edit/drop rows, confidence flags), fingerprint deduplication, import history with undo.
+- Debit: an import is assigned to one card of either type; installment columns are ignored for debit cards.
 
 ### Phase 4 — Sub-Radar
 - `core/subscriptions`: merchant normalization, recurring detection (cadence 28–31 days, also weekly and yearly), price-hike detection, duplicate-charge detection.
 - Sub-Radar tab: active subscriptions, monthly/yearly cost, red alert for price hikes, confirm/ignore/mark cancelled.
+- Debit: subscriptions are detected across credit and debit cards.
 
 ### Phase 5 — Kipp
 - `core/insights`: the rules listed in `DECISIONS.md` D4, ranked by severity, each with its numbers and a suggested action.
 - `core/kipp`: Turkish/English intent parser with fuzzy card-name matching; answers built from `core/finance` functions.
 - Kipp mascot component (SVG) whose color and mood reflect overall health; insight cards on the dashboard; chat bar with suggested questions.
+- Debit: Kipp's limit, utilization and debt insights are credit-only; spending and subscription insights cover both; the parser understands "banka kartı" / "debit card".
 
 ### Phase 6 — PDF import
 - `pdfjs-dist` with a locally bundled worker; password prompt for protected PDFs.
@@ -72,6 +78,7 @@ Work phase by phase. Finish each phase with passing checks and a pull request (o
 
 ### Phase 7 — Backup, settings, polish
 - Encrypted export/restore (PBKDF2 + AES-GCM, replace or merge), Clear All Data with confirmation.
+- Debit: backup and restore include the card type.
 - Settings: language, theme, monthly income, primary currency, storage persistence status, privacy explanation.
 - First-run onboarding with Kipp, empty states, accessibility pass (contrast, labels, touch targets ≥ 44px), Lighthouse PWA check.
 

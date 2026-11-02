@@ -144,7 +144,7 @@ The promise is enforced by the build, not just by convention:
 Turkish banks block the full value of an installment purchase against the card limit and release it as each installment is billed and paid. A 12,000 ₺ purchase in 6 installments blocks 12,000 ₺ on day one.
 
 - used = unpaid single-payment charges + remaining unpaid balance of all installment plans
-- available = limit − used, never negative. When used exceeds the limit, the card is treated as full; see D12.
+- available = limit − used, never negative. When used exceeds the limit, the card is treated as full; see D12. A credit balance adds to available (D15).
 - utilization = used / limit, shown with the D4 colors: under 30% healthy, 30–70% warning, over 70% alert.
 
 **Balance override:**
@@ -172,7 +172,7 @@ Turkish banks decline purchases that exceed the available limit, so a recorded c
 
 - Manual charges and new installment purchases larger than the card's current available limit are blocked in the entry form, with a message like "Your bank would decline this: only <available> is available." and two actions: "Update bank balance" and "Edit card limit". Refunds are never blocked. Editing an existing entry checks against the available limit without that entry.
 - `core/finance` exposes a pure function (`checkSpendAllowed`) with tests for exact-limit, one-kuruş-over, installment total, refund and edit cases.
-- If used still exceeds the limit (interest, fees, a limit reduced by the bank, or Phase 3 imports), treat the card as full: gauge at 100%, available 0, alert color, with a hint "Your recorded spending is higher than your limit. Update your bank balance or limit." There is no separate "over limit" wording in the UI.
+- If used still exceeds the limit (interest, fees, a limit reduced by the bank, or Phase 3 imports), treat the card as full: gauge at 100%, available 0, alert color, with a hint that explains the cause instead of suggesting the user overspent: "Your balance is above your limit, usually because of interest, fees or a lowered limit. Your bank won't approve new spending until it is below the limit. If this doesn't match your bank, update your balance or limit." There is no separate "over limit" wording in the UI. Spending can never push a Turkish card past its limit; a balance above it comes from interest, fees or a limit the bank lowered (or from out-of-date data).
 
 **Implementation notes:**
 - A charge exactly equal to the available limit is allowed; one kuruş more is blocked. An installment purchase is checked by its full total, since the bank blocks the whole amount (D11).
@@ -198,15 +198,54 @@ Turkish banks decline purchases that exceed the available limit, so a recorded c
 
 ---
 
-## Data model (v2)
+## D14. Statements and bill payments
+
+D11 deferred payments to Phase 2. Credit cards only (D13).
+
+- A statement covers one period, from the day after the previous statement day to this statement day (month-end clamped). Its total = single charges and refunds in the period + the installments falling due in that statement. It is computed from data, and stored in `statements` only when the user records a payment.
+- The upcoming payments list shows each credit card's next bill with its due date and amount. "Mark as paid" opens a payment form prefilled with the full statement amount, which the user can edit (minimum payment or any partial amount).
+- Effect on used (extends D11): a payment dated after the override as-of date reduces used by its amount. A full payment also marks the installments in that statement as paid, so the limit they blocked is released. A partial payment reduces used but marks no installments as paid. Interest on unpaid balances is out of scope; the user reflects it with the bank balance override.
+- Due dates: if the computed due date falls on a Saturday or Sunday, show the next Monday, labelled as moved. Public holidays are out of scope for now.
+- Debit cards have no statements or payments; their spending counts only in spending totals.
+- **Overdue bills:** a bill whose due date has passed and is not fully paid stays visible as "Overdue" / "Gecikmiş" on the card screen, in the upcoming payments list and in the due-soon banner, ahead of the open statement, until it is paid or the user marks it "Paid outside the app" / "Uygulama dışında ödendi". That records a payment of the full remaining amount dated on the due date (flagged `outside`), so it settles the statement and appears in the payment history, where it can be deleted. Statements covered by a bank balance override (closing on or before its as-of date) are never overdue.
+- **Auto-pay:** each credit card has an "Automatic payment" / "Otomatik ödeme" setting. When it is on, each closed bill counts as fully paid on its due date: the app stores a payment of the remaining amount dated on the due date, flagged `automatic`, so it appears in the payment history and can be deleted. The dashboard and card screen show "Paid automatically" instead of asking, and auto-pay bills stay out of the due-soon banner and badge. Overdue never applies to auto-pay cards.
+
+**Auto-pay implementation notes:**
+- Auto-pay counts from the day it is turned on (`autoPaySince`); older unpaid bills are not paid retroactively.
+- Payments are recorded when the app opens and when an auto-pay setting changes, in one database transaction that re-reads the data, so repeated or overlapping runs record each payment once.
+- Deleting an automatic payment marks its statement (`autoPaySkipped`) so it is not recorded again; use this when the bank did not actually pay.
+
+---
+
+## D15. Credit balance from overpayment (alacak bakiyesi)
+
+Turkish banks accept payments above the bill; the excess becomes a credit balance that adds to the card's spending power. Credit cards only (D13).
+
+- `computeCardUsage` keeps the signed balance: rawUsed = override + singles + plans − payments (D11, D14). used = max(rawUsed, 0); credit = max(−rawUsed, 0); available = limit − rawUsed, so limit + credit. The card limit itself never changes.
+- UI: when credit > 0, the figures show a "Credit" / "Fazla ödeme" row with +amount, available includes it, and the gauge shows 0% used.
+- D12 blocking checks against this available: a 50.000 limit with 30.000 credit allows a charge of exactly 80.000.
+- Credit carries forward: each statement's amount due = max(statement total − credit carried in, 0), and the unused credit carries to the next statement. Projections apply credit to upcoming months in order.
+- Payment form: when the amount exceeds the bill's remaining amount, a hint says "₺X will be added to your card as credit" / "₺X kartına alacak olarak eklenecek". There is no hard upper cap.
+- Bank balance override: the form has a "The card has a credit balance" / "Kartta alacak var" option that stores a negative balance.
+- Refunds that exceed charges also become credit; neither used nor a statement clamps them away.
+
+**Implementation notes:**
+- Statements form one chain per card, from the first statement with data, carrying credit from each into the next. With a balance override, the chain starts at the first statement after its as-of date and carries the override's credit; earlier statements are covered by the override.
+- A statement's "amount due" is what the bank asks for after credit. A payment settles the statement (D14) when it covers the amount due, and the stored `totalDue` is that amount.
+- The credit shown on the card (max(−rawUsed, 0)) and the credit carried between statements can differ while installments are outstanding: the card figure nets the limit still blocked by future installments (D11), while the statement chain applies credit as each installment is billed. Available is the same either way.
+
+---
+
+## Data model (v3)
 
 | Table | Key fields |
 | :--- | :--- |
-| `cards` | `id`, `type` (`credit` / `debit`), `name`, `bank`, `last4`, `currency`, `color`, `archived`; credit only: `limit`, `statementDay`, `dueDay` |
+| `cards` | `id`, `type` (`credit` / `debit`), `name`, `bank`, `last4`, `currency`, `color`, `archived`; credit only: `limit`, `statementDay`, `dueDay`, `autoPay?`, `autoPaySince?` (D14) |
 | `transactions` | `id`, `cardId`, `date`, `description`, `normalizedMerchant`, `amount`, `currency`, `category`, `installmentPlanId?`, `fingerprint`, `source` (`manual` / `csv` / `pdf`), `importId?` |
 | `installmentPlans` | `id`, `cardId`, `description`, `totalAmount`, `count`, `purchaseDate`, `firstDueMonth`, `currency` |
-| `balanceOverrides` | `id`, `cardId`, `balance`, `currency`, `asOf`, `createdAt` (history of bank balances entered by the user, D11) |
-| `statements` | `id`, `cardId`, `periodStart`, `periodEnd`, `dueDate`, `totalDue`, `minimumDue`, `paid` |
+| `balanceOverrides` | `id`, `cardId`, `balance` (negative for a credit balance, D15), `currency`, `asOf`, `createdAt` (history of bank balances entered by the user, D11) |
+| `statements` | `id`, `cardId`, `periodStart`, `periodEnd`, `dueDate`, `totalDue`, `minimumDue?`, `paid`, `installments`, `autoPaySkipped?` (stored when a payment is recorded, D14) |
+| `payments` | `id`, `cardId`, `statementId`, `date`, `amount`, `currency`, `createdAt`, `method?` (`manual` / `outside` / `automatic`; bill payments, credit cards only, D14; added in schema v3) |
 | `subscriptions` | `id`, `normalizedMerchant`, `cadenceDays`, `lastAmount`, `previousAmount`, `status` (`active` / `ignored` / `cancelled`), `confirmedByUser` |
 | `importProfiles` | `id`, `name`, `bank`, `kind` (`csv` / `pdf`), `headerSignature`, `columnMap` |
 | `imports` | `id`, `fileName`, `importedAt`, `rowCount`, `profileId?` (lets the user undo a whole import) |

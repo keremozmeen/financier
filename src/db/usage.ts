@@ -1,33 +1,73 @@
 import {
   computeCardUsage,
   monthOf,
+  projectTotalLiabilities,
+  recentActivity,
   spendingInMonth,
+  cardBills,
+  upcomingBills,
+  type MonthAmount,
+  type BillingInput,
+  type CardBill,
   type CardUsage,
   type CardUsageInput,
 } from '../core/finance';
-import type { Card, CreditCard, DebitCard, IsoDate } from '../types/domain';
+import type {
+  BalanceOverride,
+  Card,
+  CreditCard,
+  CurrencyCode,
+  DebitCard,
+  InstallmentPlan,
+  IsoDate,
+  Payment,
+  Statement,
+  Transaction,
+} from '../types/domain';
+import { cardsRepo } from './cards';
 import { db } from './database';
 
-/** What a card shows at a glance: a limit gauge for credit, this month's spending for debit (D13). */
+/**
+ * What a card shows at a glance: a limit gauge, overdue bills and the next bill for
+ * credit, this month's spending for debit (D13, D14).
+ */
 export type CardSummary =
-  { card: CreditCard; usage: CardUsage } | { card: DebitCard; monthSpending: number };
+  | { card: CreditCard; usage: CardUsage; bills: CardBill[] }
+  | { card: DebitCard; monthSpending: number };
 
-/** Loads everything D11/D12 need for the given credit cards in three indexed queries. */
+/** A credit card bill as listed on the dashboard (D14). */
+export type UpcomingBill = { card: CreditCard } & CardBill;
+
+/** Everything D11, D12 and D14 need for one credit card. */
+export interface CreditCardInput extends CardUsageInput, BillingInput {
+  card: CreditCard;
+  transactions: Transaction[];
+  plans: InstallmentPlan[];
+  overrides: BalanceOverride[];
+  statements: Statement[];
+  payments: Payment[];
+}
+
+/** Loads the usage and billing inputs for the given credit cards in five indexed queries. */
 export async function loadUsageInputs(
   cards: readonly CreditCard[],
   today: IsoDate,
-): Promise<CardUsageInput[]> {
+): Promise<CreditCardInput[]> {
   const ids = cards.map((card) => card.id);
-  const [transactions, plans, overrides] = await Promise.all([
+  const [transactions, plans, overrides, statements, payments] = await Promise.all([
     db.transactions.where('cardId').anyOf(ids).toArray(),
     db.installmentPlans.where('cardId').anyOf(ids).toArray(),
     db.balanceOverrides.where('cardId').anyOf(ids).toArray(),
+    db.statements.where('cardId').anyOf(ids).toArray(),
+    db.payments.where('cardId').anyOf(ids).toArray(),
   ]);
   return cards.map((card) => ({
     card,
     transactions: byCard(transactions, card.id),
     plans: byCard(plans, card.id),
     overrides: byCard(overrides, card.id),
+    statements: byCard(statements, card.id),
+    payments: byCard(payments, card.id),
     today,
   }));
 }
@@ -36,9 +76,49 @@ export async function loadCardSummaries(
   cards: readonly Card[],
   today: IsoDate,
 ): Promise<CardSummary[]> {
+  return (await loadCards(cards, today)).summaries;
+}
+
+/** One month per bar in the dashboard's cash-flow chart; the 3/6/12 toggle slices it. */
+export const PROJECTION_MONTHS = 12;
+
+export interface DashboardData {
+  summaries: CardSummary[];
+  /** Overdue bills and the next bill of every credit card, overdue first (D14). */
+  bills: UpcomingBill[];
+  /** Liabilities per currency for the next 12 due months, from this month (credit only). */
+  projections: Record<CurrencyCode, MonthAmount[]>;
+  /** Latest entries across credit and debit cards. */
+  recent: { transaction: Transaction; card: Card }[];
+}
+
+export const RECENT_ACTIVITY_COUNT = 8;
+
+/** Everything the dashboard shows, for the active cards. */
+export async function loadDashboard(today: IsoDate): Promise<DashboardData> {
+  const cards = await cardsRepo.list();
+  const { summaries, creditInputs, debitTransactions } = await loadCards(cards, today);
+  const cardById = new Map(cards.map((card) => [card.id, card]));
+  const transactions = [
+    ...creditInputs.flatMap((input) => input.transactions),
+    ...debitTransactions,
+  ];
+
+  return {
+    summaries,
+    bills: upcomingBills(creditInputs, today),
+    projections: projectTotalLiabilities(creditInputs, monthOf(today), PROJECTION_MONTHS),
+    recent: recentActivity(transactions, RECENT_ACTIVITY_COUNT).map((transaction) => ({
+      transaction,
+      card: cardById.get(transaction.cardId)!,
+    })),
+  };
+}
+
+async function loadCards(cards: readonly Card[], today: IsoDate) {
   const credit = cards.filter((card): card is CreditCard => card.type === 'credit');
   const debit = cards.filter((card): card is DebitCard => card.type === 'debit');
-  const [usageInputs, debitTransactions] = await Promise.all([
+  const [creditInputs, debitTransactions] = await Promise.all([
     loadUsageInputs(credit, today),
     db.transactions
       .where('cardId')
@@ -48,15 +128,17 @@ export async function loadCardSummaries(
   const month = monthOf(today);
 
   // Keep the caller's order (cards come sorted by name).
-  return cards.map((card): CardSummary => {
+  const summaries = cards.map((card): CardSummary => {
     if (card.type === 'credit') {
-      return { card, usage: computeCardUsage(usageInputs[credit.indexOf(card)]!) };
+      const input = creditInputs[credit.indexOf(card)]!;
+      return { card, usage: computeCardUsage(input), bills: cardBills(input, today) };
     }
     return {
       card,
       monthSpending: spendingInMonth(byCard(debitTransactions, card.id), month, card.currency),
     };
   });
+  return { summaries, creditInputs, debitTransactions };
 }
 
 function byCard<T extends { cardId: string }>(rows: readonly T[], id: string): T[] {

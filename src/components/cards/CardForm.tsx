@@ -12,6 +12,7 @@ import { useFormat } from '../../hooks/useFormat';
 import { useI18n, type MessageKey } from '../../i18n';
 import type { Card, CardType } from '../../types/domain';
 import { Button } from '../ui/Button';
+import { Checkbox } from '../ui/Checkbox';
 import { Segmented } from '../ui/Segmented';
 import { SelectField, TextField } from '../ui/TextField';
 import { CARD_COLORS, DEFAULT_CARD_COLOR } from './colors';
@@ -48,6 +49,8 @@ export function CardForm({ initial, hasEntries = false, onSubmit, onCancel }: Ca
   const [statementDay, setStatementDay] = useState(String(credit?.statementDay ?? ''));
   const [dueDay, setDueDay] = useState(String(credit?.dueDay ?? ''));
   const [color, setColor] = useState(initial?.color ?? DEFAULT_CARD_COLOR);
+  const [autoPay, setAutoPay] = useState(credit?.autoPay ?? false);
+  const today = useToday();
   const [errors, setErrors] = useState<Errors>({});
 
   function submit(event: FormEvent) {
@@ -77,6 +80,10 @@ export function CardForm({ initial, hasEntries = false, onSubmit, onCancel }: Ca
       limit: parsedLimit,
       statementDay: parsedStatement,
       dueDay: parsedDue,
+      // Auto-pay counts from the day it is turned on; keep that day while it stays on (D14).
+      ...(autoPay
+        ? { autoPay: true, autoPaySince: (credit?.autoPay && credit.autoPaySince) || today }
+        : {}),
     });
   }
 
@@ -178,6 +185,12 @@ export function CardForm({ initial, hasEntries = false, onSubmit, onCancel }: Ca
             </div>
             <StatementPreview statementDay={statementDay} dueDay={dueDay} />
           </div>
+          <Checkbox
+            label={t('cards.field.autoPay')}
+            hint={t('cards.field.autoPay.hint')}
+            checked={autoPay}
+            onChange={setAutoPay}
+          />
         </>
       )}
       <fieldset>

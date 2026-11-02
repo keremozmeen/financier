@@ -32,6 +32,10 @@ export interface CreditCard extends CardBase {
   statementDay: number;
   /** Day of month the payment is due (1–31, clamped to month length). */
   dueDay: number;
+  /** The bank pays each statement in full on its due date (D14). */
+  autoPay?: boolean;
+  /** When auto-pay was turned on; bills due before it are not paid automatically. */
+  autoPaySince?: IsoDate;
 }
 
 /** Banka kartı: spends straight from an account whose balance the app does not know (D13). */
@@ -77,15 +81,54 @@ export interface BalanceOverride {
   createdAt: IsoTimestamp;
 }
 
+/** One installment of a plan, billed in the statement due in `dueMonth`. */
+export interface InstallmentRef {
+  planId: string;
+  /** 0-based position in the plan. */
+  index: number;
+  amount: number;
+}
+
+/**
+ * A credit card statement. Statements are computed from the data and stored only
+ * when the user records a payment (D14); the stored row is a snapshot of the bill.
+ */
 export interface Statement {
   id: string;
   cardId: string;
   periodStart: IsoDate;
   periodEnd: IsoDate;
+  /** The due date shown to the user, moved off weekends. */
   dueDate: IsoDate;
   totalDue: number;
-  minimumDue: number;
+  /** Not known yet; imports may read it from the bank statement in later phases. */
+  minimumDue?: number;
+  /** Fully paid: its installments count as paid and stop blocking the limit (D14). */
   paid: boolean;
+  /** The installments billed in this statement. */
+  installments: InstallmentRef[];
+  /** The user deleted this statement's automatic payment: auto-pay leaves it alone. */
+  autoPaySkipped?: boolean;
+}
+
+/**
+ * How a payment was recorded (D14): entered in the form, "Paid outside the app" for an
+ * overdue bill, or by auto-pay (both: the full remaining amount, dated on the due date).
+ */
+export type PaymentMethod = 'manual' | 'outside' | 'automatic';
+
+/** A bill payment towards one statement (D14). Credit cards only. */
+export interface Payment {
+  id: string;
+  cardId: string;
+  statementId: string;
+  date: IsoDate;
+  /** Positive minor units. */
+  amount: number;
+  currency: CurrencyCode;
+  createdAt: IsoTimestamp;
+  /** Missing on payments saved before methods existed: those are manual. */
+  method?: PaymentMethod;
 }
 
 export type SubscriptionStatus = 'active' | 'ignored' | 'cancelled';

@@ -13,6 +13,10 @@ export function UsageFigures({ card, usage }: { card: CreditCard; usage: CardUsa
   const format = useFormat();
   const rows = [
     { label: t('gauge.used'), value: usage.used, className: LEVEL_TEXT[usage.level] },
+    // A credit balance adds to what can be spent (D15).
+    ...(usage.credit > 0
+      ? [{ label: t('gauge.credit'), value: usage.credit, className: 'text-success', plus: true }]
+      : []),
     {
       label: t('gauge.available'),
       value: usage.available,
@@ -29,6 +33,7 @@ export function UsageFigures({ card, usage }: { card: CreditCard; usage: CardUsa
         >
           <dt className="text-muted">{row.label}</dt>
           <dd className={`font-semibold whitespace-nowrap tabular-nums ${row.className}`}>
+            {'plus' in row && '+'}
             {format.money(row.value, card.currency)}
           </dd>
         </div>

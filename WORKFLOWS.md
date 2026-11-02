@@ -36,6 +36,7 @@ The binding details behind these choices are in [`DECISIONS.md`](DECISIONS.md).
 ## 4. Module & Feature Breakdown
 
 ### Module 1: Comprehensive Financial Core (`/src/core/finance`)
+* **Card Types:** Cards are credit or debit, per [`DECISIONS.md`](DECISIONS.md) D13. Limits, statements, due dates, installments and debt apply to credit cards only; spending covers both.
 * **Credit Cards & Limits:** Track total limits, available limits, statement balance ratios, and statement closing/payment due dates across all user cards.
 * **Cash Flow & Installment Projections:** Calculate multi-month installment liabilities (e.g., 3, 6, 12-month breakdowns) to simulate upcoming monthly payment burdens.
 * **Overview Metrics:** Calculate total debt load, monthly fixed vs. variable spending, and available net liquidity in real time.

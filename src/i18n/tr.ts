@@ -26,13 +26,52 @@ export const tr: Record<MessageKey, string> = {
   'dashboard.empty.title': 'Henüz kart yok',
   'dashboard.empty.body': 'Bir kredi kartı ekle, Kipp limitini senin için takip etsin.',
 
+  'dashboard.upcoming.title': 'Yaklaşan ödemeler',
+  'dashboard.upcoming.none': 'Ödenecek tutar yok',
+  'dashboard.cashFlow.title': 'Nakit akışı',
+  'dashboard.cashFlow.help':
+    'Kredi kartı ekstrelerinin her ay isteyeceği tutar: taksitler ve ekstreye girmiş harcamalar.',
+  'dashboard.cashFlow.range': 'Dönem',
+  'dashboard.cashFlow.months': '{count} ay',
+  'dashboard.cashFlow.currency': 'Para birimi',
+  'dashboard.cashFlow.total': 'Önümüzdeki {count} ay: {amount}',
+  'dashboard.cashFlow.empty': 'Yaklaşan kredi kartı ödemesi yok.',
+  'dashboard.cashFlow.month': 'Ay',
+  'dashboard.cashFlow.amount': 'Ödenecek',
+  'dashboard.recent.title': 'Son hareketler',
+  'dashboard.recent.empty': 'Henüz kayıt yok.',
+
+  'due.banner.title': 'Ödemesi yaklaşanlar',
+  'due.today': 'bugün',
+  'due.tomorrow': 'yarın',
+  'due.inDays': '{count} gün içinde',
+  'due.item': '{card}: {amount}, son ödeme {when}',
+
+  'due.overdueItem': '{card}: {amount}, {date} tarihinden beri gecikmiş',
+  'calendar.add': 'Takvime ekle',
+  'calendar.help':
+    'Her son ödeme gününden 3 gün önce hatırlatan aylık etkinlikler içeren bir takvim dosyası indirir. Dosyada yalnızca kart adları var, ama takvim uygulaman onu kendi bulutuna eşitleyebilir.',
+  'calendar.summary': '{name} son ödeme günü',
+  'calendar.description':
+    'Financier hatırlatması. Hafta sonuna denk gelen son ödeme günü pazartesiye kayar.',
+
+  'payments.title': 'Ödemeler',
+  'payments.label': 'Ödeme',
+  'payments.method.automatic': 'Otomatik ödendi',
+  'payments.delete.automatic':
+    'Financier bu otomatik ödemeyi yeniden kaydetmeyecek. Bankan ekstreyi aslında ödemediyse bunu kullan.',
+  'payments.delete.title': 'Ödeme silinsin mi?',
+  'payments.delete.body':
+    '{date} tarihli {amount} ödeme silinecek ve kullanılan tutar yeniden artacak.',
+
   'gauge.label': '{name}: limitin {percent} kullanıldı',
   'gauge.used': 'Kullanılan',
   'gauge.available': 'Kullanılabilir',
+  'gauge.credit': 'Fazla ödeme',
   'gauge.limit': 'Limit',
 
   'cards.full.hint':
-    'Kayıtlı harcaman limitinden yüksek görünüyor. Banka bakiyeni ya da limitini güncelle.',
+    'Bakiyen limitinin üzerinde; bu genelde faiz, ücretler ya da düşürülen bir limit yüzünden olur. Bakiye limitin altına inene kadar bankan yeni harcamayı onaylamaz. Bankandaki bilgiyle uyuşmuyorsa bakiyeni ya da limitini güncelle.',
 
   'cards.add': 'Kart ekle',
   'cards.empty': 'Henüz kart eklemedin.',
@@ -61,6 +100,9 @@ export const tr: Record<MessageKey, string> = {
   'cards.field.statementDay': 'Hesap kesim günü',
   'cards.field.dueDay': 'Son ödeme günü',
   'cards.field.day.hint': 'Ayın günü, 1–31.',
+  'cards.field.autoPay': 'Otomatik ödeme',
+  'cards.field.autoPay.hint':
+    'Bankan her ekstreyi son ödeme gününde hesabından tamamen öder. Financier bugünden itibaren bu ödemeleri senin için kaydeder.',
   'cards.field.color': 'Renk',
   'color.0': 'Yeşil',
   'color.1': 'Mavi',
@@ -86,9 +128,35 @@ export const tr: Record<MessageKey, string> = {
   'balance.help':
     'Bankacılık uygulamanın bu kart için gösterdiği borcu gir. Bu tarih ve öncesindeki kayıtlar bu tutara dahil sayılır.',
   'balance.field.amount': 'Güncel borç',
+  'balance.field.credit': 'Kartta alacak var',
+  'balance.field.credit.hint':
+    'Bankacılık uygulaman kartta alacak gösteriyorsa (borcundan fazla ödediysen) işaretle.',
   'balance.field.asOf': 'Tarih',
   'balance.error.amount': 'Bakiyeyi gir, örneğin 7.500,00 (ödendiyse 0).',
   'balance.error.asOf': 'Gelecekte olmayan bir tarih seç.',
+
+  'bill.title': 'Sonraki ekstre',
+  'bill.due': 'Son ödeme {date}',
+  'bill.moved': 'Hafta sonundan pazartesiye kaydı',
+  'bill.period': 'Ekstre dönemi {start} – {end}',
+  'bill.creditApplied': '{amount} alacağınla karşılandı',
+  'bill.paidSoFar': '{amount} ödendi',
+  'bill.nothingDue': 'Bu ekstrede ödenecek bir tutar yok.',
+  'bill.overdue': 'Gecikmiş',
+  'bill.overdueTitle': 'Gecikmiş ekstre',
+  'bill.paidOutside': 'Uygulama dışında ödendi',
+  'bill.autoPay': 'Otomatik ödenir',
+  'bill.markPaid': 'Ödendi olarak işaretle',
+
+  'payment.title': 'Ödeme kaydet',
+  'payment.help':
+    'Ekstre tutarının tamamı yazıldı. Asgari ya da kısmi bir ödeme için değiştirebilirsin. Bu ekstredeki taksitler yalnızca tamamı ödendiğinde ödenmiş sayılır.',
+  'payment.statementTotal': 'Ekstre tutarı: {amount}',
+  'payment.field.amount': 'Ödenen tutar',
+  'payment.creditHint': '{amount} kartına alacak olarak eklenecek',
+  'payment.field.date': 'Ödeme tarihi',
+  'payment.error.amount': 'Ödediğin tutarı gir, örneğin 1.250,00.',
+  'payment.error.date': 'Gelecekte olmayan bir tarih seç.',
 
   'cards.archive': 'Arşivle',
   'cards.unarchive': 'Arşivden çıkar',

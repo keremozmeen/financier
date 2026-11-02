@@ -1,9 +1,12 @@
 import { Outlet } from 'react-router';
+import { useAutoPay, useDueSoonBadge } from '../hooks/useFinance';
 import { useT } from '../i18n';
 import { TabBar } from './TabBar';
 
 export function AppShell() {
   const t = useT();
+  useAutoPay();
+  useDueSoonBadge();
   return (
     <div className="min-h-dvh bg-bg text-fg">
       <header className="sticky top-0 z-10 border-b border-border bg-bg/95 pt-[env(safe-area-inset-top)] backdrop-blur">

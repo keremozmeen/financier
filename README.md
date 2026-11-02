@@ -16,7 +16,7 @@ Financier is a mobile-first Progressive Web App (PWA) accompanied by **Kipp the 
 
 ## ✨ Key Features
 
-* 💳 **Credit Card & Limit Tracker:** Monitor total limits, statement balances, and closing dates across all your credit cards in one place.
+* 💳 **Credit Card & Limit Tracker:** Monitor total limits, statement balances, and closing dates across all your credit cards in one place, and add debit cards to track your spending alongside them.
 * 📈 **Cash Flow & Installment Projections:** Visualize upcoming 3, 6, and 12-month payment liabilities so you never get surprised by card bills.
 * 🔍 **Sub-Radar & Fee Inspector:** Automatically flag repeating charges and silent price increases on your subscriptions.
 * 🦎 **Kipp's Insights:** Kipp watches your card utilization, installment burden, due dates and subscription changes, and gives you clear, on-device advice about your financial health.

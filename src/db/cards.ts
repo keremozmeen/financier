@@ -43,12 +43,20 @@ export const cardsRepo = {
   async deletePermanently(id: string): Promise<void> {
     await db.transaction(
       'rw',
-      [db.cards, db.transactions, db.installmentPlans, db.balanceOverrides, db.statements],
+      [
+        db.cards,
+        db.transactions,
+        db.installmentPlans,
+        db.balanceOverrides,
+        db.statements,
+        db.payments,
+      ],
       async () => {
         await db.transactions.where('cardId').equals(id).delete();
         await db.installmentPlans.where('cardId').equals(id).delete();
         await db.balanceOverrides.where('cardId').equals(id).delete();
         await db.statements.where('cardId').equals(id).delete();
+        await db.payments.where('cardId').equals(id).delete();
         await db.cards.delete(id);
       },
     );

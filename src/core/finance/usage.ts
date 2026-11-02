@@ -6,7 +6,8 @@ import type {
   Transaction,
 } from '../../types/domain';
 import { daysBetween } from './dates';
-import { remainingPlanBalance } from './installments';
+import { currentOverride } from './overrides';
+import { paidInstallments, sum, type BillingPayment, type BillingStatement } from './statements';
 
 /** An override older than this many days should be refreshed (D11). */
 export const OVERRIDE_STALE_DAYS = 30;
@@ -17,8 +18,11 @@ export type UsageSource =
   { kind: 'calculated' } | { kind: 'override'; asOf: IsoDate; stale: boolean };
 
 export interface CardUsage {
+  /** Debt on the card, never below zero. */
   used: number;
-  /** Never negative: 0 when the card is full. */
+  /** Credit balance from overpayments or refunds, never below zero (D15). */
+  credit: number;
+  /** limit − used + credit; never negative: 0 when the card is full. */
   available: number;
   /** Used exceeds the limit: the data is out of date and the card is shown as full (D12). */
   overLimit: boolean;
@@ -33,6 +37,9 @@ export interface CardUsageInput {
   transactions: readonly UsageTransaction[];
   plans: readonly UsagePlan[];
   overrides: readonly Pick<BalanceOverride, 'balance' | 'currency' | 'asOf' | 'createdAt'>[];
+  /** Stored statements; a fully paid one marks its installments as paid (D14). */
+  statements?: readonly BillingStatement[];
+  payments?: readonly BillingPayment[];
   today: IsoDate;
 }
 
@@ -44,22 +51,7 @@ export type UsageTransaction = Pick<
 export type UsagePlan = Pick<
   InstallmentPlan,
   'purchaseDate' | 'totalAmount' | 'count' | 'currency'
-> & {
-  id?: string;
-  /** Installments already paid. Payments are tracked from Phase 2; until then none. */
-  paidInstallments?: number;
-};
-
-/** The current override is the most recently entered one; older ones are history. */
-export function currentOverride<T extends Pick<BalanceOverride, 'createdAt'>>(
-  overrides: readonly T[],
-): T | undefined {
-  let latest: T | undefined;
-  for (const override of overrides) {
-    if (!latest || override.createdAt > latest.createdAt) latest = override;
-  }
-  return latest;
-}
+> & { id?: string };
 
 /** Card limit usage per D11, including installment blocking and the balance override. */
 export function computeCardUsage(input: CardUsageInput): CardUsage {
@@ -74,21 +66,38 @@ export function computeCardUsage(input: CardUsageInput): CardUsage {
     .filter((tx) => !tx.installmentPlanId && after(tx.date))
     .reduce((sum, tx) => sum + tx.amount, 0);
 
-  const plans = inCurrency(input.plans)
-    .filter((plan) => after(plan.purchaseDate))
-    .reduce(
-      (sum, plan) =>
-        sum + remainingPlanBalance(plan.totalAmount, plan.count, plan.paidInstallments ?? 0),
-      0,
-    );
+  // Remaining unpaid balance of the plans: installments in fully paid statements no
+  // longer block the limit (D11, D14).
+  const statements = input.statements ?? [];
+  const counted = inCurrency(input.plans).filter((plan) => after(plan.purchaseDate));
+  const countedIds = new Set(counted.map((plan) => plan.id));
+  const isCounted = (ref: { planId: string }) => countedIds.has(ref.planId);
+  const plans =
+    counted.reduce((total, plan) => total + plan.totalAmount, 0) -
+    sum(paidInstallments(statements).filter(isCounted));
 
-  // Refunds can exceed charges; a credit balance still means nothing is used.
-  const used = Math.max((override?.balance ?? 0) + singles + plans, 0);
-  const overLimit = used > card.limit;
+  // A payment after the as-of date reduces used by its amount (D14). The part of a
+  // settling payment that paid installments of counted plans was released above, so
+  // it is not subtracted twice.
+  const payments = inCurrency(input.payments ?? []);
+  let paid = sum(payments.filter((p) => after(p.date)));
+  for (const statement of statements) {
+    const settling = latestPayment(payments.filter((p) => p.statementId === statement.id));
+    if (statement.paid && settling && after(settling.date)) {
+      paid -= sum(statement.installments.filter(isCounted));
+    }
+  }
+
+  // The signed balance: below zero the bank owes the user a credit balance, which adds
+  // to the spending power without changing the limit (D15).
+  const balance = (override?.balance ?? 0) + singles + plans - paid;
+  const used = Math.max(balance, 0);
+  const overLimit = balance > card.limit;
 
   return {
     used,
-    available: overLimit ? 0 : card.limit - used,
+    credit: Math.max(-balance, 0),
+    available: overLimit ? 0 : card.limit - balance,
     overLimit,
     utilization: card.limit > 0 ? Math.min(used / card.limit, 1) : null,
     level: utilizationLevel(used, card.limit),
@@ -100,6 +109,16 @@ export function computeCardUsage(input: CardUsageInput): CardUsage {
         }
       : { kind: 'calculated' },
   };
+}
+
+function latestPayment<T extends BillingPayment>(payments: readonly T[]): T | undefined {
+  return payments.reduce<T | undefined>(
+    (latest, p) =>
+      !latest || p.date > latest.date || (p.date === latest.date && p.createdAt > latest.createdAt)
+        ? p
+        : latest,
+    undefined,
+  );
 }
 
 /** Below 30% healthy, 30–70% warning, above 70% (including a full card) alert (D4, D11, D12). */

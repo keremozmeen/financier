@@ -25,13 +25,51 @@ export const en = {
   'dashboard.empty.title': 'No cards yet',
   'dashboard.empty.body': 'Add a credit card and Kipp will keep an eye on its limit.',
 
+  'dashboard.upcoming.title': 'Upcoming payments',
+  'dashboard.upcoming.none': 'Nothing to pay',
+  'dashboard.cashFlow.title': 'Cash flow',
+  'dashboard.cashFlow.help':
+    'What your credit card bills ask for each month: installments plus charges already on the statement.',
+  'dashboard.cashFlow.range': 'Period',
+  'dashboard.cashFlow.months': '{count} mo',
+  'dashboard.cashFlow.currency': 'Currency',
+  'dashboard.cashFlow.total': 'Next {count} months: {amount}',
+  'dashboard.cashFlow.empty': 'No upcoming credit card payments.',
+  'dashboard.cashFlow.month': 'Month',
+  'dashboard.cashFlow.amount': 'To pay',
+  'dashboard.recent.title': 'Recent activity',
+  'dashboard.recent.empty': 'No entries yet.',
+
+  'due.banner.title': 'Due soon',
+  'due.today': 'today',
+  'due.tomorrow': 'tomorrow',
+  'due.inDays': 'in {count} days',
+  'due.item': '{card}: {amount} due {when}',
+
+  'due.overdueItem': '{card}: {amount} overdue since {date}',
+  'calendar.add': 'Add to calendar',
+  'calendar.help':
+    'Downloads a calendar file with a monthly reminder 3 days before each due date. It holds only card names, but your calendar app may sync it to its cloud.',
+  'calendar.summary': '{name} payment due',
+  'calendar.description': 'Reminder from Financier. A due date on a weekend moves to Monday.',
+
+  'payments.title': 'Payments',
+  'payments.label': 'Payment',
+  'payments.method.automatic': 'Paid automatically',
+  'payments.delete.automatic':
+    'Financier will not record this automatic payment again. Use this if your bank did not actually pay the bill.',
+  'payments.delete.title': 'Delete payment?',
+  'payments.delete.body':
+    'This removes the {amount} payment from {date}, and your used amount goes back up.',
+
   'gauge.label': '{name}: {percent} of limit used',
   'gauge.used': 'Used',
   'gauge.available': 'Available',
+  'gauge.credit': 'Credit',
   'gauge.limit': 'Limit',
 
   'cards.full.hint':
-    'Your recorded spending is higher than your limit. Update your bank balance or limit.',
+    "Your balance is above your limit, usually because of interest, fees or a lowered limit. Your bank won't approve new spending until it is below the limit. If this doesn't match your bank, update your balance or limit.",
 
   'cards.add': 'Add card',
   'cards.empty': 'You have not added any cards yet.',
@@ -60,6 +98,9 @@ export const en = {
   'cards.field.statementDay': 'Statement closing day',
   'cards.field.dueDay': 'Payment due day',
   'cards.field.day.hint': 'Day of the month, 1–31.',
+  'cards.field.autoPay': 'Automatic payment',
+  'cards.field.autoPay.hint':
+    'Your bank pays each statement in full from your account on its due date. Financier records those payments for you from today on.',
   'cards.field.color': 'Color',
   'color.0': 'Green',
   'color.1': 'Blue',
@@ -85,9 +126,35 @@ export const en = {
   'balance.help':
     'Enter the debt your banking app shows for this card. Entries dated on or before this day are treated as part of it.',
   'balance.field.amount': 'Current balance',
+  'balance.field.credit': 'The card has a credit balance',
+  'balance.field.credit.hint':
+    'Tick this when your banking app shows money owed to you (you paid more than you owed).',
   'balance.field.asOf': 'As of',
   'balance.error.amount': 'Enter the balance, e.g. 7.500,00 (0 if paid off).',
   'balance.error.asOf': 'Pick a date that is not in the future.',
+
+  'bill.title': 'Next bill',
+  'bill.due': 'Due {date}',
+  'bill.moved': 'Moved from the weekend to Monday',
+  'bill.period': 'Statement {start} – {end}',
+  'bill.creditApplied': '{amount} covered by your credit',
+  'bill.paidSoFar': '{amount} paid so far',
+  'bill.nothingDue': 'Nothing to pay on this statement.',
+  'bill.overdue': 'Overdue',
+  'bill.overdueTitle': 'Overdue bill',
+  'bill.paidOutside': 'Paid outside the app',
+  'bill.autoPay': 'Paid automatically',
+  'bill.markPaid': 'Mark as paid',
+
+  'payment.title': 'Record a payment',
+  'payment.help':
+    'The full statement amount is filled in. Change it to record a minimum or partial payment. Only a full payment marks the installments in this statement as paid.',
+  'payment.statementTotal': 'Statement total: {amount}',
+  'payment.field.amount': 'Amount paid',
+  'payment.creditHint': '{amount} will be added to your card as credit',
+  'payment.field.date': 'Payment date',
+  'payment.error.amount': 'Enter the amount you paid, e.g. 1.250,00.',
+  'payment.error.date': 'Pick a date that is not in the future.',
 
   'cards.archive': 'Archive',
   'cards.unarchive': 'Unarchive',

@@ -14,17 +14,20 @@ import { BalanceOverrideForm } from '../components/cards/BalanceOverrideForm';
 import { CardTitle } from '../components/cards/CardTitle';
 import { CardUsagePanel } from '../components/cards/CardUsagePanel';
 import { DeleteCardDialog } from '../components/cards/DeleteCardDialog';
+import { NextBill } from '../components/cards/NextBill';
+import { PaymentForm } from '../components/cards/PaymentForm';
+import { PaymentList } from '../components/cards/PaymentList';
 import { TransactionList } from '../components/cards/TransactionList';
 import { Button, ButtonLink } from '../components/ui/Button';
 import { Dialog } from '../components/ui/Dialog';
 import { ScreenHeader } from '../components/ui/ScreenHeader';
 import type { CardUsage } from '../core/finance';
-import { balanceOverridesRepo, cardsRepo, transactionsRepo } from '../db';
+import { balanceOverridesRepo, cardsRepo, paymentsRepo, transactionsRepo } from '../db';
 import { useEntryLabel } from '../hooks/useEntryLabel';
 import { useCardDetail } from '../hooks/useFinance';
 import { useFormat } from '../hooks/useFormat';
 import { useT } from '../i18n';
-import type { Transaction } from '../types/domain';
+import type { Payment, Transaction } from '../types/domain';
 
 export function CardDetailScreen() {
   const t = useT();
@@ -33,8 +36,12 @@ export function CardDetailScreen() {
   const detail = useCardDetail(id);
   const entryLabel = useEntryLabel();
   const [editingBalance, setEditingBalance] = useState(false);
+  /** The period end of the bill being paid. */
+  const [paying, setPaying] = useState<string>();
   const [deleteCounts, setDeleteCounts] = useState<{ transactions: number; overrides: number }>();
   const [pendingDelete, setPendingDelete] = useState<Transaction>();
+  const [pendingPaymentDelete, setPendingPaymentDelete] = useState<Payment>();
+  const format = useFormat();
 
   if (detail === undefined) return <p className="text-muted">{t('common.loading')}</p>;
   if (detail === null) {
@@ -46,7 +53,7 @@ export function CardDetailScreen() {
     );
   }
 
-  const { summary, transactions, plans } = detail;
+  const { summary, transactions, plans, payments } = detail;
   const { card } = summary;
 
   async function archive(archived: boolean) {
@@ -86,6 +93,31 @@ export function CardDetailScreen() {
         )}
       </div>
 
+      {/* Debit cards have no statements or payments (D13, D14). */}
+      {'bills' in summary &&
+        summary.bills.map((item) =>
+          paying === item.bill.periodEnd ? (
+            <PaymentForm
+              key={item.bill.periodEnd}
+              card={summary.card}
+              bill={item.bill}
+              onCancel={() => setPaying(undefined)}
+              onSubmit={async (amount, date) => {
+                await paymentsRepo.record(summary.card, item.bill, amount, date);
+                setPaying(undefined);
+              }}
+            />
+          ) : (
+            <NextBill
+              key={item.bill.periodEnd}
+              card={summary.card}
+              item={item}
+              onMarkPaid={() => setPaying(item.bill.periodEnd)}
+              onPaidOutside={() => void paymentsRepo.markPaidOutside(summary.card, item.bill)}
+            />
+          ),
+        )}
+
       {'usage' in summary && editingBalance ? (
         <BalanceOverrideForm
           card={summary.card}
@@ -110,6 +142,8 @@ export function CardDetailScreen() {
           </ButtonLink>
         </div>
       )}
+
+      <PaymentList payments={payments} onDelete={setPendingPaymentDelete} />
 
       <div>
         <h2 className="mb-2 text-sm font-medium text-muted">{t('tx.title')}</h2>
@@ -146,6 +180,37 @@ export function CardDetailScreen() {
             navigate('/cards', { replace: true });
           }}
         />
+      )}
+
+      {pendingPaymentDelete && (
+        <Dialog
+          title={t('payments.delete.title')}
+          onClose={() => setPendingPaymentDelete(undefined)}
+        >
+          <p className="text-sm">
+            {t('payments.delete.body', {
+              amount: format.money(pendingPaymentDelete.amount, pendingPaymentDelete.currency),
+              date: format.date(pendingPaymentDelete.date),
+            })}
+          </p>
+          {pendingPaymentDelete.method === 'automatic' && (
+            <p className="text-sm text-muted">{t('payments.delete.automatic')}</p>
+          )}
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" onClick={() => setPendingPaymentDelete(undefined)}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              variant="danger"
+              onClick={async () => {
+                await paymentsRepo.remove(pendingPaymentDelete.id);
+                setPendingPaymentDelete(undefined);
+              }}
+            >
+              {t('common.delete')}
+            </Button>
+          </div>
+        </Dialog>
       )}
 
       {pendingDelete && (
