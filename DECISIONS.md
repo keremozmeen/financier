@@ -236,19 +236,43 @@ Turkish banks accept payments above the bill; the excess becomes a credit balanc
 
 ---
 
-## Data model (v3)
+## D16. Import row types
+
+A card statement is more than purchases: it also lists installment slices, the bill payments the user made, balance lines and bank charges. Importing every line as a charge or refund would double-count installments, turn payments into refunds and inflate spending with summary lines. Every imported row (CSV now, PDF in Phase 6) is therefore classified first. Classification lives in `src/parsers/common/` as pure, tested functions with Turkish and English keywords; the review screen shows each row's type and lets the user change it.
+
+| Type | Recognized by | Credit card | Debit card (D13) |
+| :--- | :--- | :--- | :--- |
+| **Charge** | Any other row with a positive amount | Imported as a transaction | Same |
+| **Refund** | Any other row with a negative (credit) amount ("İADE", "REFUND" raise confidence) | Imported as a negative transaction | Same |
+| **Installment slice** | "TAKSİT 3/6", "3/6 TAKSİT", "3. TAKSİT", "(3/6)", "3/6", "installment 3 of 6", or the mapped installment column | Linked to an existing plan, or creates the plan for the remaining installments; never a separate charge | Ignored: imported as a plain charge |
+| **Bill payment** | "ÖDEME", "HESAPTAN ÖDEME", "OTOMATİK ÖDEME", "KART ÖDEMESİ", "PAYMENT", "AUTOPAY"… on a credit (negative) row | Offered as a payment against its statement (D14), unless already recorded; never a refund | Skipped (no statements; it is usually money sent to a credit card) |
+| **Balance or summary line** | "ÖNCEKİ DÖNEM BAKİYESİ", "DÖNEM BORCU", "ASGARİ ÖDEME", "TOPLAM", "PREVIOUS BALANCE", "MINIMUM PAYMENT"… | Skipped | Skipped |
+| **Interest or fee** | "FAİZ", "BSMV", "KKDF", "KART ÜCRETİ", "ÜYELİK ÜCRETİ", "GECİKME", "INTEREST", "LATE FEE", "ANNUAL FEE"… on a positive row | Imported as a charge with `fee: true`, so later phases can report fees | Same |
+
+**Rules:**
+- Keywords are matched on the normalized description (case and Turkish accents folded, as in D3's fingerprint), on whole words. Summary keywords are checked first, so "ASGARİ ÖDEME TUTARI" is a summary line, not a payment. A payment keyword on a positive (charge) row is a merchant name ("IYZICO ÖDEME …"), so that row stays a charge.
+- Each row gets a confidence flag: **high** when a keyword or a marker with "TAKSİT" decided it, **medium** for a bare "3/6" marker or a refund with no refund keyword, **low** when the date or amount needed guessing. Unparseable rows are shown as errors and are never saved.
+- **Installment slices:** a slice belongs to the statement the import covers, which is the statement period containing the latest date in the file (banks print either the purchase date or the billing date on a slice, so the row's own date is not used). It links to an existing plan on the same card and currency when (a) the descriptions are similar (one contains the other, or they share their first word or most of their words, ignoring the marker; a plan without a description matches on amount alone, and takes the bank's description, like D3's merge), (b) the row's amount is one of the plan's installment amounts, and (c) the plan has an installment due in that statement's month (±1 month). A linked slice saves nothing, since the plan already bills it. Otherwise the import creates a plan for the remaining installments: slice k of n creates n − k + 1 installments of the row's amount, the first due in that statement's month, plus its purchase transaction (D11), and the review screen says "Creates a plan with N installments left". Re-importing the statement then links the slice to that plan.
+- **Bill payments** are matched to the latest statement that closed before the payment date. A payment is skipped as already recorded when a payment of the same amount is already stored within ±3 days of its date (manual, "Paid outside the app", automatic or imported), and as covered by auto-pay when the card has automatic payment on and the payment falls within ±3 days of the due date of a bill auto-pay pays (D14). A payment whose statement has nothing to pay is skipped. Paying more than the amount due becomes credit (D15).
+- **Duplicates and manual entries (D3):** charges, refunds and fees are first deduplicated by fingerprint against earlier imports. Identical rows within one file are kept (two coffees on the same day): the n-th identical row gets the fingerprint suffix `#n`, so re-importing the same file still adds nothing. A remaining charge or refund that matches a manual entry (same card, same signed amount, date within ±3 days) is "Already logged" and merged by default: nothing new is saved, and the manual entry takes the bank's description if it had none. Each manual entry merges with one row at most, and the user can unmerge a row.
+- **Undo** removes everything an import created (its transactions, the plans and payments it created, re-settling those statements as deleting a payment does in D14) and restores the descriptions it filled in on merged entries and linked plans.
+- Changing a row's type on the review screen recomputes its outcome. Only types that apply to the card are offered: debit cards have no installment or payment type.
+
+---
+
+## Data model (v4)
 
 | Table | Key fields |
 | :--- | :--- |
 | `cards` | `id`, `type` (`credit` / `debit`), `name`, `bank`, `last4`, `currency`, `color`, `archived`; credit only: `limit`, `statementDay`, `dueDay`, `autoPay?`, `autoPaySince?` (D14) |
-| `transactions` | `id`, `cardId`, `date`, `description`, `normalizedMerchant`, `amount`, `currency`, `category`, `installmentPlanId?`, `fingerprint`, `source` (`manual` / `csv` / `pdf`), `importId?` |
-| `installmentPlans` | `id`, `cardId`, `description`, `totalAmount`, `count`, `purchaseDate`, `firstDueMonth`, `currency` |
+| `transactions` | `id`, `cardId`, `date`, `description`, `normalizedMerchant`, `amount`, `currency`, `category`, `installmentPlanId?`, `fingerprint`, `source` (`manual` / `csv` / `pdf`), `importId?`, `fee?` (interest or bank fee, D16) |
+| `installmentPlans` | `id`, `cardId`, `description`, `totalAmount`, `count`, `purchaseDate`, `firstDueMonth`, `currency`, `importId?` (created by an import, D16; indexed in schema v4) |
 | `balanceOverrides` | `id`, `cardId`, `balance` (negative for a credit balance, D15), `currency`, `asOf`, `createdAt` (history of bank balances entered by the user, D11) |
 | `statements` | `id`, `cardId`, `periodStart`, `periodEnd`, `dueDate`, `totalDue`, `minimumDue?`, `paid`, `installments`, `autoPaySkipped?` (stored when a payment is recorded, D14) |
-| `payments` | `id`, `cardId`, `statementId`, `date`, `amount`, `currency`, `createdAt`, `method?` (`manual` / `outside` / `automatic`; bill payments, credit cards only, D14; added in schema v3) |
+| `payments` | `id`, `cardId`, `statementId`, `date`, `amount`, `currency`, `createdAt`, `method?` (`manual` / `outside` / `automatic`; bill payments, credit cards only, D14; added in schema v3), `importId?` (recorded by an import, D16; indexed in schema v4) |
 | `subscriptions` | `id`, `normalizedMerchant`, `cadenceDays`, `lastAmount`, `previousAmount`, `status` (`active` / `ignored` / `cancelled`), `confirmedByUser` |
-| `importProfiles` | `id`, `name`, `bank`, `kind` (`csv` / `pdf`), `headerSignature`, `columnMap` |
-| `imports` | `id`, `fileName`, `importedAt`, `rowCount`, `profileId?` (lets the user undo a whole import) |
+| `importProfiles` | `id`, `name`, `bank`, `kind` (`csv` / `pdf`), `headerSignature`, `columnMap`, `options` (header row, decimal separator, date order, sign convention) |
+| `imports` | `id`, `fileName`, `importedAt`, `rowCount`, `profileId?`, `cardId`, `counts` (per outcome), `restore` (descriptions to put back on undo, D16) (lets the user undo a whole import) |
 | `settings` | key/value: `locale`, `theme`, `monthlyIncome?`, `primaryCurrency`, `onboardingDone` |
 
 ---
