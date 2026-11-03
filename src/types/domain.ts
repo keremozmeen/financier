@@ -59,6 +59,8 @@ export interface Transaction {
   fingerprint: string;
   source: TransactionSource;
   importId?: string;
+  /** Interest or a bank fee (D16), so fees can be reported. */
+  fee?: boolean;
 }
 
 export interface InstallmentPlan {
@@ -70,6 +72,8 @@ export interface InstallmentPlan {
   purchaseDate: IsoDate;
   firstDueMonth: IsoMonth;
   currency: CurrencyCode;
+  /** Created by an import for a slice with no plan yet; undo removes it (D16). */
+  importId?: string;
 }
 
 export interface BalanceOverride {
@@ -129,6 +133,8 @@ export interface Payment {
   createdAt: IsoTimestamp;
   /** Missing on payments saved before methods existed: those are manual. */
   method?: PaymentMethod;
+  /** Recorded by an import from a bill payment row; undo removes it (D16). */
+  importId?: string;
 }
 
 export type SubscriptionStatus = 'active' | 'ignored' | 'cancelled';
@@ -143,13 +149,34 @@ export interface Subscription {
   confirmedByUser: boolean;
 }
 
+/** Settings that tell the CSV reader how a bank formats its export (D3). */
+export interface ImportOptions {
+  /** 0-based index of the header row among the non-empty rows. */
+  headerRow: number;
+  decimal: ',' | '.';
+  dateOrder: 'DMY' | 'MDY' | 'YMD';
+  chargeSign: 'positive' | 'negative';
+}
+
 export interface ImportProfile {
   id: string;
   name: string;
   bank: string;
   kind: 'csv' | 'pdf';
   headerSignature: string;
+  /** Field ("date", "description", "amount", "debit", "credit", "installment") → column index. */
   columnMap: Record<string, string>;
+  options: ImportOptions;
+}
+
+/** What an import did, per D16 outcome, for the history list. */
+export interface ImportRecordCounts {
+  transactions: number;
+  plans: number;
+  payments: number;
+  merged: number;
+  linked: number;
+  skipped: number;
 }
 
 export interface ImportRecord {
@@ -158,6 +185,18 @@ export interface ImportRecord {
   importedAt: IsoTimestamp;
   rowCount: number;
   profileId?: string;
+  cardId: string;
+  counts: ImportRecordCounts;
+  /** Descriptions the import filled in, put back on undo (D16). */
+  restore: {
+    transactions: {
+      id: string;
+      description: string;
+      normalizedMerchant: string;
+      fingerprint: string;
+    }[];
+    plans: { id: string; description: string }[];
+  };
 }
 
 export interface SettingRow {

@@ -1,6 +1,6 @@
 import Papa from 'papaparse';
 import { normalizeDescription } from '../../core/finance';
-import type { CurrencyCode, IsoDate } from '../../types/domain';
+import type { CurrencyCode, ImportOptions, IsoDate } from '../../types/domain';
 import { detectDateOrder, parseStatementDate, type DateOrder } from '../common/dates';
 import {
   detectDecimalSeparator,
@@ -30,14 +30,12 @@ export interface CsvMapping {
   installment?: number;
 }
 
-export interface CsvOptions {
-  /** 0-based index of the header row; rows above it (account details) are ignored. */
-  headerRow: number;
-  decimal: DecimalSeparator;
-  dateOrder: DateOrder;
-  /** Whether charges are positive in the amount column (most banks) or negative. */
-  chargeSign: 'positive' | 'negative';
-}
+/**
+ * How the file is formatted: the header row (rows above it hold account details), the
+ * decimal separator, the date order, and whether charges are positive in the amount
+ * column (most banks) or negative.
+ */
+export type CsvOptions = ImportOptions;
 
 export const MAPPING_FIELDS = [
   'date',
