@@ -5,7 +5,7 @@ import type {
   Transaction,
   TransactionSource,
 } from '../../types/domain';
-import { normalizeDescription, transactionFingerprint } from '../finance';
+import { normalizeDescription } from '../finance';
 import { signedAmount } from './draft';
 import type { PlannedRow } from './plan';
 
@@ -94,12 +94,4 @@ export function importChanges(
   }
   changes.payments.sort((a, b) => a.date.localeCompare(b.date));
   return changes;
-}
-
-/** The fingerprint a merged manual entry gets with its new description. */
-export function mergedFingerprint(
-  tx: Pick<Transaction, 'cardId' | 'date' | 'amount'>,
-  description: string,
-) {
-  return transactionFingerprint(tx.cardId, tx.date, tx.amount, description);
 }

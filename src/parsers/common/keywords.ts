@@ -37,6 +37,18 @@ export const PAYMENT_KEYWORDS = [
   'thank you',
 ];
 
+/**
+ * Paying a credit card from a debit account: an outflow (positive) on the debit card,
+ * already counted on the credit card it paid.
+ */
+export const CARD_PAYMENT_KEYWORDS = [
+  'kredi karti\\w* (?:borcu? )?odeme\\w*',
+  'kart borcu odeme\\w*',
+  'kk odeme\\w*',
+  'credit card payment\\w*',
+  'card payment',
+];
+
 /** Refunds: raise the confidence of a credit row. */
 export const REFUND_KEYWORDS = ['iade\\w*', 'refund\\w*', 'returns?', 'iptal\\w*', 'cancel\\w*'];
 

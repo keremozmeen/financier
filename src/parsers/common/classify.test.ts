@@ -100,6 +100,19 @@ describe('classifyRow (D16)', () => {
     it('classifies payments on debit cards too, so the review can explain the skip', () => {
       expect(debit('KREDİ KARTI ÖDEMESİ', -500_000).type).toBe('payment');
     });
+
+    it.each([
+      'KREDİ KARTI ÖDEMESİ',
+      'KREDI KARTI BORCU ODEME 1234',
+      'KK ÖDEME',
+      'CREDIT CARD PAYMENT',
+    ])('reads the outflow %s on a debit card as a card payment', (description) => {
+      expect(debit(description, 425_000)).toEqual({ type: 'payment', confidence: 'high' });
+    });
+
+    it('keeps merchant names with "ödeme" as charges on a debit card', () => {
+      expect(debit('IYZICO ÖDEME HIZMETLERI', 45_000).type).toBe('charge');
+    });
   });
 
   describe('balance and summary lines', () => {

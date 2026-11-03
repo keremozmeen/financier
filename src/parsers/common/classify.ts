@@ -5,6 +5,7 @@ import {
   type InstallmentMarker,
 } from './installments';
 import {
+  CARD_PAYMENT_KEYWORDS,
   FEE_KEYWORDS,
   keywordRegex,
   PAYMENT_KEYWORDS,
@@ -38,12 +39,13 @@ const SUMMARY = keywordRegex(SUMMARY_KEYWORDS);
 const PAYMENT = keywordRegex(PAYMENT_KEYWORDS);
 const REFUND = keywordRegex(REFUND_KEYWORDS);
 const FEE = keywordRegex(FEE_KEYWORDS);
+const CARD_PAYMENT = keywordRegex(CARD_PAYMENT_KEYWORDS);
 
 /**
  * Classifies one imported row (D16). Summary lines are checked first, so "ASGARİ ÖDEME
  * TUTARI" is not a payment. A credit row is a refund when it says so, else a bill
- * payment when it has a payment keyword, else a refund with medium confidence. A charge
- * row is a fee when it has a fee keyword, else an installment slice when it carries a
+ * payment when it has a payment keyword, else a refund with medium confidence. On a
+ * debit card, a "KREDİ KARTI ÖDEMESİ" outflow is a payment too. A charge row is a fee when it has a fee keyword, else an installment slice when it carries a
  * marker (credit cards only), else a charge.
  */
 export function classifyRow(input: ClassifyInput): Classification {
@@ -56,6 +58,11 @@ export function classifyRow(input: ClassifyInput): Classification {
     return { type: 'refund', confidence: 'medium' };
   }
 
+  // On a debit card, paying a credit card bill is an outflow: skip it, the credit card
+  // already counts that spending (D16).
+  if (input.cardType === 'debit' && CARD_PAYMENT.test(text)) {
+    return { type: 'payment', confidence: 'high' };
+  }
   if (FEE.test(text)) return { type: 'fee', confidence: 'high' };
 
   const column = input.installmentColumn ? parseInstallmentColumn(input.installmentColumn) : null;

@@ -54,6 +54,13 @@ export class FinancierDatabase extends Dexie {
     this.version(2).stores({ cards: 'id' }).upgrade(upgradeToV2);
     // v3 (D14): bill payments. Nothing to migrate: no statements were stored before.
     this.version(3).stores({ payments: 'id, cardId, statementId' });
+    // v4 (D16): imports can be undone, so the plans and payments they create are indexed.
+    // Nothing to migrate: nothing was imported before.
+    this.version(4).stores({
+      payments: 'id, cardId, statementId, importId',
+      installmentPlans: 'id, cardId, importId',
+      imports: 'id, importedAt, cardId',
+    });
   }
 }
 
