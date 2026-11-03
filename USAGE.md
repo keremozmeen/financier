@@ -26,7 +26,7 @@ Financier is a **Progressive Web App (PWA)**, meaning you don't need to visit an
 
 All processing happens **on your phone**. No file is ever uploaded anywhere.
 
-1. Download your statement as **CSV** from your bank's website or app. (PDF import comes in a later version; Excel files can be saved as CSV first.)
+1. Download your statement as **CSV** or **Excel** (`.xls`, `.xlsx`) from your bank's website or app. Card statements and bank account statements (hesap hareketleri) both work. PDF import comes in a later version.
 2. Open the **Import** tab, pick the card the statement belongs to, and choose or drag in the file.
 3. The first time, match the columns (date, description, amount, and optionally the installment column). Financier remembers the mapping and reuses it for files with the same headers.
 4. Review every row before anything is saved. Each row shows its type, which you can change:
@@ -37,7 +37,14 @@ All processing happens **on your phone**. No file is ever uploaded anywhere.
    * Entries you already typed in by hand are shown as **Already logged** and merged, and rows you imported before are skipped, so importing the same file twice adds nothing.
 5. Tap **Import**. Changed your mind? **Import history** lets you undo a whole import.
 
-Debit card files work the same way, without installments or bill payments.
+Debit card files work the same way, without installments.
+
+**Bank account statements (hesap hareketleri)** are imported onto the account's debit card. Financier recognizes:
+* **Income** (salary, incoming EFT/Havale/FAST): saved as income, never counted as spending. Untick it to leave it out.
+* **Card purchases** (POS, internet, contactless) and **automatic bills** (electricity, water, gas, internet, phone): saved as spending; bills are marked so Sub-Radar can track them.
+* **Credit card payments:** recorded as a payment on the credit card they paid, matched by its last 4 digits or picked by you, and never counted as spending. A payment you already recorded, or one automatic payment made, is not added again.
+* **Transfers and ATM withdrawals:** skipped unless you tap **Count as spending**.
+* Balance columns are ignored, and rows are matched by the bank's reference number, so importing the same file again adds nothing.
 
 ---
 

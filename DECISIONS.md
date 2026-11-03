@@ -245,7 +245,7 @@ A card statement is more than purchases: it also lists installment slices, the b
 | **Charge** | Any other row with a positive amount | Imported as a transaction | Same |
 | **Refund** | Any other row with a negative (credit) amount ("İADE", "REFUND" raise confidence) | Imported as a negative transaction | Same |
 | **Installment slice** | "TAKSİT 3/6", "3/6 TAKSİT", "3. TAKSİT", "(3/6)", "3/6", "installment 3 of 6", or the mapped installment column | Linked to an existing plan, or creates the plan for the remaining installments; never a separate charge | Ignored: imported as a plain charge |
-| **Bill payment** | "ÖDEME", "HESAPTAN ÖDEME", "OTOMATİK ÖDEME", "KART ÖDEMESİ", "PAYMENT", "AUTOPAY"… on a credit (negative) row | Offered as a payment against its statement (D14), unless already recorded; never a refund | Skipped: no statements (D13). An outflow named "KREDİ KARTI ÖDEMESİ", "KK ÖDEME" or "CREDIT CARD PAYMENT" is also a payment, since the credit card already counts that spending |
+| **Bill payment** | "ÖDEME", "HESAPTAN ÖDEME", "OTOMATİK ÖDEME", "KART ÖDEMESİ", "PAYMENT", "AUTOPAY"… on a credit (negative) row | Offered as a payment against its statement (D14), unless already recorded; never a refund | Recorded on the credit card it paid (D17); skipped when the app has no credit card. An outflow named "KREDİ KARTI ÖDEMESİ", "KK ÖDEME" or "CREDIT CARD PAYMENT" is also a payment, never spending |
 | **Balance or summary line** | "ÖNCEKİ DÖNEM BAKİYESİ", "DÖNEM BORCU", "ASGARİ ÖDEME", "TOPLAM", "PREVIOUS BALANCE", "MINIMUM PAYMENT"… | Skipped | Skipped |
 | **Interest or fee** | "FAİZ", "BSMV", "KKDF", "KART ÜCRETİ", "ÜYELİK ÜCRETİ", "GECİKME", "INTEREST", "LATE FEE", "ANNUAL FEE"… on a positive row | Imported as a charge with `fee: true`, so later phases can report fees | Same |
 
@@ -257,7 +257,43 @@ A card statement is more than purchases: it also lists installment slices, the b
 - **Bill payments** are matched to the latest statement that closed before the payment date. A payment is skipped as already recorded when a payment of the same amount is already stored within ±3 days of its date (manual, "Paid outside the app", automatic or imported), and as covered by auto-pay when the card has automatic payment on and the payment falls within ±3 days of the due date of a bill auto-pay pays (D14). A payment whose statement has nothing to pay is skipped. Paying more than the amount due becomes credit (D15).
 - **Duplicates and manual entries (D3):** charges, refunds and fees are first deduplicated by fingerprint against earlier imports. Identical rows within one file are kept (two coffees on the same day): the n-th identical row gets the fingerprint suffix `#n`, so re-importing the same file still adds nothing. A remaining charge or refund that matches a manual entry (same card, same signed amount, date within ±3 days) is "Already logged" and merged by default: nothing new is saved, and the manual entry takes the bank's description if it had none. Each manual entry merges with one row at most, and the user can unmerge a row.
 - **Undo** removes everything an import created (its transactions, the plans and payments it created, re-settling those statements as deleting a payment does in D14) and restores the descriptions it filled in on merged entries and linked plans.
-- Changing a row's type on the review screen recomputes its outcome. Only types that apply to the card are offered: debit cards have no installment type, and a payment on a debit card is always skipped.
+- Changing a row's type on the review screen recomputes its outcome. Only types that apply to the card are offered: debit cards have no installment type, and a payment on a debit card follows D17.
+
+---
+
+## D17. Bank account statements (hesap hareketleri)
+
+A bank account export lists more than card purchases: salary and incoming transfers, outgoing transfers, cash withdrawals, utility bills and the payments that settle credit card bills. Importing it as a card statement would count salary as a refund and a credit card payment as spending. An account statement is therefore recognized and classified with its own rules, extending D16.
+
+- **Detection:** a file whose header has at least two of Bakiye, Ek Hesap Bakiyesi, Kanal/Şube and Valör is an account statement. It is imported onto a **debit card** (the account's card, D13); opened on a credit card, the import asks for the debit card instead.
+- **Columns:** the date comes from Tarih/Saat (or Tarih), never Valör; times are dropped ("03.11.2026 14:22"). The amount comes from İşlem Tutarı, where money going out is negative. Balance columns (Bakiye, Ek Hesap Bakiyesi), Valör and Kanal/Şube are never mapped. İşlem Türü and İşlem are mapped as labels; Referans as the row's reference.
+- **Classification:** İşlem Türü first, then İşlem, then Açıklama; the first text a rule recognizes decides. The keyword lists live in `src/parsers/common/keywords.ts`, so a new bank label is a one-line addition.
+
+| Type | Recognized by | Saved as |
+| :--- | :--- | :--- |
+| **Card purchase** (charge) | POS, sanal POS, internet alışveriş, temassız, harcama… | A charge on the debit card |
+| **Income** | Money in that is not a refund: maaş, gelen EFT/Havale/FAST… (any unlabelled money in, with medium confidence) | An income transaction (negative amount, `income: true`), never a refund and never counted in spending, so Kipp can use it later. The user can leave it out on the review screen. |
+| **Refund** | Money in with "İADE", "İPTAL" | A refund on the debit card |
+| **Credit card bill payment** | "KREDİ KARTI ÖDEMESİ", "KK ÖDEME"… | A D14 payment on the credit card it paid, never spending. The card is the one picked on the review screen, else the only credit card whose last 4 digits appear in the description, else the only credit card in the app; with none, the row asks the user to pick. Deduplicated like D16 (same amount within ±3 days on that card, any method, and auto-pay due dates). |
+| **Automatic bill** | fatura, otomatik ödeme talimatı, elektrik, doğalgaz, su, internet and phone providers… | A charge with `bill: true`, so Sub-Radar can detect it as recurring (Phase 4) |
+| **Transfer or cash** | giden EFT/Havale/FAST, virman, ATM, para çekme… | Skipped by default; "Count as spending" saves it as a charge with `transfer: true` |
+| **Fee** | masraf, ücret, komisyon (as D16) | A charge with `fee: true` |
+| **Summary** | as D16 | Skipped |
+
+- **Referans:** when the file has a reference column, a row's fingerprint is `cardId + "ref" + reference` instead of date + amount + description (D3), so a re-export with a reworded description is still recognized.
+- **Undo** (D16) also removes the payments the import recorded on credit cards.
+
+---
+
+## D18. Excel import with SheetJS (vendored)
+
+Many Turkish banks (İş Bankası among them) export `.xls` rather than CSV, and some ".xls" files are HTML tables. Excel import uses **SheetJS Community Edition 0.20.3**.
+
+- **Source:** the official tarball from `https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz` (Apache-2.0), downloaded once and committed as `vendor/xlsx-0.20.3.tgz`. `package.json` installs it from that file, so installs and CI never fetch from an outside host. The npm `xlsx` package is not used: it is frozen at 0.18.5, which has a prototype-pollution and a ReDoS advisory with no npm fix.
+- **SHA-256:** `8dc73fc3b00203e72d176e85b50938627c7b086e607c682e8d3c22c02bb99fe8`. `npm run check:vendor` verifies it and runs in CI before `npm ci`. Upgrading means downloading the new tarball from the same site, updating this checksum and `scripts/check-vendor.mjs`, and recording the version here.
+- **Formats:** `.xlsx`, legacy `.xls` (BIFF) and HTML saved as `.xls`, told apart by their first bytes, not the file name. HTML cells are read as text without number parsing, so "1.250" stays a Turkish thousand; binary date cells become ISO dates (read as UTC, so no time-zone shift) and number cells plain decimals rounded to the cent. Info rows above the header are skipped by finding the row that names known columns (D17). CSV keeps using PapaParse.
+- **Loading:** the import screen is a lazy route, and SheetJS is a dynamic import inside it that loads only when a spreadsheet is opened. It stays out of the main bundle (no chunk-size warning) and is precached for offline use like the rest of the app. SheetJS makes no network calls; the CSP is unchanged.
+- PDF import stays in Phase 6.
 
 ---
 
@@ -266,13 +302,13 @@ A card statement is more than purchases: it also lists installment slices, the b
 | Table | Key fields |
 | :--- | :--- |
 | `cards` | `id`, `type` (`credit` / `debit`), `name`, `bank`, `last4`, `currency`, `color`, `archived`; credit only: `limit`, `statementDay`, `dueDay`, `autoPay?`, `autoPaySince?` (D14) |
-| `transactions` | `id`, `cardId`, `date`, `description`, `normalizedMerchant`, `amount`, `currency`, `category`, `installmentPlanId?`, `fingerprint`, `source` (`manual` / `csv` / `pdf`), `importId?`, `fee?` (interest or bank fee, D16) |
+| `transactions` | `id`, `cardId`, `date`, `description`, `normalizedMerchant`, `amount`, `currency`, `category`, `installmentPlanId?`, `fingerprint`, `source` (`manual` / `csv` / `pdf`), `importId?`, `fee?` (interest or bank fee, D16), `income?`, `bill?`, `transfer?` (account statements, D17; income is excluded from spending) |
 | `installmentPlans` | `id`, `cardId`, `description`, `totalAmount`, `count`, `purchaseDate`, `firstDueMonth`, `currency`, `importId?` (created by an import, D16; indexed in schema v4) |
 | `balanceOverrides` | `id`, `cardId`, `balance` (negative for a credit balance, D15), `currency`, `asOf`, `createdAt` (history of bank balances entered by the user, D11) |
 | `statements` | `id`, `cardId`, `periodStart`, `periodEnd`, `dueDate`, `totalDue`, `minimumDue?`, `paid`, `installments`, `autoPaySkipped?` (stored when a payment is recorded, D14) |
 | `payments` | `id`, `cardId`, `statementId`, `date`, `amount`, `currency`, `createdAt`, `method?` (`manual` / `outside` / `automatic`; bill payments, credit cards only, D14; added in schema v3), `importId?` (recorded by an import, D16; indexed in schema v4) |
 | `subscriptions` | `id`, `normalizedMerchant`, `cadenceDays`, `lastAmount`, `previousAmount`, `status` (`active` / `ignored` / `cancelled`), `confirmedByUser` |
-| `importProfiles` | `id`, `name`, `bank`, `kind` (`csv` / `pdf`), `headerSignature`, `columnMap`, `options` (header row, decimal separator, date order, sign convention) |
+| `importProfiles` | `id`, `name`, `bank`, `kind` (`csv` / `pdf`), `headerSignature`, `columnMap` (date, description, amount or debit/credit, installment, reference, İşlem Türü, İşlem), `options` (header row, decimal separator, date order, sign convention) |
 | `imports` | `id`, `fileName`, `importedAt`, `rowCount`, `profileId?`, `cardId`, `counts` (per outcome), `restore` (descriptions to put back on undo, D16) (lets the user undo a whole import) |
 | `settings` | key/value: `locale`, `theme`, `monthlyIncome?`, `primaryCurrency`, `onboardingDone` |
 
