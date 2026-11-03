@@ -1,4 +1,10 @@
-import { classifyRow, lowerConfidence, rowTypesFor, type ClassifyInput } from './classify';
+import {
+  classifyAccountRow,
+  classifyRow,
+  lowerConfidence,
+  rowTypesFor,
+  type ClassifyInput,
+} from './classify';
 
 const credit = (description: string, amount: number, extra: Partial<ClassifyInput> = {}) =>
   classifyRow({ description, amount, cardType: 'credit', ...extra });
@@ -170,5 +176,58 @@ describe('lowerConfidence', () => {
     expect(lowerConfidence('high', 'medium')).toBe('medium');
     expect(lowerConfidence('low', 'high')).toBe('low');
     expect(lowerConfidence('high', 'high')).toBe('high');
+  });
+});
+
+describe('classifyAccountRow (D17)', () => {
+  const out = (description: string, amount: number, labels?: string[]) =>
+    classifyAccountRow({ description, amount, ...(labels ? { labels } : {}) }).type;
+
+  it.each([
+    ['MIGROS KADIKOY', ['POS Harcama'], 'charge'],
+    ['TRENDYOL', ['İnternet Alışveriş'], 'charge'],
+    ['A101', ['Temassız İşlem'], 'charge'],
+    ['KREDİ KARTI ÖDEMESİ 1234', ['Kredi Kartı Ödemesi'], 'payment'],
+    ['İGDAŞ', ['Otomatik Ödeme Talimatı'], 'bill'],
+    ['TURKCELL FATURA', [], 'bill'],
+    ['ENERJİSA ELEKTRİK', [], 'bill'],
+    ['ATM KADIKOY', ['ATM Para Çekme'], 'transfer'],
+    ['MEHMET DEMİR', ['Giden EFT'], 'transfer'],
+    ['HAVALE', [], 'transfer'],
+    ['EFT ÜCRETİ', [], 'fee'],
+    ['HESAP İŞLETİM ÜCRETİ', ['Masraf'], 'fee'],
+    ['DEVREDEN BAKİYE', [], 'summary'],
+  ] as const)('reads the outflow %s as %s', (description, labels, type) => {
+    expect(out(description, 10_000, [...labels])).toBe(type);
+  });
+
+  it.each([
+    ['ACME MAAŞ', ['Maaş Ödemesi'], 'income'],
+    ['AYŞE YILMAZ', ['Gelen FAST'], 'income'],
+    ['AYŞE YILMAZ', ['Gelen EFT'], 'income'],
+    ['ZARA IADE', ['POS İade'], 'refund'],
+    ['ALIŞVERİŞ İPTAL', [], 'refund'],
+  ] as const)('reads the inflow %s as %s', (description, labels, type) => {
+    expect(out(description, -10_000, [...labels])).toBe(type);
+  });
+
+  it('never reads incoming money as a refund unless it says so', () => {
+    expect(classifyAccountRow({ description: 'AHMET', amount: -10_000 })).toEqual({
+      type: 'income',
+      confidence: 'medium',
+    });
+  });
+
+  it('decides by İşlem Türü before the description', () => {
+    // The label says purchase, so a shop called "Fatura Kırtasiye" stays a purchase.
+    expect(out('FATURA KIRTASIYE', 10_000, ['POS Harcama'])).toBe('charge');
+    expect(out('FATURA KIRTASIYE', 10_000)).toBe('bill');
+  });
+
+  it('offers the account types on the review screen', () => {
+    expect(rowTypesFor('debit', 'account')).toEqual(
+      expect.arrayContaining(['income', 'transfer', 'bill', 'payment']),
+    );
+    expect(rowTypesFor('debit', 'account')).not.toContain('installment');
   });
 });

@@ -34,14 +34,15 @@ async function seedCredit() {
 const csvFile = (text: string, name = 'ekstre.csv') => new File([text], name, { type: 'text/csv' });
 
 async function upload(file: File) {
-  await user.upload(await screen.findByLabelText('Statement file'), file);
+  // The import screen is a lazy route (D18): give it time to load under a busy test run.
+  await user.upload(await screen.findByLabelText('Statement file', {}, { timeout: 5000 }), file);
 }
 
 function rowFor(text: string) {
   return screen.getByText(text).closest('li') as HTMLElement;
 }
 
-describe('CSV import flow (D3, D16)', () => {
+describe('import flow (D3, D16)', () => {
   it('maps, reviews, imports, re-imports and undoes a statement', async () => {
     await seedCredit();
     renderApp('/import');
@@ -125,7 +126,9 @@ describe('CSV import flow (D3, D16)', () => {
     await upload(csvFile(CREDIT_CARD_CSV));
     await user.click(await screen.findByRole('button', { name: 'Continue' }));
 
-    const migros = await screen.findByText('MIGROS KADIKOY');
+    // Saving the mapping is async: wait for the review, or the wizard preview matches.
+    await screen.findByRole('region', { name: 'Review' }, { timeout: 5000 });
+    const migros = screen.getByText('MIGROS KADIKOY');
     const row = migros.closest('li') as HTMLElement;
     expect(
       within(row).getByText('Already logged: your entry gets this description'),
@@ -169,7 +172,9 @@ describe('CSV import flow (D3, D16)', () => {
 
     await screen.findByRole('region', { name: 'Review' });
     const card = rowFor('KREDI KARTI ODEMESI');
-    expect(within(card).getByText('Debit cards have no bills: not imported')).toBeInTheDocument();
+    expect(
+      within(card).getByText('Bill payment: add the credit card it paid to record it'),
+    ).toBeInTheDocument();
     const types = within(card).getByLabelText('Type of row 5');
     expect(within(types).queryByRole('option', { name: 'Installment' })).not.toBeInTheDocument();
 
@@ -180,11 +185,9 @@ describe('CSV import flow (D3, D16)', () => {
     ]);
   });
 
-  it('explains that Excel and PDF files are not supported yet', async () => {
+  it('explains that PDF files are not supported yet', async () => {
     await seedCredit();
     renderApp('/import');
-    await upload(new File(['x'], 'ekstre.xlsx'));
-    expect(await screen.findByRole('alert')).toHaveTextContent('Excel files (.xlsx, .xls)');
     await upload(new File(['x'], 'ekstre.pdf'));
     expect(await screen.findByRole('alert')).toHaveTextContent('PDF statements');
   });

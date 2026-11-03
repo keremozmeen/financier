@@ -8,6 +8,7 @@ import {
   guessMapping,
   guessOptions,
   headerSignature,
+  isAccountStatement,
   parseCsv,
 } from './csv';
 import { CREDIT_CARD_CSV, DEBIT_CARD_CSV } from './fixtures';
@@ -187,5 +188,70 @@ describe('profile column maps', () => {
     expect(isCompleteMapping({ date: 0, description: 0, amount: 1 })).toBe(false);
     expect(isCompleteMapping({ date: 0, description: 1, amount: 2, installment: 2 })).toBe(false);
     expect(isCompleteMapping({ date: 0, description: 1, amount: 2 })).toBe(true);
+  });
+});
+
+describe('account statements (D17)', () => {
+  const header = [
+    'Tarih/Saat',
+    'Valör',
+    'Kanal/Şube',
+    'İşlem Tutarı',
+    'Bakiye',
+    'Ek Hesap Bakiyesi',
+    'İşlem',
+    'İşlem Türü',
+    'Açıklama',
+    'Referans',
+  ];
+
+  it('detects an account statement by its balance and channel columns', () => {
+    expect(isAccountStatement(header)).toBe(true);
+    expect(isAccountStatement(['İşlem Tarihi', 'Açıklama', 'Taksit', 'Tutar (TL)'])).toBe(false);
+    // One signal alone is not enough.
+    expect(isAccountStatement(['Tarih', 'Açıklama', 'Tutar', 'Bakiye'])).toBe(false);
+  });
+
+  it('finds the header below info rows by its column names', () => {
+    const rows = [
+      ['TÜRKİYE İŞ BANKASI'],
+      ['Tarih Aralığı', '01.10.2026 - 31.10.2026'],
+      header,
+      ['03.11.2026 14:22'],
+    ];
+    expect(detectHeaderRow(rows)).toBe(2);
+  });
+
+  it('never maps Valör, Kanal/Şube or a balance column', () => {
+    const mapping = guessMapping(header, []);
+    expect(Object.values(mapping)).not.toEqual(expect.arrayContaining([1, 2, 4, 5]));
+    expect(mapping).toMatchObject({ date: 0, amount: 3, description: 8, reference: 9 });
+  });
+
+  it('treats money out as charges', () => {
+    const rows = [
+      header,
+      [
+        '03.11.2026 14:22',
+        '03.11.2026',
+        'POS',
+        '-1.234,56',
+        '9.000,00',
+        '0,00',
+        'Harcama',
+        'POS',
+        'MIGROS',
+        'R1',
+      ],
+    ];
+    const mapping = guessMapping(header, rows.slice(1));
+    const options = guessOptions(rows, 0, mapping);
+    expect(options.chargeSign).toBe('negative');
+    expect(extractRows(rows, mapping, options, 'TRY')[0]).toMatchObject({
+      date: '2026-11-03',
+      amount: 123_456,
+      reference: 'R1',
+      labels: ['POS', 'Harcama'],
+    });
   });
 });

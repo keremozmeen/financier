@@ -28,6 +28,12 @@ export interface CsvMapping {
   /** "Alacak" column: refunds and payments. */
   credit?: number;
   installment?: number;
+  /** "Referans": the bank's own id for the row, used as its fingerprint (D17). */
+  reference?: number;
+  /** "İşlem Türü": the bank's label for the row, classified before the description (D17). */
+  operationType?: number;
+  /** "İşlem": a shorter label some banks add. */
+  operation?: number;
 }
 
 /**
@@ -44,6 +50,9 @@ export const MAPPING_FIELDS = [
   'debit',
   'credit',
   'installment',
+  'reference',
+  'operationType',
+  'operation',
 ] as const;
 export type MappingField = (typeof MAPPING_FIELDS)[number];
 
@@ -56,6 +65,9 @@ export interface ParsedRow {
   /** Signed minor units: positive is a charge. Null when unreadable. */
   amount: number | null;
   installmentColumn?: string;
+  reference?: string;
+  /** The bank's labels ("İşlem Türü", then "İşlem"), classified before the description. */
+  labels?: string[];
   /** The date or amount only parsed with a different format than the file's. */
   guessed: boolean;
 }
@@ -63,11 +75,14 @@ export interface ParsedRow {
 const HEADER_SCAN_ROWS = 30;
 
 /**
- * The header row: the first row (within the first 30) with at least two text cells
- * that is followed by a row containing a date. Banks put account details above it.
+ * The header row, within the first 30 rows: the first one naming at least two known
+ * columns ("Tarih", "Açıklama", "İşlem Tutarı"…), else the first with at least two text
+ * cells that is followed by a row containing a date. Banks put account details above it.
  */
 export function detectHeaderRow(rows: readonly string[][]): number {
   const limit = Math.min(rows.length - 1, HEADER_SCAN_ROWS);
+  // Known column names decide first, so info rows above the header are skipped (D17).
+  for (let i = 0; i < limit; i++) if (looksLikeHeader(rows[i] as string[])) return i;
   for (let i = 0; i < limit; i++) {
     const row = rows[i] as string[];
     const textCells = row.filter((cell) => /\p{L}/u.test(cell) && !parseStatementDate(cell));
@@ -84,31 +99,72 @@ export function headerSignature(header: readonly string[]): string {
   return cells.join('|');
 }
 
-const HEADER_HINTS: Record<MappingField, RegExp> = {
-  date: /\b(?:islem tarihi|tarih|date|transaction date|posting date)\b/,
-  description: /\b(?:aciklama|islem|isyeri|detay|description|merchant|details|payee)\b/,
-  amount: /\b(?:tutar|tutari|miktar|amount|tutar tl|islem tutari)\b/,
-  debit: /\b(?:borc|debit|harcama)\b/,
-  credit: /\b(?:alacak|credit)\b/,
+// Header names per field, most specific first, matched on folded text. A field takes the
+// first header that matches its earliest pattern, so "Açıklama" wins over "İşlem".
+const HEADER_HINTS: Record<MappingField, readonly RegExp[]> = {
+  date: [
+    /^tarih ?\/ ?saat$/,
+    /^islem tarihi/,
+    /^tarih\b/,
+    /\b(?:transaction |posting )?date\b/,
+    /tarih/,
+  ],
+  description: [/aciklama/, /\b(?:description|details|merchant|payee|isyeri|detay)\b/, /^islem$/],
+  amount: [/islem tutari/, /\btutari?\b/, /\b(?:amount|miktar)\b/],
+  debit: [/\b(?:borc|debit)\b/, /^harcama$/],
+  credit: [/\b(?:alacak|credit)\b/],
   // "Taksit Tutarı" is an amount, not the "3/6" column.
-  installment: /^(?!.*\b(?:tutar|tutari|amount)\b).*\b(?:taksit|installment)\w*\b/,
+  installment: [/^(?!.*\b(?:tutar|tutari|amount)\b).*\b(?:taksit|installment)\w*\b/],
+  reference: [/\b(?:referans|reference|dekont|ref)\b/],
+  operationType: [/islem (?:turu|tipi)/, /\btransaction type\b/],
+  operation: [/^islem$/, /^(?:type|operation)$/],
 };
+
+/** Headers that never hold a mapped field: balances and value dates (D17). */
+const IGNORED_HEADERS = /\b(?:bakiye|bakiyesi|balance|valor|kanal|sube)\b/;
+
+/** Header names that mark the real header row below a bank's info rows. */
+const KNOWN_HEADERS =
+  /^(?:tarih|tarih ?\/ ?saat|islem tarihi|valor|aciklama|tutar|islem tutari|tutar tl|bakiye|ek hesap bakiyesi|referans|kanal ?\/ ?sube|islem|islem turu|taksit|borc|alacak|date|description|amount|debit|credit|balance|reference)\b/;
+
+/** The header row names at least two of the columns banks use. */
+function looksLikeHeader(row: readonly string[]): boolean {
+  return row.filter((cell) => KNOWN_HEADERS.test(foldText(cell))).length >= 2;
+}
+
+/**
+ * A bank account statement (hesap hareketleri, D17) rather than a card statement: its
+ * header has at least two of Bakiye, Ek Hesap Bakiyesi, Kanal/Şube and Valör.
+ */
+export function isAccountStatement(header: readonly string[]): boolean {
+  const folded = header.map((cell) => foldText(cell));
+  const signals = [/^bakiye\b|\bbakiye$/, /ek hesap/, /kanal|sube/, /valor/];
+  return signals.filter((signal) => folded.some((cell) => signal.test(cell))).length >= 2;
+}
 
 /** A first mapping guess from header names, then from the column contents. */
 export function guessMapping(header: readonly string[], sample: readonly string[][]): CsvMapping {
   const folded = header.map((cell) => foldText(cell));
-  const used = new Set<number>();
+  const used = new Set(folded.flatMap((cell, i) => (IGNORED_HEADERS.test(cell) ? [i] : [])));
   const find = (field: MappingField) => {
-    const index = folded.findIndex((cell, i) => !used.has(i) && HEADER_HINTS[field].test(cell));
-    if (index < 0) return undefined;
-    used.add(index);
-    return index;
+    for (const pattern of HEADER_HINTS[field]) {
+      const index = folded.findIndex((cell, i) => !used.has(i) && pattern.test(cell));
+      if (index >= 0) {
+        used.add(index);
+        return index;
+      }
+    }
+    return undefined;
   };
-  // Installment and date first: "Taksit Tutarı" and "İşlem Tarihi" also look like an
-  // amount and a description.
+  // Installment, date and the label columns first: "Taksit Tutarı", "İşlem Tarihi" and
+  // "İşlem Türü" also look like an amount and a description.
   const installment = find('installment');
   const date = find('date') ?? columnWhere(sample, used, (cell) => !!parseStatementDate(cell));
   if (date !== undefined) used.add(date);
+  const reference = find('reference');
+  const operationType = find('operationType');
+  const description = find('description');
+  const operation = find('operation');
   // A charge/credit pair only counts when both columns exist.
   const debit = find('debit');
   const credit = find('credit');
@@ -119,13 +175,15 @@ export function guessMapping(header: readonly string[], sample: readonly string[
     : (find('amount') ??
       columnWhere(sample, used, (cell) => parseStatementAmount(cell, 'TRY') !== null));
   if (amount !== undefined) used.add(amount);
-  const description = find('description') ?? longestTextColumn(sample, used);
 
   return {
     date: date ?? 0,
-    description: description ?? 1,
+    description: description ?? longestTextColumn(sample, used) ?? 1,
     ...(pair ? { debit, credit } : { amount: amount ?? 2 }),
     ...(installment !== undefined ? { installment } : {}),
+    ...(reference !== undefined ? { reference } : {}),
+    ...(operationType !== undefined ? { operationType } : {}),
+    ...(operation !== undefined ? { operation } : {}),
   };
 }
 
@@ -143,7 +201,8 @@ export function guessOptions(
     headerRow,
     decimal: detectDecimalSeparator(body.flatMap((row) => amountColumns.map((c) => row[c] ?? ''))),
     dateOrder: detectDateOrder(body.map((row) => row[mapping.date] ?? '')),
-    chargeSign: 'positive',
+    // Account statements write money going out as a negative amount (D17).
+    chargeSign: isAccountStatement(rows[headerRow] ?? []) ? 'negative' : 'positive',
   };
 }
 
@@ -170,12 +229,17 @@ export function extractRows(
     const date = readDate(cell(mapping.date), options.dateOrder);
     const amount = readAmount(row, mapping, options, currency);
     const installmentColumn = cell(mapping.installment);
+    const reference = cell(mapping.reference);
+    const labels = [cell(mapping.operationType), cell(mapping.operation)].filter(Boolean);
+    const description = cell(mapping.description) || labels.at(-1) || '';
     result.push({
       line: i + 1,
       date: date.value,
-      description: cell(mapping.description).replace(/\s+/g, ' '),
+      description: description.replace(/\s+/g, ' '),
       amount: amount.value,
       ...(installmentColumn ? { installmentColumn } : {}),
+      ...(reference ? { reference } : {}),
+      ...(labels.length > 0 ? { labels } : {}),
       guessed: date.guessed || amount.guessed,
     });
   });

@@ -8,17 +8,20 @@ import {
   countOutcomes,
   importChanges,
   planImport,
+  type CardRecords,
   type DraftRow,
   type ImportContext,
 } from '../core/import';
 import type {
   Card,
+  CreditCard,
   ImportOptions,
   ImportProfile,
   ImportRecord,
   IsoDate,
   TransactionSource,
 } from '../types/domain';
+import { cardsRepo } from './cards';
 import { db, newId } from './database';
 import { paymentsRepo } from './payments';
 import { loadUsageInputs } from './usage';
@@ -44,16 +47,18 @@ const IMPORT_TABLES = [
 ];
 
 export const importsRepo = {
-  /** Everything stored for a card that an import is checked against (D3, D16). */
+  /**
+   * Everything stored for a card that an import is checked against (D3, D16). For a debit
+   * card it also loads the active credit cards, which account rows can pay (D17).
+   */
   async loadContext(card: Card): Promise<ImportContext> {
-    const [transactions, plans, statements, payments, overrides] = await Promise.all([
-      db.transactions.where('cardId').equals(card.id).toArray(),
-      db.installmentPlans.where('cardId').equals(card.id).toArray(),
-      db.statements.where('cardId').equals(card.id).toArray(),
-      db.payments.where('cardId').equals(card.id).toArray(),
-      db.balanceOverrides.where('cardId').equals(card.id).toArray(),
-    ]);
-    return { card, transactions, plans, statements, payments, overrides };
+    const records = await loadRecords(card.id);
+    if (card.type === 'credit') return { card, ...records };
+    const credit = (await cardsRepo.list()).filter((c): c is CreditCard => c.type === 'credit');
+    const creditCards = await Promise.all(
+      credit.map(async (c) => ({ card: c, ...(await loadRecords(c.id)) })),
+    );
+    return { card, ...records, creditCards };
   },
 
   /** Saves the reviewed rows (D16). Returns the new import's id. */
@@ -100,16 +105,17 @@ export const importsRepo = {
         }
       }
 
-      // Payments go last so each bill includes the imported charges (D14, D15).
+      // Payments go last so each bill includes the imported charges (D14, D15). From a
+      // debit account they are recorded on the credit card they paid (D17).
       let payments = 0;
-      if (card.type === 'credit') {
-        for (const payment of changes.payments) {
-          const [input] = await loadUsageInputs([card], today);
-          const bill = computeBill(statementPeriodFor(payment.periodEnd, card), input!);
-          if (bill.amountDue <= 0) continue;
-          await paymentsRepo.record(card, bill, payment.amount, payment.date, { importId, now });
-          payments++;
-        }
+      for (const payment of changes.payments) {
+        const target = await db.cards.get(payment.cardId);
+        if (target?.type !== 'credit') continue;
+        const [input] = await loadUsageInputs([target], today);
+        const bill = computeBill(statementPeriodFor(payment.periodEnd, target), input!);
+        if (bill.amountDue <= 0) continue;
+        await paymentsRepo.record(target, bill, payment.amount, payment.date, { importId, now });
+        payments++;
       }
 
       const counts = countOutcomes(planned);
@@ -186,6 +192,17 @@ export const importsRepo = {
     });
   },
 };
+
+async function loadRecords(cardId: string): Promise<CardRecords> {
+  const [transactions, plans, statements, payments, overrides] = await Promise.all([
+    db.transactions.where('cardId').equals(cardId).toArray(),
+    db.installmentPlans.where('cardId').equals(cardId).toArray(),
+    db.statements.where('cardId').equals(cardId).toArray(),
+    db.payments.where('cardId').equals(cardId).toArray(),
+    db.balanceOverrides.where('cardId').equals(cardId).toArray(),
+  ]);
+  return { transactions, plans, statements, payments, overrides };
+}
 
 function pick(tx: {
   id: string;

@@ -16,8 +16,8 @@ export interface ImportChanges {
   transactions: NewTransaction[];
   /** Plans for slices with no plan yet, each with its purchase transaction (D11). */
   plans: { plan: Omit<InstallmentPlan, 'id' | 'importId'>; purchase: NewTransaction }[];
-  /** Bill payments, in date order, against the statement closing on `periodEnd`. */
-  payments: { date: IsoDate; amount: number; periodEnd: IsoDate }[];
+  /** Bill payments, in date order, on credit card `cardId` against the statement closing on `periodEnd`. */
+  payments: { cardId: string; date: IsoDate; amount: number; periodEnd: IsoDate }[];
   /** Merged manual entries that take the bank's description (D3). */
   merges: { transactionId: string; description: string }[];
   /** Linked plans without a description that take the bank's (D16). */
@@ -54,7 +54,7 @@ export function importChanges(
       case 'add':
         changes.transactions.push({
           ...entry(row.date!, description, signedAmount(row), outcome.fingerprint),
-          ...(outcome.fee ? { fee: true } : {}),
+          ...(outcome.flag ? { [outcome.flag]: true } : {}),
         });
         break;
       case 'newPlan':
@@ -73,6 +73,7 @@ export function importChanges(
         break;
       case 'payment':
         changes.payments.push({
+          cardId: outcome.cardId,
           date: row.date!,
           amount: row.amount!,
           periodEnd: outcome.periodEnd,

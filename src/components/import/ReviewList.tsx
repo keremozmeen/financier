@@ -14,13 +14,14 @@ import {
 import { parseInstallmentColumn, rowTypesFor, type ImportRowType } from '../../parsers/common';
 import { useFormat } from '../../hooks/useFormat';
 import { useI18n, type MessageKey } from '../../i18n';
-import type { Card } from '../../types/domain';
+import type { Card, CreditCard, StatementKind } from '../../types/domain';
 import { Button } from '../ui/Button';
 import { inputClass, TextField } from '../ui/TextField';
 
 /** Step 3 of an import: every row with its type, outcome and confidence (D3, D16). */
 export function ReviewList({
   card,
+  statement,
   drafts,
   context,
   onChange,
@@ -28,6 +29,7 @@ export function ReviewList({
   busy,
 }: {
   card: Card;
+  statement: StatementKind;
   drafts: readonly DraftRow[];
   context: ImportContext;
   onChange: (drafts: DraftRow[]) => void;
@@ -38,6 +40,7 @@ export function ReviewList({
   const planned = useMemo(() => planImport(drafts, context), [drafts, context]);
   const counts = countOutcomes(planned);
   const planNames = new Map(context.plans.map((plan) => [plan.id, plan.description]));
+  const creditCards = (context.creditCards ?? []).map((c) => c.card);
   const skipped = counts.skip + counts.duplicate + counts.paymentRecorded + counts.dropped;
 
   const update = (index: number, patch: Partial<DraftRow>) =>
@@ -85,6 +88,8 @@ export function ReviewList({
             <ReviewRow
               key={item.row.line}
               card={card}
+              statement={statement}
+              creditCards={creditCards}
               item={item}
               planName={(id) => planNames.get(id) || t('tx.fallback.installment')}
               onChange={(patch) => update(i, patch)}
@@ -103,11 +108,15 @@ export function ReviewList({
 
 function ReviewRow({
   card,
+  statement,
+  creditCards,
   item: { row, outcome },
   planName,
   onChange,
 }: {
   card: Card;
+  statement: StatementKind;
+  creditCards: readonly CreditCard[];
   item: PlannedRow;
   planName: (id: string) => string;
   onChange: (patch: Partial<DraftRow>) => void;
@@ -115,8 +124,12 @@ function ReviewRow({
   const { t } = useI18n();
   const format = useFormat();
   const [editing, setEditing] = useState(false);
-  const types = rowTypesFor(card.type);
-  const credit = row.type === 'refund' || row.type === 'payment';
+  const types = rowTypesFor(card.type, statement);
+  const credit = row.type === 'refund' || row.type === 'income';
+  // A bill payment from a debit account is recorded on a credit card (D17).
+  const pickCard = card.type === 'debit' && row.type === 'payment' && creditCards.length > 0;
+  const paidCard =
+    outcome.kind === 'payment' ? creditCards.find((c) => c.id === outcome.cardId) : undefined;
   const label = row.description || t('tx.fallback.charge');
 
   return (
@@ -171,6 +184,33 @@ function ReviewRow({
         >
           <Pencil aria-hidden="true" size={16} />
         </button>
+        {pickCard && (
+          <select
+            value={
+              outcome.kind === 'payment' || outcome.kind === 'paymentRecorded'
+                ? outcome.cardId
+                : (row.targetCardId ?? '')
+            }
+            onChange={(event) => onChange({ targetCardId: event.target.value || undefined })}
+            aria-label={t('review.payCard', { line: row.line })}
+            className={`${inputClass} w-auto min-w-36 text-sm`}
+          >
+            <option value="">{t('review.pickCard')}</option>
+            {creditCards.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.last4 ? `${c.name} ·${c.last4}` : c.name}
+              </option>
+            ))}
+          </select>
+        )}
+        {row.type === 'transfer' && (
+          <Button
+            variant="ghost"
+            onClick={() => onChange({ countAsSpending: !row.countAsSpending })}
+          >
+            {t(row.countAsSpending ? 'review.dontCount' : 'review.countAsSpending')}
+          </Button>
+        )}
         {outcome.kind === 'merge' && (
           <Button variant="ghost" onClick={() => onChange({ unmerged: true })}>
             {t('review.unmerge')}
@@ -183,12 +223,20 @@ function ReviewRow({
         )}
       </div>
       <p className={`pl-9 text-sm ${OUTCOME_TONE[outcome.kind]}`}>
-        {outcomeText(outcome, t, format, card, planName)}
+        {outcomeText(outcome, t, format, card, planName, paidCard)}
       </p>
       {editing && <RowEditor card={card} row={row} onChange={onChange} />}
     </li>
   );
 }
+
+const ADD_TEXT: Record<'none' | 'fee' | 'income' | 'bill' | 'transfer', MessageKey> = {
+  none: 'review.outcome.add',
+  fee: 'review.outcome.addFee',
+  income: 'review.outcome.addIncome',
+  bill: 'review.outcome.addBill',
+  transfer: 'review.outcome.addTransfer',
+};
 
 const OUTCOME_TONE: Record<RowOutcome['kind'], string> = {
   add: 'text-fg',
@@ -209,11 +257,12 @@ function outcomeText(
   format: ReturnType<typeof useFormat>,
   card: Card,
   planName: (id: string) => string,
+  paidCard?: CreditCard,
 ): string {
   switch (outcome.kind) {
     case 'add':
       if (outcome.manualMatch) return t('review.outcome.addUnmerged');
-      return t(outcome.fee ? 'review.outcome.addFee' : 'review.outcome.add');
+      return t(ADD_TEXT[outcome.flag ?? 'none']);
     case 'duplicate':
       return t('review.outcome.duplicate');
     case 'merge':
@@ -225,11 +274,15 @@ function outcomeText(
         count: outcome.count,
         amount: format.money(outcome.totalAmount, card.currency),
       });
-    case 'payment':
-      return t('review.outcome.payment', {
+    case 'payment': {
+      const params = {
         date: format.date(outcome.dueDate),
-        amount: format.money(outcome.amountDue, card.currency),
-      });
+        amount: format.money(outcome.amountDue, paidCard?.currency ?? card.currency),
+      };
+      return paidCard
+        ? t('review.outcome.paymentCard', { ...params, card: paidCard.name })
+        : t('review.outcome.payment', params);
+    }
     case 'paymentRecorded':
       return t(
         outcome.reason === 'autoPay' ? 'review.outcome.autoPay' : 'review.outcome.paymentRecorded',

@@ -76,3 +76,78 @@ export const FEE_KEYWORDS = [
 export function keywordRegex(fragments: readonly string[]): RegExp {
   return new RegExp(`(?:^|[^\\p{L}\\p{N}])(?:${fragments.join('|')})(?=$|[^\\p{L}\\p{N}])`, 'u');
 }
+
+// ---- Bank account statements, hesap hareketleri (D17) ----
+// Matched on "İşlem Türü" first, then "İşlem", then the description. Add a bank's new
+// label as one line in the matching list.
+
+/** Card purchases from the account: POS, internet, contactless. */
+export const ACCOUNT_PURCHASE_KEYWORDS = [
+  'pos\\w*',
+  'sanal pos',
+  'internet (?:alisveris|harcama)\\w*',
+  'e ?ticaret',
+  'temassiz\\w*',
+  'kartli (?:islem|harcama)\\w*',
+  'banka karti harcama\\w*',
+  'alisveris\\w*',
+  'harcama\\w*',
+  'card purchase',
+  'contactless',
+  'purchase',
+];
+
+/** Incoming money: salary, incoming EFT/Havale/FAST. */
+export const ACCOUNT_INCOME_KEYWORDS = [
+  'maas\\w*',
+  'gelen (?:eft|havale|fast|transfer)\\w*',
+  '(?:eft|havale|fast) (?:gelen|alindi)',
+  'ucret odemesi',
+  'kira geliri',
+  'mevduat faiz\\w*',
+  'salary',
+  'payroll',
+  'incoming (?:transfer|eft)',
+];
+
+/** Outgoing transfers and cash withdrawals: skipped unless the user counts them as spending. */
+export const ACCOUNT_TRANSFER_KEYWORDS = [
+  'giden (?:eft|havale|fast|transfer)\\w*',
+  'eft',
+  'havale\\w*',
+  'fast',
+  'virman\\w*',
+  'para transferi',
+  'hesaba transfer',
+  'atm\\w*',
+  'bankamatik',
+  'nakit cek\\w*',
+  'para cek\\w*',
+  'outgoing transfer',
+  'cash withdrawal',
+  'transfer',
+  'withdrawal',
+];
+
+/** Automatic bill payments: utilities, internet, phone (fatura, otomatik ödeme talimatı). */
+export const ACCOUNT_BILL_KEYWORDS = [
+  'fatura\\w*',
+  'otomatik odeme talimat\\w*',
+  'talimatli odeme\\w*',
+  'elektrik\\w*',
+  'dogal ?gaz\\w*',
+  'su (?:faturasi|bedeli)',
+  'enerjisa',
+  'ck enerji',
+  'igdas',
+  'baskentgaz',
+  'iski',
+  'aski',
+  'turkcell',
+  'vodafone',
+  'turk telekom\\w*',
+  'ttnet',
+  'superonline',
+  'utility',
+  'bill payment',
+];

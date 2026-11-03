@@ -1,4 +1,5 @@
 import {
+  classifyAccountRow,
   classifyRow,
   isCreditType,
   lowerConfidence,
@@ -8,7 +9,7 @@ import {
   type InstallmentMarker,
 } from '../../parsers/common';
 import type { ParsedRow } from '../../parsers/csv';
-import type { CardType, IsoDate } from '../../types/domain';
+import type { CardType, IsoDate, StatementKind } from '../../types/domain';
 
 /** One row on the review screen, as the user left it. */
 export interface DraftRow {
@@ -25,18 +26,35 @@ export interface DraftRow {
   dropped: boolean;
   /** The user said this row is not the manual entry it matched (D3). */
   unmerged: boolean;
+  /** The bank's "Referans" for the row: its fingerprint when present (D17). */
+  reference?: string;
+  /** The credit card a bill payment from the account paid, as picked by the user (D17). */
+  targetCardId?: string;
+  /** An outgoing transfer or ATM withdrawal the user counts as spending (D17). */
+  countAsSpending?: boolean;
 }
 
-/** Classifies parsed rows into review rows (D16). */
-export function draftRows(parsed: readonly ParsedRow[], cardType: CardType): DraftRow[] {
+/** Classifies parsed rows into review rows: card statements per D16, account statements per D17. */
+export function draftRows(
+  parsed: readonly ParsedRow[],
+  cardType: CardType,
+  kind: StatementKind = 'card',
+): DraftRow[] {
   return parsed.map((row) => {
     const amount = row.amount ?? 0;
-    const classified = classifyRow({
-      description: row.description,
-      amount,
-      cardType,
-      ...(row.installmentColumn ? { installmentColumn: row.installmentColumn } : {}),
-    });
+    const classified =
+      kind === 'account'
+        ? classifyAccountRow({
+            description: row.description,
+            amount,
+            ...(row.labels ? { labels: row.labels } : {}),
+          })
+        : classifyRow({
+            description: row.description,
+            amount,
+            cardType,
+            ...(row.installmentColumn ? { installmentColumn: row.installmentColumn } : {}),
+          });
     return {
       line: row.line,
       date: row.date,
@@ -49,6 +67,7 @@ export function draftRows(parsed: readonly ParsedRow[], cardType: CardType): Dra
         : {}),
       dropped: false,
       unmerged: false,
+      ...(row.reference ? { reference: row.reference } : {}),
     };
   });
 }
@@ -66,7 +85,7 @@ export function editDraft(row: DraftRow, patch: Partial<DraftRow>): DraftRow {
   return next;
 }
 
-/** The row's amount with its direction: refunds and payments are negative. */
+/** The row's amount with its direction: money in (refunds, payments, income) is negative. */
 export function signedAmount(row: Pick<DraftRow, 'amount' | 'type'>): number {
   const amount = row.amount ?? 0;
   return isCreditType(row.type) ? -amount : amount;

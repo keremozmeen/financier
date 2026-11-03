@@ -9,7 +9,13 @@ import type {
 import { transactionFingerprint } from '../finance';
 import { importChanges } from './changes';
 import { draftRows, editDraft, type DraftRow } from './draft';
-import { countOutcomes, importDueMonth, planImport, type ImportContext } from './plan';
+import {
+  countOutcomes,
+  importDueMonth,
+  planImport,
+  type CardRecords,
+  type ImportContext,
+} from './plan';
 import { similarDescriptions } from './similar';
 
 const credit: CreditCard = {
@@ -173,7 +179,7 @@ describe('planImport', () => {
       ];
       const planned = planImport(rows, context());
       expect(planned.map((p) => p.outcome.kind)).toEqual(['add', 'add', 'add', 'skip']);
-      expect(planned[2]?.outcome).toMatchObject({ fee: true });
+      expect(planned[2]?.outcome).toMatchObject({ flag: 'fee' });
 
       const changes = importChanges(planned, credit, 'csv');
       expect(changes.transactions.map((t) => [t.description, t.amount, t.fee])).toEqual([
@@ -469,13 +475,14 @@ describe('planImport', () => {
       const planned = planImport([pay()], context({ transactions: [charge] }));
       expect(planned[0]?.outcome).toEqual({
         kind: 'payment',
+        cardId: 'c1',
         periodEnd: '2026-09-10',
         dueDate: '2026-09-21',
         amountDue: 100_000,
       });
       expect(importChanges(planned, credit, 'csv')).toMatchObject({
         transactions: [],
-        payments: [{ date: '2026-09-16', amount: 100_000, periodEnd: '2026-09-10' }],
+        payments: [{ cardId: 'c1', date: '2026-09-16', amount: 100_000, periodEnd: '2026-09-10' }],
       });
     });
 
@@ -496,6 +503,7 @@ describe('planImport', () => {
           outcomes([pay()], context({ transactions: [charge], payments: [recorded] }))[0],
         ).toEqual({
           kind: 'paymentRecorded',
+          cardId: 'c1',
           reason: 'recorded',
         });
       },
@@ -515,7 +523,7 @@ describe('planImport', () => {
           [pay({ date: '2026-09-21', amount: 123_400 })],
           context({ card, transactions: [charge] }),
         )[0],
-      ).toEqual({ kind: 'paymentRecorded', reason: 'autoPay' });
+      ).toEqual({ kind: 'paymentRecorded', cardId: 'c1', reason: 'autoPay' });
     });
 
     it('offers payments auto-pay does not cover', () => {
@@ -570,5 +578,142 @@ describe('similarDescriptions', () => {
     ['MEDIAMARKT ISTANBUL', 'TEKNOSA ISTANBUL MAGAZA'],
   ])('does not match %s and %s', (a, b) => {
     expect(similarDescriptions(a, b)).toBe(false);
+  });
+});
+
+describe('account statements (D17)', () => {
+  const visa: CreditCard = { ...credit, id: 'v1', name: 'Visa', last4: '1234' };
+  const master: CreditCard = { ...credit, id: 'm1', name: 'Master', last4: '9876' };
+  // Each card has a 1.000 ₺ charge on its statement closing 10 Sep.
+  const records = (card: CreditCard, patch: Partial<CardRecords> = {}) => ({
+    card,
+    transactions: [tx({ cardId: card.id, date: '2026-08-20', amount: 100_000 }, card)],
+    plans: [],
+    statements: [],
+    payments: [],
+    overrides: [],
+    ...patch,
+  });
+  const account = (patch: Partial<ImportContext> = {}) =>
+    context({ card: debit, creditCards: [records(visa), records(master)], ...patch });
+  const cardPayment = (patch: Partial<DraftRow> = {}) =>
+    row({
+      type: 'payment',
+      description: 'KREDİ KARTI ÖDEMESİ 5555********1234',
+      amount: 100_000,
+      date: '2026-09-16',
+      ...patch,
+    });
+
+  it('saves income flagged as income, never as a refund', () => {
+    const planned = planImport(
+      [row({ type: 'income', description: 'MAAŞ', amount: 4_500_000 })],
+      account(),
+    );
+    expect(planned[0]?.outcome).toMatchObject({ kind: 'add', flag: 'income' });
+    expect(importChanges(planned, debit, 'csv').transactions[0]).toMatchObject({
+      amount: -4_500_000,
+      income: true,
+    });
+  });
+
+  it('skips transfers and ATM withdrawals unless counted as spending', () => {
+    const transfer = row({ type: 'transfer', description: 'ATM KADIKOY' });
+    expect(outcomes([transfer], account())[0]).toEqual({ kind: 'skip', reason: 'transfer' });
+    const counted = planImport([{ ...transfer, countAsSpending: true }], account());
+    expect(counted[0]?.outcome).toMatchObject({ kind: 'add', flag: 'transfer' });
+    expect(importChanges(counted, debit, 'csv').transactions[0]).toMatchObject({
+      amount: 10_000,
+      transfer: true,
+    });
+  });
+
+  it('saves automatic bills as charges marked as bills', () => {
+    const planned = planImport([row({ type: 'bill', description: 'ENERJİSA' })], account());
+    expect(importChanges(planned, debit, 'csv').transactions[0]).toMatchObject({
+      amount: 10_000,
+      bill: true,
+    });
+  });
+
+  it('pays the credit card named by its last 4 digits', () => {
+    const planned = planImport([cardPayment()], account());
+    expect(planned[0]?.outcome).toMatchObject({
+      kind: 'payment',
+      cardId: 'v1',
+      amountDue: 100_000,
+    });
+    const changes = importChanges(planned, debit, 'csv');
+    // Never counted as spending on the debit card.
+    expect(changes.transactions).toEqual([]);
+    expect(changes.payments).toEqual([
+      { cardId: 'v1', date: '2026-09-16', amount: 100_000, periodEnd: '2026-09-10' },
+    ]);
+  });
+
+  it('asks for the card when the digits match none, and pays the one picked', () => {
+    const unknown = cardPayment({ description: 'KREDİ KARTI ÖDEMESİ' });
+    expect(outcomes([unknown], account())[0]).toEqual({ kind: 'skip', reason: 'pickCard' });
+    expect(outcomes([{ ...unknown, targetCardId: 'm1' }], account())[0]).toMatchObject({
+      kind: 'payment',
+      cardId: 'm1',
+    });
+  });
+
+  it('pays the only credit card when there is one, and skips when there is none', () => {
+    const single = account({ creditCards: [records(master)] });
+    expect(outcomes([cardPayment()], single)[0]).toMatchObject({ kind: 'payment', cardId: 'm1' });
+    expect(outcomes([cardPayment()], account({ creditCards: [] }))[0]).toEqual({
+      kind: 'skip',
+      reason: 'debitPayment',
+    });
+  });
+
+  it('skips a payment already recorded on that card within 3 days, any method', () => {
+    const recorded = payment({ cardId: 'v1', date: '2026-09-14', method: 'automatic' });
+    const ctx = account({
+      creditCards: [records(visa, { payments: [recorded] }), records(master)],
+    });
+    expect(outcomes([cardPayment()], ctx)[0]).toEqual({
+      kind: 'paymentRecorded',
+      cardId: 'v1',
+      reason: 'recorded',
+    });
+  });
+
+  it('skips a payment the credit card’s auto-pay makes', () => {
+    const auto = { ...visa, autoPay: true, autoPaySince: '2026-09-01' };
+    const ctx = account({ creditCards: [records(auto)] });
+    expect(outcomes([cardPayment({ date: '2026-09-21', amount: 99_000 })], ctx)[0]).toEqual({
+      kind: 'paymentRecorded',
+      cardId: 'v1',
+      reason: 'autoPay',
+    });
+  });
+
+  describe('Referans fingerprints', () => {
+    const ref = (reference: string, patch: Partial<DraftRow> = {}) => row({ reference, ...patch });
+
+    it('fingerprints by the bank reference instead of date, amount and description', () => {
+      const [first] = importChanges(planImport([ref('R1')], account()), debit, 'csv').transactions;
+      expect(first?.fingerprint).toBe('d1|ref|r1');
+    });
+
+    it('finds a row again by reference even when the bank changed its description', () => {
+      const earlier = tx({ source: 'csv', fingerprint: 'd1|ref|r1' }, debit);
+      expect(
+        outcomes(
+          [ref('R1', { description: 'MIGROS KADIKOY 2' })],
+          account({ transactions: [earlier] }),
+        )[0],
+      ).toEqual({ kind: 'duplicate' });
+    });
+
+    it('keeps identical rows with different references apart', () => {
+      expect(outcomes([ref('R1'), ref('R2')], account()).map((o) => o.kind)).toEqual([
+        'add',
+        'add',
+      ]);
+    });
   });
 });

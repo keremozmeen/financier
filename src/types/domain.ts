@@ -61,6 +61,15 @@ export interface Transaction {
   importId?: string;
   /** Interest or a bank fee (D16), so fees can be reported. */
   fee?: boolean;
+  /**
+   * Money received on a bank account: salary, incoming EFT/Havale/FAST (D17). Stored with a
+   * negative amount, like a refund, but never counted in spending.
+   */
+  income?: boolean;
+  /** An automatic utility or phone bill paid from the account (D17), for Sub-Radar. */
+  bill?: boolean;
+  /** An outgoing transfer or ATM withdrawal the user chose to count as spending (D17). */
+  transfer?: boolean;
 }
 
 export interface InstallmentPlan {
@@ -157,6 +166,9 @@ export interface ImportOptions {
   dateOrder: 'DMY' | 'MDY' | 'YMD';
   chargeSign: 'positive' | 'negative';
 }
+
+/** A card statement (D16) or a bank account statement, hesap hareketleri (D17). */
+export type StatementKind = 'card' | 'account';
 
 export interface ImportProfile {
   id: string;

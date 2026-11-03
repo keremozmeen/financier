@@ -1,10 +1,14 @@
-import type { CardType } from '../../types/domain';
+import type { CardType, StatementKind } from '../../types/domain';
 import {
   parseInstallmentColumn,
   parseInstallmentMarker,
   type InstallmentMarker,
 } from './installments';
 import {
+  ACCOUNT_BILL_KEYWORDS,
+  ACCOUNT_INCOME_KEYWORDS,
+  ACCOUNT_PURCHASE_KEYWORDS,
+  ACCOUNT_TRANSFER_KEYWORDS,
   CARD_PAYMENT_KEYWORDS,
   FEE_KEYWORDS,
   keywordRegex,
@@ -15,7 +19,19 @@ import {
 import { foldText } from './text';
 
 /** What an imported row is (D16). */
-export type ImportRowType = 'charge' | 'refund' | 'installment' | 'payment' | 'summary' | 'fee';
+export type ImportRowType =
+  | 'charge'
+  | 'refund'
+  | 'installment'
+  | 'payment'
+  | 'summary'
+  | 'fee'
+  /** Account statements (D17): money received, never a refund or spending. */
+  | 'income'
+  /** Account statements (D17): outgoing transfer or ATM withdrawal, skipped by default. */
+  | 'transfer'
+  /** Account statements (D17): an automatic utility or phone bill, a charge marked as a bill. */
+  | 'bill';
 
 export type Confidence = 'high' | 'medium' | 'low';
 
@@ -40,6 +56,10 @@ const PAYMENT = keywordRegex(PAYMENT_KEYWORDS);
 const REFUND = keywordRegex(REFUND_KEYWORDS);
 const FEE = keywordRegex(FEE_KEYWORDS);
 const CARD_PAYMENT = keywordRegex(CARD_PAYMENT_KEYWORDS);
+const PURCHASE = keywordRegex(ACCOUNT_PURCHASE_KEYWORDS);
+const INCOME = keywordRegex(ACCOUNT_INCOME_KEYWORDS);
+const TRANSFER = keywordRegex(ACCOUNT_TRANSFER_KEYWORDS);
+const BILL = keywordRegex(ACCOUNT_BILL_KEYWORDS);
 
 /**
  * Classifies one imported row (D16). Summary lines are checked first, so "ASGARİ ÖDEME
@@ -85,16 +105,59 @@ export function classifyRow(input: ClassifyInput): Classification {
   return { type: 'charge', confidence: 'high' };
 }
 
-/** The types the review screen offers for a card: no installments on debit cards (D13). */
-export function rowTypesFor(cardType: CardType): ImportRowType[] {
+export interface ClassifyAccountInput {
+  description: string;
+  /** "İşlem Türü", then "İşlem": checked before the description. */
+  labels?: readonly string[];
+  /** Signed minor units: positive is money going out of the account. */
+  amount: number;
+}
+
+/**
+ * Classifies a bank account statement row (D17). Each text is tried in order (the bank's
+ * labels, then the description), and the first one a rule recognizes decides. Money
+ * going out: a credit card bill payment, an automatic bill, a fee, an outgoing transfer
+ * or ATM withdrawal, else a purchase. Money coming in: a refund when it says so, else
+ * income.
+ */
+export function classifyAccountRow(input: ClassifyAccountInput): Classification {
+  const texts = [...(input.labels ?? []), input.description].map(foldText).filter(Boolean);
+  if (texts.some((text) => SUMMARY.test(text))) return { type: 'summary', confidence: 'high' };
+
+  if (input.amount < 0) {
+    for (const text of texts) {
+      if (REFUND.test(text)) return { type: 'refund', confidence: 'high' };
+      if (INCOME.test(text) || TRANSFER.test(text)) return { type: 'income', confidence: 'high' };
+    }
+    return { type: 'income', confidence: 'medium' };
+  }
+
+  for (const text of texts) {
+    if (CARD_PAYMENT.test(text)) return { type: 'payment', confidence: 'high' };
+    if (BILL.test(text)) return { type: 'bill', confidence: 'high' };
+    if (FEE.test(text)) return { type: 'fee', confidence: 'high' };
+    if (TRANSFER.test(text)) return { type: 'transfer', confidence: 'high' };
+    if (PURCHASE.test(text)) return { type: 'charge', confidence: 'high' };
+  }
+  return { type: 'charge', confidence: 'medium' };
+}
+
+/**
+ * The types the review screen offers: no installments on debit cards (D13), and income,
+ * transfers and bills only on account statements (D17).
+ */
+export function rowTypesFor(cardType: CardType, kind: StatementKind = 'card'): ImportRowType[] {
+  if (kind === 'account') {
+    return ['charge', 'income', 'refund', 'bill', 'payment', 'transfer', 'fee', 'summary'];
+  }
   return cardType === 'credit'
     ? ['charge', 'refund', 'installment', 'payment', 'fee', 'summary']
     : ['charge', 'refund', 'payment', 'fee', 'summary'];
 }
 
-/** Whether the row's amount is a credit to the card (refund or payment) for its type. */
+/** Whether the row's amount is money in (refund, payment to the card, income) for its type. */
 export function isCreditType(type: ImportRowType): boolean {
-  return type === 'refund' || type === 'payment';
+  return type === 'refund' || type === 'payment' || type === 'income';
 }
 
 export function lowerConfidence(a: Confidence, b: Confidence): Confidence {

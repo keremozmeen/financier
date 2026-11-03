@@ -6,7 +6,6 @@ import { CardDetailScreen } from './CardDetailScreen';
 import { EditCardScreen, NewCardScreen } from './CardFormScreen';
 import { CardsScreen } from './CardsScreen';
 import { DashboardScreen } from './DashboardScreen';
-import { ImportScreen } from './ImportScreen';
 import { SettingsScreen } from './SettingsScreen';
 
 export const routes: RouteObject[] = [
@@ -20,7 +19,11 @@ export const routes: RouteObject[] = [
       { path: 'cards/:id', element: <CardDetailScreen /> },
       { path: 'cards/:id/edit', element: <EditCardScreen /> },
       { path: 'cards/:id/add', element: <AddTransactionScreen /> },
-      { path: 'import', element: <ImportScreen /> },
+      {
+        path: 'import',
+        // Loaded with the tab: CSV parsing, and SheetJS on demand, stay out of the main bundle (D18).
+        lazy: async () => ({ Component: (await import('./ImportScreen')).ImportScreen }),
+      },
       { path: 'sub-radar', element: <PlaceholderScreen title="nav.subRadar" /> },
       { path: 'settings', element: <SettingsScreen /> },
       { path: '*', element: <Navigate to="/" replace /> },

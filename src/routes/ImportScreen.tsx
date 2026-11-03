@@ -16,16 +16,18 @@ import {
   guessMapping,
   guessOptions,
   headerSignature,
+  isAccountStatement,
   parseCsv,
   toColumnMap,
   type CsvMapping,
   type CsvOptions,
 } from '../parsers/csv';
 import { importsRepo } from '../db';
+import { readSpreadsheet, sniffSheetFormat } from '../parsers/sheet';
 import { useCards, useToday } from '../hooks/useFinance';
 import { useImportContext } from '../hooks/useImports';
 import { useT, type MessageKey } from '../i18n';
-import type { Card } from '../types/domain';
+import type { Card, StatementKind } from '../types/domain';
 
 interface CsvFile {
   name: string;
@@ -41,6 +43,7 @@ type Step =
       mapping: CsvMapping;
       options: CsvOptions;
       drafts: DraftRow[];
+      statement: StatementKind;
       profile?: { id: string; name: string; used: boolean };
     }
   | { kind: 'done'; cardId: string };
@@ -61,12 +64,14 @@ export function ImportScreen() {
     if (!card) return;
     setError(undefined);
     const extension = file.name.toLowerCase().split('.').pop() ?? '';
-    if (['xlsx', 'xls', 'xlsm', 'ods'].includes(extension)) return setError('import.error.excel');
     if (extension === 'pdf') return setError('import.error.pdf');
 
     let rows: string[][];
     try {
-      rows = parseCsv(decodeText(new Uint8Array(await file.arrayBuffer())));
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      // Excel and HTML-as-.xls go through SheetJS, loaded only now (D18).
+      const sheet = sniffSheetFormat(bytes);
+      rows = sheet ? await readSpreadsheet(bytes, sheet) : parseCsv(decodeText(bytes));
     } catch {
       return setError('import.error.read');
     }
@@ -74,6 +79,10 @@ export function ImportScreen() {
 
     const csv = { name: file.name, rows };
     const headerRow = detectHeaderRow(rows);
+    // Account statements belong on the account's debit card (D17).
+    if (isAccountStatement(rows[headerRow] ?? []) && card.type !== 'debit') {
+      return setError('import.error.accountNeedsDebit');
+    }
     // A saved profile for these headers skips the wizard (D3).
     const profile = await importsRepo.findProfile(headerSignature(rows[headerRow] ?? []));
     const saved = profile && fromColumnMap(profile.columnMap);
@@ -98,8 +107,20 @@ export function ImportScreen() {
     profile?: { id: string; name: string; used: boolean },
   ) {
     if (!card) return;
-    const drafts = draftRows(extractRows(file.rows, mapping, options, card.currency), card.type);
-    setStep({ kind: 'review', file, mapping, options, drafts, ...(profile ? { profile } : {}) });
+    const kind: StatementKind = isAccountStatement(file.rows[options.headerRow] ?? [])
+      ? 'account'
+      : 'card';
+    const parsed = extractRows(file.rows, mapping, options, card.currency);
+    const drafts = draftRows(parsed, card.type, kind);
+    setStep({
+      kind: 'review',
+      file,
+      mapping,
+      options,
+      drafts,
+      statement: kind,
+      ...(profile ? { profile } : {}),
+    });
   }
 
   async function finishMapping(file: CsvFile, result: MappingResult) {
@@ -192,6 +213,9 @@ export function ImportScreen() {
           <p className="text-sm">
             <span className="font-medium">{card.name}</span> · {step.file.name}
           </p>
+          {step.statement === 'account' && (
+            <p className="text-sm text-muted">{t('import.accountDetected')}</p>
+          )}
           {step.profile?.used && (
             <p className="text-sm text-muted">
               {t('import.profileUsed', { name: step.profile.name })}
@@ -219,6 +243,7 @@ export function ImportScreen() {
           ) : (
             <ReviewList
               card={card}
+              statement={step.statement}
               drafts={step.drafts}
               context={context}
               busy={busy}

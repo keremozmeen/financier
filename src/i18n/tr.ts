@@ -206,13 +206,13 @@ export const tr: Record<MessageKey, string> = {
   'import.privacy': 'Dosyalar bu cihazda okunur. Hiçbir şey yüklenmez.',
   'import.card': 'Kart',
   'import.noCards': 'Önce bir kart ekle, sonra ekstresini içe aktar.',
-  'import.debitNote': 'Banka kartı: taksit sütunları yok sayılır, kart ödemeleri atlanır.',
-  'import.drop.title': 'Bir CSV dosyası seç',
-  'import.drop.hint': 'ya da buraya bırak. Ekstreyi bankandan CSV olarak indir.',
+  'import.debitNote':
+    'Banka kartı: taksit sütunları yok sayılır, kredi kartı ödemeleri ödenen karta kaydedilir.',
+  'import.drop.title': 'Bir CSV veya Excel dosyası seç',
+  'import.drop.hint':
+    'ya da buraya bırak. Ekstreyi bankandan CSV veya Excel (.xls, .xlsx) olarak indir.',
   'import.drop.label': 'Ekstre dosyası',
   'import.reading': '{file} okunuyor…',
-  'import.error.excel':
-    'Excel dosyaları (.xlsx, .xls) henüz desteklenmiyor. Dosyayı açıp CSV olarak kaydet ya da bankandan CSV indir.',
   'import.error.pdf': 'PDF ekstreler sonraki bir sürümde gelecek. Şimdilik bankandan CSV indir.',
   'import.error.empty': 'Financier bu dosyada okuyabileceği bir satır bulamadı.',
   'import.error.read': 'Bu dosya okunamadı.',
@@ -290,7 +290,7 @@ export const tr: Record<MessageKey, string> = {
   'review.outcome.paymentRecorded': 'Ödeme zaten kayıtlı',
   'review.outcome.autoPay': 'Otomatik ödemeyle ödendi',
   'review.outcome.skip.summary': 'Bakiye satırı: aktarılmaz',
-  'review.outcome.skip.debitPayment': 'Banka kartının ekstresi yok: aktarılmaz',
+  'review.outcome.skip.debitPayment': 'Kart ödemesi: kaydetmek için ödenen kredi kartını ekle',
   'review.outcome.skip.nothingToPay': 'Bu tarihte ödenecek ekstre yok: aktarılmaz',
   'review.outcome.dropped': 'Çıkarıldı',
   'review.outcome.invalid.date': 'Geçerli bir tarih gerekli',
@@ -310,6 +310,26 @@ export const tr: Record<MessageKey, string> = {
   'history.undo.body':
     '"{file}" dosyasının eklediği {transactions} kaydı, {plans} taksit planını ve {payments} ödemeyi siler, doldurduğu açıklamaları geri alır. Kendi kayıtların kalır.',
   'history.undo.confirm': 'Geri al',
+
+  'tx.badge.income': 'Gelir',
+  'tx.badge.bill': 'Fatura',
+  'import.error.accountNeedsDebit':
+    'Bu bir hesap hareketleri dökümü. O hesabın banka kartını seç, sonra dosyayı yeniden seç.',
+  'import.accountDetected':
+    'Hesap hareketleri: gelir, transfer, fatura ve kredi kartı ödemeleri tanınır.',
+  'review.type.income': 'Gelir',
+  'review.type.transfer': 'Transfer veya nakit',
+  'review.type.bill': 'Fatura',
+  'review.payCard': 'Satır {line} ile ödenen kredi kartı',
+  'review.pickCard': 'Kredi kartını seç',
+  'review.countAsSpending': 'Harcama say',
+  'review.dontCount': 'Sayma',
+  'review.outcome.addIncome': 'Gelir: harcamaya sayılmaz',
+  'review.outcome.addBill': 'Yeni fatura',
+  'review.outcome.addTransfer': 'Harcama olarak sayılır',
+  'review.outcome.paymentCard': '{card} kartının {date} tarihli ekstresinin ödemesi ({amount})',
+  'review.outcome.skip.transfer': 'Transfer veya nakit: harcamaya sayılmaz',
+  'review.outcome.skip.pickCard': 'Kredi kartı ödemesi: ödenen kartı seç',
 
   'settings.language': 'Dil',
   'settings.theme': 'Tema',

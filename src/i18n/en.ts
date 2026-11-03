@@ -205,13 +205,13 @@ export const en = {
   'import.privacy': 'Files are read on this device. Nothing is uploaded.',
   'import.card': 'Card',
   'import.noCards': 'Add a card first, then import its statement.',
-  'import.debitNote': 'Debit card: installment columns are ignored and bill payments are skipped.',
-  'import.drop.title': 'Choose a CSV file',
-  'import.drop.hint': 'or drop it here. Export the statement as CSV from your bank.',
+  'import.debitNote':
+    'Debit card: installment columns are ignored, and credit card payments are recorded on the card they paid.',
+  'import.drop.title': 'Choose a CSV or Excel file',
+  'import.drop.hint':
+    'or drop it here. Download the statement as CSV or Excel (.xls, .xlsx) from your bank.',
   'import.drop.label': 'Statement file',
   'import.reading': 'Reading {file}…',
-  'import.error.excel':
-    'Excel files (.xlsx, .xls) are not supported yet. Open the file and save it as CSV, or download CSV from your bank.',
   'import.error.pdf':
     'PDF statements come in a later version. Download CSV from your bank for now.',
   'import.error.empty': 'Financier found no rows it can read in this file.',
@@ -290,7 +290,7 @@ export const en = {
   'review.outcome.paymentRecorded': 'Payment already recorded',
   'review.outcome.autoPay': 'Paid by automatic payment',
   'review.outcome.skip.summary': 'Balance line: not imported',
-  'review.outcome.skip.debitPayment': 'Debit cards have no bills: not imported',
+  'review.outcome.skip.debitPayment': 'Bill payment: add the credit card it paid to record it',
   'review.outcome.skip.nothingToPay': 'No bill to pay on this date: not imported',
   'review.outcome.dropped': 'Left out',
   'review.outcome.invalid.date': 'Needs a valid date',
@@ -310,6 +310,26 @@ export const en = {
   'history.undo.body':
     'This removes the {transactions} entries, {plans} installment plans and {payments} payments that "{file}" added, and puts back the descriptions it filled in. Your own entries stay.',
   'history.undo.confirm': 'Undo import',
+
+  'tx.badge.income': 'Income',
+  'tx.badge.bill': 'Bill',
+  'import.error.accountNeedsDebit':
+    'This is a bank account statement (hesap hareketleri). Choose the debit card for that account, then the file again.',
+  'import.accountDetected':
+    'Bank account statement: income, transfers, bills and credit card payments are recognized.',
+  'review.type.income': 'Income',
+  'review.type.transfer': 'Transfer or cash',
+  'review.type.bill': 'Bill',
+  'review.payCard': 'Credit card paid by row {line}',
+  'review.pickCard': 'Pick the credit card',
+  'review.countAsSpending': 'Count as spending',
+  'review.dontCount': 'Don’t count',
+  'review.outcome.addIncome': 'Income: not counted as spending',
+  'review.outcome.addBill': 'New bill',
+  'review.outcome.addTransfer': 'Counted as spending',
+  'review.outcome.paymentCard': 'Payment for the {card} bill due {date} ({amount})',
+  'review.outcome.skip.transfer': 'Transfer or cash: not counted as spending',
+  'review.outcome.skip.pickCard': 'Credit card payment: pick the card it paid',
 
   'settings.language': 'Language',
   'settings.theme': 'Theme',

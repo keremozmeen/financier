@@ -29,7 +29,11 @@ const MONTHS: Record<string, number> = {};
  * Returns null when the text is not a valid date.
  */
 export function parseStatementDate(input: string, order: DateOrder = 'DMY'): IsoDate | null {
-  const text = foldText(input).replace(/[ t]\d{1,2}:\d{2}(:\d{2})?.*$/, '');
+  // A time after the date ("03.11.2026 14:22", "2026-11-03T14:22", "03.11.2026-14:22:05") is dropped.
+  const text = foldText(input).replace(
+    /[\s t/-]+\d{1,2}[:.]\d{2}(?:[:.]\d{2})?\s*$|[ t]\d{1,2}:\d{2}.*$/,
+    '',
+  );
 
   const numeric = /^(\d{1,4})[./-](\d{1,2})[./-](\d{2,4})$/.exec(text);
   if (numeric) {
