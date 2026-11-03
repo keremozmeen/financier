@@ -15,7 +15,7 @@ describe('parseStatementAmount', () => {
     ['1.234,56 TL', 123_456],
     ['₺1.234,56', 123_456],
     ['- 45,00 TRY', -4500],
-    ['1 234,56', 123_456],
+    ['1\u00a0234,56', 123_456],
     ['1.234', 123_400],
   ])('reads the Turkish amount %s', (input, expected) => {
     expect(parseStatementAmount(input, 'TRY', ',')).toBe(expected);
