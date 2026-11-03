@@ -41,6 +41,11 @@ export function TransactionList({
                     {t('tx.badge.installments', { count })}
                   </span>
                 )}
+                {tx.fee && (
+                  <span className="rounded bg-surface-raised px-1.5 py-0.5 text-warn">
+                    {t('tx.badge.fee')}
+                  </span>
+                )}
                 {/* Without a description the label already reads "Refund". */}
                 {refund && tx.description.trim() && (
                   <span className="rounded bg-surface-raised px-1.5 py-0.5 text-success">

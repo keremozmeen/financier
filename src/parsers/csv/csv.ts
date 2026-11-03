@@ -257,3 +257,44 @@ function longestTextColumn(
   }
   return best;
 }
+
+/** A mapping as stored in an import profile: field → column index as a string. */
+export function toColumnMap(mapping: CsvMapping): Record<string, string> {
+  const map: Record<string, string> = {};
+  for (const field of MAPPING_FIELDS) {
+    const column = mapping[field];
+    if (column !== undefined) map[field] = String(column);
+  }
+  return map;
+}
+
+/** Reads a stored column map; null when it lacks a date, description or amount column. */
+export function fromColumnMap(map: Readonly<Record<string, string>>): CsvMapping | null {
+  const read = (field: MappingField) => {
+    const value = map[field];
+    return value !== undefined && /^\d+$/.test(value) ? Number(value) : undefined;
+  };
+  const mapping: CsvMapping = { date: read('date') ?? -1, description: read('description') ?? -1 };
+  for (const field of ['amount', 'debit', 'credit', 'installment'] as const) {
+    const column = read(field);
+    if (column !== undefined) mapping[field] = column;
+  }
+  return isCompleteMapping(mapping) ? mapping : null;
+}
+
+/**
+ * The mapping names a date, a description and either an amount column or a charge and
+ * credit pair, each in a different column.
+ */
+export function isCompleteMapping(mapping: CsvMapping): boolean {
+  const amounts =
+    mapping.amount !== undefined
+      ? [mapping.amount]
+      : mapping.debit !== undefined && mapping.credit !== undefined
+        ? [mapping.debit, mapping.credit]
+        : null;
+  if (!amounts || mapping.date < 0 || mapping.description < 0) return false;
+  const columns = [mapping.date, mapping.description, ...amounts];
+  if (mapping.installment !== undefined) columns.push(mapping.installment);
+  return new Set(columns).size === columns.length;
+}

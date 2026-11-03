@@ -1,6 +1,9 @@
 import { decodeText } from './decode';
 import {
   detectHeaderRow,
+  fromColumnMap,
+  isCompleteMapping,
+  toColumnMap,
   extractRows,
   guessMapping,
   guessOptions,
@@ -160,5 +163,29 @@ describe('extractRows', () => {
     expect(parsed[0]).toMatchObject({ date: null, amount: 4500, guessed: false });
     expect(parsed[1]).toMatchObject({ date: '2026-10-25', amount: 123_450, guessed: true });
     expect(parsed[2]).toMatchObject({ date: null, amount: null });
+  });
+});
+
+describe('profile column maps', () => {
+  it('round-trips a mapping', () => {
+    const mapping = { date: 0, description: 1, amount: 3, installment: 2 };
+    expect(toColumnMap(mapping)).toEqual({
+      date: '0',
+      description: '1',
+      amount: '3',
+      installment: '2',
+    });
+    expect(fromColumnMap(toColumnMap(mapping))).toEqual(mapping);
+    const pair = { date: 0, description: 1, debit: 2, credit: 3 };
+    expect(fromColumnMap(toColumnMap(pair))).toEqual(pair);
+  });
+
+  it('rejects incomplete or overlapping mappings', () => {
+    expect(fromColumnMap({ date: '0', description: '1' })).toBeNull();
+    expect(fromColumnMap({ date: '0', description: '1', debit: '2' })).toBeNull();
+    expect(fromColumnMap({ date: '0', description: 'x', amount: '2' })).toBeNull();
+    expect(isCompleteMapping({ date: 0, description: 0, amount: 1 })).toBe(false);
+    expect(isCompleteMapping({ date: 0, description: 1, amount: 2, installment: 2 })).toBe(false);
+    expect(isCompleteMapping({ date: 0, description: 1, amount: 2 })).toBe(true);
   });
 });

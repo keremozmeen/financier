@@ -26,10 +26,18 @@ Financier is a **Progressive Web App (PWA)**, meaning you don't need to visit an
 
 All processing happens **on your phone**. No file is ever uploaded anywhere.
 
-1. Open **Financier** and navigate to the **Import / Upload** section.
-2. Drag and drop your bank statement file (**PDF** or **CSV** format) or select it from your device files.
-3. Kipp will automatically extract your transactions, identify credit card details, and calculate statement balances.
-4. Review the parsed items and tap **Save to Local Storage**.
+1. Download your statement as **CSV** from your bank's website or app. (PDF import comes in a later version; Excel files can be saved as CSV first.)
+2. Open the **Import** tab, pick the card the statement belongs to, and choose or drag in the file.
+3. The first time, match the columns (date, description, amount, and optionally the installment column). Financier remembers the mapping and reuses it for files with the same headers.
+4. Review every row before anything is saved. Each row shows its type, which you can change:
+   * **Charges, refunds and fees** (interest, BSMV, KKDF, card fees) are added as entries; fees are marked so you can see what the bank charged.
+   * **Installment slices** ("TAKSİT 3/6") join your existing installment plan, or create a plan for the installments left. They never count twice.
+   * **Bill payments** ("HESAPTAN ÖDEME") are recorded against the statement they paid, unless you already recorded that payment (or automatic payment covers it).
+   * **Balance lines** ("ÖNCEKİ DÖNEM BAKİYESİ", "DÖNEM BORCU") are skipped.
+   * Entries you already typed in by hand are shown as **Already logged** and merged, and rows you imported before are skipped, so importing the same file twice adds nothing.
+5. Tap **Import**. Changed your mind? **Import history** lets you undo a whole import.
+
+Debit card files work the same way, without installments or bill payments.
 
 ---
 

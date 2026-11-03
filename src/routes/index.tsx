@@ -6,6 +6,7 @@ import { CardDetailScreen } from './CardDetailScreen';
 import { EditCardScreen, NewCardScreen } from './CardFormScreen';
 import { CardsScreen } from './CardsScreen';
 import { DashboardScreen } from './DashboardScreen';
+import { ImportScreen } from './ImportScreen';
 import { SettingsScreen } from './SettingsScreen';
 
 export const routes: RouteObject[] = [
@@ -19,7 +20,7 @@ export const routes: RouteObject[] = [
       { path: 'cards/:id', element: <CardDetailScreen /> },
       { path: 'cards/:id/edit', element: <EditCardScreen /> },
       { path: 'cards/:id/add', element: <AddTransactionScreen /> },
-      { path: 'import', element: <PlaceholderScreen title="nav.import" /> },
+      { path: 'import', element: <ImportScreen /> },
       { path: 'sub-radar', element: <PlaceholderScreen title="nav.subRadar" /> },
       { path: 'settings', element: <SettingsScreen /> },
       { path: '*', element: <Navigate to="/" replace /> },
