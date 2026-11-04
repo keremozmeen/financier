@@ -88,7 +88,10 @@ Work phase by phase. Finish each phase with passing checks and a pull request (o
 - When something is ambiguous at the product level, ask Kerem; when it is purely technical, decide, and note the choice in the PR description.
 - Test data must be synthetic. Never commit real financial data.
 
-## Pull requests and writing
+## Commits and pull requests
 
-- Do not end pull request descriptions with "🤖 Generated with Claude Code" or any similar signature line.
-- In pull requests, commit messages, docs and chat, never refer to Kerem in the third person (e.g. not "Kerem's bank exports records like this"). Address Kerem directly ("your export") or describe the thing neutrally ("the bank's export", "the sample export").
+These rules apply to every commit message and every pull request (title, description and comments):
+
+- Always write in the first person plural ("we add", "we skip") or the imperative mood ("add", "skip").
+- Never append "🤖 Generated with Claude Code", "Generated with Claude Code" or any similar signature, footer or trailer.
+- Never refer to Kerem in the third person (e.g. not "Kerem's bank exports records like this"). Describe the thing neutrally ("the bank's export", "the sample export") or say "we".
