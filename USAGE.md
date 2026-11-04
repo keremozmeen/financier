@@ -28,7 +28,7 @@ All processing happens **on your phone**. No file is ever uploaded anywhere.
 
 1. Download your statement as **CSV** or **Excel** (`.xls`, `.xlsx`) from your bank's website or app. Card statements and bank account statements (hesap hareketleri) both work. PDF import comes in a later version.
 2. Open the **Import** tab, pick the card the statement belongs to, and choose or drag in the file.
-3. The first time, match the columns (date, description, amount, and optionally the installment column). Financier remembers the mapping and reuses it for files with the same headers.
+3. Financier reads the columns on its own: it skips the bank's info rows, finds the date, description and amount columns by their names, and works out the number and date formats. The review screen shows how it read the file ("Columns: Date: İşlem Tarihi · …"); tap **Change columns** if something is off. Only when a file's columns can't be recognized does it ask which column is which, using the file's own column names, and it remembers your answer for the next file from that bank.
 4. Review every row before anything is saved. Each row shows its type, which you can change:
    * **Charges, refunds and fees** (interest, BSMV, KKDF, card fees) are added as entries; fees are marked so you can see what the bank charged.
    * **Installment slices** ("TAKSİT 3/6") join your existing installment plan, or create a plan for the installments left. They never count twice.
@@ -64,9 +64,14 @@ Financier tracks two kinds of cards. You pick the type when you add a card, and 
 
 ## 🔍 Spotting Subscriptions & Hidden Fees
 
-1. Go to the **Sub-Radar** tab.
-2. Kipp automatically detects recurring charges (e.g., payments occurring every 28–31 days).
-3. Look for the **Red Alert Indicator**—this flags subscriptions that have silently increased in price compared to previous months.
+1. Go to the **Sub-Radar** tab. It finds the charges that repeat on your cards, credit and debit, and shows them by name ("Netflix", "YouTube Premium"), even when the bank writes them differently or you moved one to another card.
+2. The top tells you what your subscriptions cost **per month**, with the yearly cost and how much **raises** have added. Every raise is counted, however small.
+3. If something needs a look, one line says **Needs your attention**. Tap it to see:
+   * **Price increases** of ₺5 or 3% and up. Smaller ones (₺0,50, or exchange-rate drift) don't raise an alert; you see them in grey in the subscription's details. Tap **Got it** to clear an alert.
+   * **Double charges:** the same amount twice within 3 days. A refund of that amount clears it, or tap **Not a duplicate**.
+   * **Charges after you cancelled:** tap **Still active** or **Dismiss**.
+4. Tap a subscription to see its dates, recent charges and the bank's text. There you can tap **I cancelled it** or **Not a subscription**. Nothing needs confirming: found subscriptions just count.
+5. **Bills** (electricity, gas, water, phone) are one line with their monthly average; tap it to see them. Cancelled, hidden and no-longer-charged ones are under **Past and hidden**, where **Restore** brings them back.
 
 ---
 

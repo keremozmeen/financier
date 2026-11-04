@@ -5,6 +5,7 @@ import {
   cardsRepo,
   loadCardSummaries,
   loadDashboard,
+  loadSubRadar,
   loadUsageInputs,
   paymentsRepo,
   transactionsRepo,
@@ -91,4 +92,10 @@ export function useAutoPay() {
   useEffect(() => {
     if (key) void paymentsRepo.applyAutoPayments(today);
   }, [key, today]);
+}
+
+/** Subscriptions, bills and their alerts (D19), recomputed when entries or choices change. */
+export function useSubRadar() {
+  const today = useToday();
+  return useLiveQuery(() => loadSubRadar(today), [today]);
 }

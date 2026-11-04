@@ -35,7 +35,7 @@ This file records the decisions that turn the open questions in `WORKFLOWS.md` i
 **Decision:** Build import in three layers, in this order:
 
 1. **Manual entry** for cards, transactions and installments. Always available, and the fallback for anything a parser misses.
-2. **CSV import with a column-mapping wizard.** The user maps columns (date, description, amount, installments) once; the mapping is saved as a named profile ("Garanti BBVA CSV") and reused automatically when a file with the same headers is imported.
+2. **CSV import with automatic column mapping.** Financier finds the header row (skipping the bank's info rows above it), the columns (date, description, amount or a Borç/Alacak pair, installments, and for account statements Referans and İşlem Türü / İşlem) and the formats (decimal separator, date order, and whether charges are negative) on its own. It imports without asking when it is confident: the header row names known columns, the date, description and amount columns were found by their header names, and at least half of the rows read a date and an amount. Otherwise a short screen asks only for the columns, by the file's own header names, with the formats folded away unless the preview finds unreadable values. Either way the mapping is saved as a profile, without asking, and reused for the next file with the same headers. A profile keeps the columns and the sign; number and date formats are read from each file, because a bank's .xlsx and HTML .xls of the same statement write numbers differently (D18). The review screen shows how the file was read ("Columns: Date: İşlem Tarihi · …") with a way to change it.
 3. **PDF import via bank adapters.** `pdfjs-dist` extracts positioned text locally; each supported bank gets a small adapter that turns that text into transactions. Start with the most common Turkish credit cards, one bank at a time, each developed against an anonymized sample statement:
    - Garanti BBVA (Bonus), Yapı Kredi (World), İş Bankası (Maximum), Akbank (Axess), QNB (CardFinans), Enpara.
    - A **generic heuristic adapter** (date + description + amount line detection) handles unknown banks, with lower confidence.
@@ -299,6 +299,41 @@ Many Turkish banks (İş Bankası among them) export `.xls` rather than CSV, and
 
 ---
 
+## D19. Sub-Radar: subscriptions, bills and their alerts
+
+Sub-Radar finds charges that repeat, shows what they cost per month and per year, and warns about price increases, double charges and charges after a cancellation. Small raises are the point: ten subscriptions that each go up by ₺10 cost ₺100 a month without anyone noticing, so no percentage threshold hides them. Detection is computed from the stored transactions every time, like statements (D14); only the user's choices are stored. The logic lives in `src/core/subscriptions/` as pure, tested functions.
+
+- **Which entries count:** charges on credit and debit cards (D13). Fees, counted transfers, income, refunds and installment purchases are never subscriptions. Refunds are used only to clear a double-charge alert.
+- **Merchant key:** the description is folded (case and Turkish accents, as D3), then payment-processor prefixes (İyzico, PayTR, PayU, Param…), web and company noise (com, www, tr, ltd, şti…), city names and tokens with digits (references, card numbers) are dropped. The key is the first remaining word, or the first two when the first is a platform that bills several services (Google, Apple, Amazon, Microsoft, PayPal, Türk…). "NETFLIX.COM", "NETFLIX COM ISTANBUL" and "IYZICO *NETFLIX" share the key `netflix`. The key is shared across cards, so a subscription moved to another card stays one subscription. **Display name:** a known service's name ("Netflix", "YouTube Premium", "ChatGPT") from a short brand list, else the description's own words without processors, noise and billing words (fatura, abonelik…), in title case ("Kahve Dünyası"). The bank's text is kept in the details.
+- **Series:** charges with the same key and currency, by date. One merchant can bill several subscriptions (two Apple plans), so a charge joins the series whose latest amount is within 35% of it, else starts a new one; a price increase stays in its series. Bills are one series per merchant, whatever the amount.
+- **Bills:** a series is a bill when any of its charges is marked `bill` (D17) or its description has a bill keyword (`keywords.ts`). Bills appear in their own section with the average of their last 3 charges as the monthly cost, and get no price-increase alert, because their amount changes every month.
+- **Cadence:** counted from the latest charge backwards, over consecutive intervals of **weekly** 6–8 days, **monthly** 25–35 days (28–31 plus a few days of posting delay) or **yearly** 355–375 days. A series is a subscription with **3 charges** in a weekly or monthly run, or **2** in a yearly run. A second charge of the same amount within 3 days is a double charge and is left out of the cadence.
+- **Active:** the latest charge is at most 14 days (weekly), 45 days (monthly) or 400 days (yearly) old. Older series are listed as "Not seen lately" and leave the totals. The next charge is expected 7 days, one calendar month (clamped to the month's last day) or one year after the latest.
+- **Cost:** the latest amount for a subscription, the 3-charge average for a bill. Monthly equivalent: weekly × 52 / 12, monthly × 1, yearly / 12; yearly: weekly × 52, monthly × 12, yearly × 1, rounded to the minor unit. Totals are per currency, over active series that are not ignored or cancelled.
+- **Price increase (subscriptions only):** a charge is an increase when it is higher than **each** of up to 3 charges before it. Every increase is caught and counted: the top of the tab sums the monthly equivalent of every current increase ("raises add ₺10,50 a month"), so many small raises can't hide. A price that moves with the exchange rate counts only when it sets a new high. Only a **notable** increase is a red alert: **at least 5 units of the currency (₺5) or 3%**. A smaller one (₺57,99 → ₺58,49, or exchange-rate drift) is shown in grey inside the subscription's details, with no alert and no badge. An increase stays visible while it is among the series' last 3 charges (last 2 for yearly); its alert stays until the user acknowledges that amount ("Got it"), and a later, higher notable increase alerts again.
+- **Double charge:** two charges of the same amount in one series within 3 days. The alert clears when a refund of that amount from the same merchant follows within 30 days, or when the user taps "Not a duplicate".
+- **User choices** (stored in `subscriptions`, keyed by `merchant key | currency`, plus `#first amount` only when one merchant has several subscription series):
+  - No stored row: active. Nothing needs confirming: a found subscription counts until the user says otherwise.
+  - **Not a subscription** ("Hide this bill" for bills): hidden from lists, totals and alerts, listed under "Past and hidden" with Restore.
+  - **I cancelled it:** stores the date; the series leaves the totals and is listed under "Past and hidden". A charge after that date raises a "charged after you cancelled" alert, with "Still active" (back to active) or "Dismiss" (the cancellation date moves to that charge).
+- **Screen (D20):** one total (subscriptions per month, with the yearly cost, the count and the raises on one line), one "Needs your attention (n)" line that opens to the alerts, and a list of names and prices with a red dot on rows that have an alert. Cadence, card, dates, price change, recent charges, the bank's text and the actions open when a row is tapped. Bills are one folded line with their monthly average; inactive, cancelled and hidden series are one folded "Past and hidden" line.
+- **Debit:** subscriptions and bills are detected across credit and debit cards together; Sub-Radar uses no limits, statements or due dates. Kipp's subscription insights (D4, Phase 5) read these results.
+
+---
+
+## D20. Simple by default
+
+Financier is for everyday users as much as for people who track every kuruş. A screen that shows everything the app knows overwhelms the first group and slows down the second, and a hard learning curve costs users at launch.
+
+- **One thing first:** each screen leads with the one number or answer the user came for, in a sentence or a large figure.
+- **Details on tap:** history, dates, the bank's raw text, secondary figures and actions open when the user taps a row; lists show a name and an amount.
+- **Alerts only when worth acting on:** red is for things the user should do something about. Small changes are shown quietly and still counted (D19 price increases).
+- **Ask only what can't be inferred:** prefer values the app can read from an import or compute over form fields, and never ask the user to confirm something the app can safely assume (Sub-Radar has no confirm step).
+- **Plain words:** no technical terms on screen ("mapping", "fingerprint", "detected"); the same idea uses the same word everywhere, in both languages.
+- **Scope:** applied to Sub-Radar and to import column mapping (D3) in Phase 4. The design pass before Phase 5 applies it to cards, the import review screen (opening on the rows needing a look, with less text) and the dashboard; every later phase follows it.
+
+---
+
 ## Data model (v4)
 
 | Table | Key fields |
@@ -309,7 +344,7 @@ Many Turkish banks (İş Bankası among them) export `.xls` rather than CSV, and
 | `balanceOverrides` | `id`, `cardId`, `balance` (negative for a credit balance, D15), `currency`, `asOf`, `createdAt` (history of bank balances entered by the user, D11) |
 | `statements` | `id`, `cardId`, `periodStart`, `periodEnd`, `dueDate`, `totalDue`, `minimumDue?`, `paid`, `installments`, `autoPaySkipped?` (stored when a payment is recorded, D14) |
 | `payments` | `id`, `cardId`, `statementId`, `date`, `amount`, `currency`, `createdAt`, `method?` (`manual` / `outside` / `automatic`; bill payments, credit cards only, D14; added in schema v3), `importId?` (recorded by an import, D16; indexed in schema v4) |
-| `subscriptions` | `id`, `normalizedMerchant`, `cadenceDays`, `lastAmount`, `previousAmount`, `status` (`active` / `ignored` / `cancelled`), `confirmedByUser` |
+| `subscriptions` | `id` (series key, D19), `normalizedMerchant`, `currency`, `status` (`active` / `ignored` / `cancelled`), `cancelledAt?`, `hikeSeenAmount?`, `dismissedDuplicates?` (only the user's Sub-Radar choices; series, cadence and amounts are computed, D19) |
 | `importProfiles` | `id`, `name`, `bank`, `kind` (`csv` / `pdf`), `headerSignature`, `columnMap` (date, description, amount or debit/credit, installment, reference, İşlem Türü, İşlem), `options` (header row, decimal separator, date order, sign convention) |
 | `imports` | `id`, `fileName`, `importedAt`, `rowCount`, `profileId?`, `cardId`, `counts` (per outcome), `restore` (descriptions to put back on undo, D16) (lets the user undo a whole import) |
 | `settings` | key/value: `locale`, `theme`, `monthlyIncome?`, `primaryCurrency`, `onboardingDone` |

@@ -1,5 +1,6 @@
 import { decodeText } from './decode';
 import {
+  autoMap,
   detectHeaderRow,
   fromColumnMap,
   isCompleteMapping,
@@ -181,6 +182,18 @@ describe('profile column maps', () => {
     expect(fromColumnMap(toColumnMap(pair))).toEqual(pair);
   });
 
+  it('keeps the reference and label columns of an account statement (D17)', () => {
+    const account = {
+      date: 0,
+      description: 8,
+      amount: 3,
+      reference: 9,
+      operationType: 7,
+      operation: 6,
+    };
+    expect(fromColumnMap(toColumnMap(account))).toEqual(account);
+  });
+
   it('rejects incomplete or overlapping mappings', () => {
     expect(fromColumnMap({ date: '0', description: '1' })).toBeNull();
     expect(fromColumnMap({ date: '0', description: '1', debit: '2' })).toBeNull();
@@ -253,5 +266,53 @@ describe('account statements (D17)', () => {
       reference: 'R1',
       labels: ['POS', 'Harcama'],
     });
+  });
+});
+
+describe('autoMap (D16, D20)', () => {
+  it('reads a card statement with info rows above the header on its own', () => {
+    const auto = autoMap(parseCsv(CREDIT_CARD_CSV), 'TRY');
+    expect(auto.confident).toBe(true);
+    expect(auto.mapping).toMatchObject({ date: 0, description: 1, installment: 2, amount: 3 });
+    expect(auto.options).toMatchObject({ headerRow: 2, decimal: ',', chargeSign: 'positive' });
+  });
+
+  it('reads a debit card file with charge and credit columns on its own', () => {
+    const auto = autoMap(parseCsv(DEBIT_CARD_CSV), 'TRY');
+    expect(auto.confident).toBe(true);
+    expect(auto.mapping).toMatchObject({ date: 0, description: 1, debit: 2, credit: 3 });
+  });
+
+  it('asks when the headers are unknown', () => {
+    const rows = [
+      ['Col A', 'Col B', 'Col C'],
+      ['01.09.2026', 'MIGROS', '45,00'],
+      ['02.09.2026', 'SHELL', '1.200,00'],
+    ];
+    expect(autoMap(rows, 'TRY').confident).toBe(false);
+  });
+
+  it('asks when most rows do not read with the guess', () => {
+    const rows = [
+      ['Tarih', 'Açıklama', 'Tutar'],
+      ['01.09.2026', 'MIGROS', '45,00'],
+      ['yesterday', 'SHELL', 'abc'],
+      ['soon', 'ZARA', 'n/a'],
+    ];
+    expect(autoMap(rows, 'TRY').confident).toBe(false);
+  });
+
+  it('detects a card statement that writes charges as negative numbers', () => {
+    const rows = [
+      ['Tarih', 'İşlem Açıklaması', 'Tutar'],
+      ['01.10.2026', 'ŞEKERCİ HACI BEKİR', '-145,00'],
+      ['03.10.2026', 'GÜLLÜOĞLU', '-320,50'],
+      ['05.10.2026', 'İADE ÇİÇEKSEPETİ', '89,90'],
+    ];
+    const auto = autoMap(rows, 'TRY');
+    expect(auto.options.chargeSign).toBe('negative');
+    expect(extractRows(rows, auto.mapping, auto.options, 'TRY').map((r) => r.amount)).toEqual([
+      14_500, 32_050, -8_990,
+    ]);
   });
 });
