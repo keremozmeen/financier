@@ -48,13 +48,13 @@ describe('import flow (D3, D16)', () => {
     renderApp('/import');
 
     await upload(csvFile(CREDIT_CARD_CSV));
-    const wizard = await screen.findByRole('form', { name: 'Match the columns' });
-    expect(within(wizard).getByLabelText('Header row')).toHaveValue('2');
-    expect(within(wizard).getByLabelText('Mapping name')).toHaveValue('Garanti BBVA CSV');
-    expect(within(wizard).getByText('MIGROS KADIKOY')).toBeInTheDocument();
-    await user.click(within(wizard).getByRole('button', { name: 'Continue' }));
-
+    // Known headers: no mapping step, the review says how the file was read (D20).
     const review = await screen.findByRole('region', { name: 'Review' });
+    expect(screen.queryByRole('form', { name: 'Which column is which?' })).not.toBeInTheDocument();
+    expect(
+      screen.getByText('Columns: Date: İşlem Tarihi · Description: Açıklama · Amount: Tutar (TL)'),
+    ).toBeInTheDocument();
+    expect(await db.importProfiles.count()).toBe(1);
     expect(
       within(rowFor('ÖNCEKİ DÖNEM BAKİYESİ')).getByText('Balance line: not imported'),
     ).toBeInTheDocument();
@@ -85,10 +85,8 @@ describe('import flow (D3, D16)', () => {
     // The same headers use the saved mapping, and nothing new is added.
     await user.click(screen.getByRole('button', { name: 'Import another file' }));
     await upload(csvFile(CREDIT_CARD_CSV, 'ekstre-2.csv'));
-    expect(
-      await screen.findByText('Using your saved mapping "Garanti BBVA CSV".'),
-    ).toBeInTheDocument();
     await screen.findByRole('region', { name: 'Review' });
+    expect(await db.importProfiles.count()).toBe(1);
     expect(within(rowFor('MIGROS KADIKOY')).getByText('Already imported')).toBeInTheDocument();
     expect(
       within(rowFor('HESAPTAN ÖDEME')).getByText('Payment already recorded'),
@@ -112,6 +110,35 @@ describe('import flow (D3, D16)', () => {
     expect(await db.installmentPlans.count()).toBe(0);
   });
 
+  it("asks only for the columns it can't read, by their header names, and remembers them", async () => {
+    await seedCredit();
+    renderApp('/import');
+    const file = 'Gün;Ne;Kaç TL\n15.09.2026;MIGROS KADIKOY;1.234,56\n16.09.2026;SHELL;850,00\n';
+    await upload(csvFile(file, 'garip.csv'));
+
+    const wizard = await screen.findByRole('form', { name: 'Which column is which?' });
+    const date = within(wizard).getByLabelText('Date');
+    expect(within(date).getByRole('option', { name: 'Gün' })).toBeInTheDocument();
+    expect(within(date).queryByRole('option', { name: /Column/ })).not.toBeInTheDocument();
+    // Formats stay folded while the preview reads every row.
+    expect(
+      within(wizard).getByText('Number and date formats').closest('details'),
+    ).not.toHaveAttribute('open');
+    await user.selectOptions(within(wizard).getByLabelText('Description'), 'Ne');
+    await user.selectOptions(within(wizard).getByLabelText('Amount'), 'Kaç TL');
+    await user.click(within(wizard).getByRole('button', { name: 'Continue' }));
+    await screen.findByRole('region', { name: 'Review' }, { timeout: 5000 });
+    expect(
+      screen.getByText('Columns: Date: Gün · Description: Ne · Amount: Kaç TL'),
+    ).toBeInTheDocument();
+
+    // The same headers open straight in review next time.
+    await user.click(screen.getByRole('button', { name: 'Choose another file' }));
+    await upload(csvFile(file, 'garip-2.csv'));
+    await screen.findByRole('region', { name: 'Review' }, { timeout: 5000 });
+    expect(screen.queryByRole('form', { name: 'Which column is which?' })).not.toBeInTheDocument();
+  });
+
   it('lets the user change a row type and unmerge a manual entry', async () => {
     const card = await seedCredit();
     await transactionsRepo.addManual({
@@ -124,9 +151,6 @@ describe('import flow (D3, D16)', () => {
     });
     renderApp('/import');
     await upload(csvFile(CREDIT_CARD_CSV));
-    await user.click(await screen.findByRole('button', { name: 'Continue' }));
-
-    // Saving the mapping is async: wait for the review, or the wizard preview matches.
     await screen.findByRole('region', { name: 'Review' }, { timeout: 5000 });
     const migros = screen.getByText('MIGROS KADIKOY');
     const row = migros.closest('li') as HTMLElement;
@@ -166,9 +190,7 @@ describe('import flow (D3, D16)', () => {
       color: '#38bdf8',
     });
     renderApp('/import');
-    expect(await screen.findByText(/installment columns are ignored/)).toBeInTheDocument();
     await upload(csvFile(DEBIT_CARD_CSV, 'hesap.csv'));
-    await user.click(await screen.findByRole('button', { name: 'Continue' }));
 
     await screen.findByRole('region', { name: 'Review' });
     const card = rowFor('KREDI KARTI ODEMESI');

@@ -1,3 +1,4 @@
+import { ChevronDown } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import {
   extractRows,
@@ -9,35 +10,36 @@ import {
 } from '../../parsers/csv';
 import { useFormat } from '../../hooks/useFormat';
 import { useT } from '../../i18n';
-import type { CurrencyCode } from '../../types/domain';
+import type { CardType, CurrencyCode } from '../../types/domain';
 import { Button } from '../ui/Button';
-import { Checkbox } from '../ui/Checkbox';
 import { Segmented } from '../ui/Segmented';
-import { SelectField, TextField } from '../ui/TextField';
+import { SelectField } from '../ui/TextField';
 
 export interface MappingResult {
   mapping: CsvMapping;
   options: CsvOptions;
-  /** Save as a profile under this name (D3); undefined to not save. */
-  profileName?: string;
 }
 
 const PREVIEW_ROWS = 5;
 const HEADER_CHOICES = 15;
 
-/** Step 2 of a CSV import: which column holds what, and how the file writes numbers and dates. */
+/**
+ * Shown only when Financier can't read a file on its own (D16, D20): which column holds
+ * the date, description and amount, by the file's own header names. Formats are detected
+ * and stay folded unless the preview finds unreadable values.
+ */
 export function MappingWizard({
   rows,
   currency,
+  cardType,
   initial,
-  defaultName,
   onSubmit,
   onCancel,
 }: {
   rows: readonly string[][];
   currency: CurrencyCode;
+  cardType: CardType;
   initial: { mapping: CsvMapping; options: CsvOptions };
-  defaultName: string;
   onSubmit: (result: MappingResult) => void;
   onCancel: () => void;
 }) {
@@ -45,8 +47,6 @@ export function MappingWizard({
   const format = useFormat();
   const [mapping, setMapping] = useState(initial.mapping);
   const [options, setOptions] = useState(initial.options);
-  const [save, setSave] = useState(true);
-  const [name, setName] = useState(defaultName);
   const [error, setError] = useState<string>();
 
   const header = rows[options.headerRow] ?? [];
@@ -56,7 +56,8 @@ export function MappingWizard({
   );
   const columns = Array.from({ length: width }, (_, i) => ({
     value: String(i),
-    label: t('mapping.column', { n: i + 1, name: header[i] || '—' }),
+    // The header's own name; a number only for a column without one.
+    label: header[i]?.trim() || t('mapping.column', { n: i + 1 }),
   }));
   const optional = [{ value: '', label: t('mapping.none') }, ...columns];
   const split = mapping.amount === undefined;
@@ -91,12 +92,13 @@ export function MappingWizard({
       setError(t('mapping.error.columns'));
       return;
     }
-    onSubmit({ mapping, options, ...(save && name.trim() ? { profileName: name.trim() } : {}) });
+    onSubmit({ mapping, options });
   }
 
-  const preview = isCompleteMapping(mapping)
-    ? extractRows(rows, mapping, options, currency).slice(0, PREVIEW_ROWS)
-    : [];
+  const parsed = isCompleteMapping(mapping) ? extractRows(rows, mapping, options, currency) : [];
+  const preview = parsed.slice(0, PREVIEW_ROWS);
+  // Formats open on their own when they are probably wrong.
+  const unreadable = preview.some((row) => row.date === null || row.amount === null);
 
   return (
     <form onSubmit={submit} noValidate aria-label={t('mapping.title')} className="space-y-4">
@@ -104,18 +106,6 @@ export function MappingWizard({
         <h2 className="text-lg font-semibold">{t('mapping.title')}</h2>
         <p className="text-sm text-muted">{t('mapping.help')}</p>
       </div>
-      <SelectField
-        label={t('mapping.headerRow')}
-        value={String(options.headerRow)}
-        onChange={pickHeader}
-        options={rows.slice(0, HEADER_CHOICES).map((row, i) => ({
-          value: String(i),
-          label: t('mapping.row', {
-            n: i + 1,
-            preview: row.filter(Boolean).join(' · ').slice(0, 60),
-          }),
-        }))}
-      />
       <div className="grid gap-4 sm:grid-cols-2">
         <SelectField
           label={t('mapping.field.date')}
@@ -130,15 +120,6 @@ export function MappingWizard({
           options={columns}
         />
       </div>
-      <Segmented
-        label={t('mapping.amountMode')}
-        value={split ? 'split' : 'single'}
-        onChange={setAmountMode}
-        options={[
-          { value: 'single', label: t('mapping.amountMode.single') },
-          { value: 'split', label: t('mapping.amountMode.split') },
-        ]}
-      />
       {split ? (
         <div className="grid gap-4 sm:grid-cols-2">
           <SelectField
@@ -155,54 +136,90 @@ export function MappingWizard({
           />
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
+        <SelectField
+          label={t('mapping.field.amount')}
+          value={String(mapping.amount)}
+          onChange={(v) => setColumn('amount', v)}
+          options={columns}
+        />
+      )}
+      {/* Debit cards have no installments (D13). */}
+      {cardType === 'credit' && (
+        <SelectField
+          label={t('mapping.field.installment')}
+          value={String(mapping.installment ?? '')}
+          onChange={(v) => setColumn('installment', v)}
+          options={optional}
+        />
+      )}
+      <details className="group rounded-xl border border-border bg-surface" open={unreadable}>
+        <summary className="flex min-h-11 cursor-pointer list-none items-center gap-3 px-4 text-sm font-medium [&::-webkit-details-marker]:hidden">
+          <span className="flex-1">{t('mapping.formats')}</span>
+          <ChevronDown
+            aria-hidden="true"
+            size={16}
+            className="shrink-0 text-muted transition-transform group-open:rotate-180"
+          />
+        </summary>
+        <div className="space-y-4 px-4 pb-4">
           <SelectField
-            label={t('mapping.field.amount')}
-            value={String(mapping.amount)}
-            onChange={(v) => setColumn('amount', v)}
-            options={columns}
+            label={t('mapping.headerRow')}
+            value={String(options.headerRow)}
+            onChange={pickHeader}
+            options={rows.slice(0, HEADER_CHOICES).map((row, i) => ({
+              value: String(i),
+              label: t('mapping.row', {
+                n: i + 1,
+                preview: row.filter(Boolean).join(' · ').slice(0, 60),
+              }),
+            }))}
           />
           <Segmented
-            label={t('mapping.chargeSign')}
-            value={options.chargeSign}
-            onChange={(chargeSign) => setOptions((o) => ({ ...o, chargeSign }))}
+            label={t('mapping.amountMode')}
+            value={split ? 'split' : 'single'}
+            onChange={setAmountMode}
             options={[
-              { value: 'positive', label: t('mapping.chargeSign.positive') },
-              { value: 'negative', label: t('mapping.chargeSign.negative') },
+              { value: 'single', label: t('mapping.amountMode.single') },
+              { value: 'split', label: t('mapping.amountMode.split') },
             ]}
           />
+          {!split && (
+            <Segmented
+              label={t('mapping.chargeSign')}
+              value={options.chargeSign}
+              onChange={(chargeSign) => setOptions((o) => ({ ...o, chargeSign }))}
+              options={[
+                { value: 'positive', label: t('mapping.chargeSign.positive') },
+                { value: 'negative', label: t('mapping.chargeSign.negative') },
+              ]}
+            />
+          )}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <SelectField
+              label={t('mapping.decimal')}
+              value={options.decimal}
+              onChange={(decimal) =>
+                setOptions((o) => ({ ...o, decimal: decimal as CsvOptions['decimal'] }))
+              }
+              options={[
+                { value: ',', label: t('mapping.decimal.comma') },
+                { value: '.', label: t('mapping.decimal.dot') },
+              ]}
+            />
+            <SelectField
+              label={t('mapping.dateOrder')}
+              value={options.dateOrder}
+              onChange={(dateOrder) =>
+                setOptions((o) => ({ ...o, dateOrder: dateOrder as CsvOptions['dateOrder'] }))
+              }
+              options={(['DMY', 'MDY', 'YMD'] as const).map((order) => ({
+                value: order,
+                label: t(`mapping.dateOrder.${order}`),
+              }))}
+            />
+          </div>
         </div>
-      )}
-      <SelectField
-        label={t('mapping.field.installment')}
-        value={String(mapping.installment ?? '')}
-        onChange={(v) => setColumn('installment', v)}
-        options={optional}
-      />
-      <div className="grid gap-4 sm:grid-cols-2">
-        <SelectField
-          label={t('mapping.decimal')}
-          value={options.decimal}
-          onChange={(decimal) =>
-            setOptions((o) => ({ ...o, decimal: decimal as CsvOptions['decimal'] }))
-          }
-          options={[
-            { value: ',', label: t('mapping.decimal.comma') },
-            { value: '.', label: t('mapping.decimal.dot') },
-          ]}
-        />
-        <SelectField
-          label={t('mapping.dateOrder')}
-          value={options.dateOrder}
-          onChange={(dateOrder) =>
-            setOptions((o) => ({ ...o, dateOrder: dateOrder as CsvOptions['dateOrder'] }))
-          }
-          options={(['DMY', 'MDY', 'YMD'] as const).map((order) => ({
-            value: order,
-            label: t(`mapping.dateOrder.${order}`),
-          }))}
-        />
-      </div>
+      </details>
 
       {preview.length > 0 && (
         <div>
@@ -234,15 +251,6 @@ export function MappingWizard({
         </div>
       )}
 
-      <Checkbox label={t('mapping.save')} checked={save} onChange={setSave} />
-      {save && (
-        <TextField
-          label={t('mapping.profileName')}
-          value={name}
-          onChange={setName}
-          maxLength={60}
-        />
-      )}
       {error && (
         <p role="alert" className="text-sm text-alert">
           {error}

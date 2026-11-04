@@ -56,15 +56,10 @@ describe('account statement import flow (D17, D18)', () => {
     );
     await openFile(xls('html'));
 
-    const wizard = await screen.findByRole(
-      'form',
-      { name: 'Match the columns' },
-      { timeout: 5000 },
-    );
-    expect(within(wizard).getByLabelText('Header row')).toHaveValue('4');
-    await user.click(within(wizard).getByRole('button', { name: 'Continue' }));
-    await screen.findByRole('region', { name: 'Review' });
-    expect(screen.getByText(/Bank account statement/)).toBeInTheDocument();
+    // The info rows above the header are skipped and the columns read on their own.
+    await screen.findByRole('region', { name: 'Review' }, { timeout: 5000 });
+    expect(screen.getByText(/· bank account statement/)).toBeInTheDocument();
+    expect(screen.getByText(/^Columns: Date: Tarih\/Saat/)).toBeInTheDocument();
 
     expect(
       within(rowFor('ACME A.Ş. EKİM MAAŞ')).getByText('Income: not counted as spending'),
@@ -90,6 +85,30 @@ describe('account statement import flow (D17, D18)', () => {
     expect((await db.transactions.toArray()).some((t) => t.transfer)).toBe(true);
   });
 
+  it('recognizes the same statement in another format through the saved mapping', async () => {
+    await seed();
+    renderApp('/import');
+    await user.selectOptions(
+      await screen.findByLabelText('Card', {}, { timeout: 5000 }),
+      'İş Bankası · Debit card',
+    );
+    await openFile(xls('xlsx'));
+    await screen.findByRole('region', { name: 'Review' }, { timeout: 5000 });
+    await user.click(screen.getByRole('button', { name: 'Import' }));
+    expect(await screen.findByText('Import complete')).toBeInTheDocument();
+    const saved = await db.transactions.count();
+
+    // The HTML .xls writes "1.250,00" where Excel stores 1250: formats are read per file,
+    // and the saved Referans and İşlem Türü columns still match every row (D17, D18).
+    await user.click(screen.getByRole('button', { name: 'Import another file' }));
+    await openFile(xls('html'));
+    await screen.findByRole('region', { name: 'Review' }, { timeout: 5000 });
+    expect(within(rowFor('MIGROS KADIKOY')).getByText('Already imported')).toBeInTheDocument();
+    expect(within(rowFor('ACME A.Ş. EKİM MAAŞ')).getByText('Already imported')).toBeInTheDocument();
+    expect(await db.importProfiles.count()).toBe(1);
+    expect(await db.transactions.count()).toBe(saved);
+  });
+
   it('lets the user pick the credit card a payment paid', async () => {
     await seed();
     await cardsRepo.create({
@@ -107,8 +126,7 @@ describe('account statement import flow (D17, D18)', () => {
     renderApp('/import');
     await user.selectOptions(await screen.findByLabelText('Card', {}, { timeout: 5000 }), debitId);
     await openFile(xls('xlsx'));
-    await user.click(await screen.findByRole('button', { name: 'Continue' }, { timeout: 5000 }));
-    await screen.findByRole('region', { name: 'Review' });
+    await screen.findByRole('region', { name: 'Review' }, { timeout: 5000 });
 
     const payment = rowFor('KREDİ KARTI ÖDEMESİ 5555********1234');
     // Matched by the last 4 digits; the user can switch it.

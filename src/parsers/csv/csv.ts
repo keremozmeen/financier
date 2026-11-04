@@ -201,9 +201,74 @@ export function guessOptions(
     headerRow,
     decimal: detectDecimalSeparator(body.flatMap((row) => amountColumns.map((c) => row[c] ?? ''))),
     dateOrder: detectDateOrder(body.map((row) => row[mapping.date] ?? '')),
-    // Account statements write money going out as a negative amount (D17).
-    chargeSign: isAccountStatement(rows[headerRow] ?? []) ? 'negative' : 'positive',
+    chargeSign: detectChargeSign(rows, headerRow, mapping),
   };
+}
+
+/**
+ * Whether charges are written as negative numbers: always on account statements (D17),
+ * and on a card statement whose single amount column is mostly negative (some banks
+ * export charges as "-45,00"). A charge/credit pair has no sign to guess.
+ */
+function detectChargeSign(
+  rows: readonly string[][],
+  headerRow: number,
+  mapping: CsvMapping,
+): CsvOptions['chargeSign'] {
+  if (isAccountStatement(rows[headerRow] ?? [])) return 'negative';
+  if (mapping.amount === undefined) return 'positive';
+  let negative = 0;
+  let positive = 0;
+  for (const row of rows.slice(headerRow + 1)) {
+    const value = parseStatementAmount(row[mapping.amount] ?? '', 'TRY');
+    if (value === null || value === 0) continue;
+    if (value < 0) negative++;
+    else positive++;
+  }
+  return negative > positive ? 'negative' : 'positive';
+}
+
+export interface AutoMapping {
+  mapping: CsvMapping;
+  options: CsvOptions;
+  /**
+   * The file can be imported without asking (D16, D20): the header row names known
+   * columns, the date, description and amount columns were found by their names, and
+   * at least half of the rows read a date and an amount.
+   */
+  confident: boolean;
+}
+
+/** Finds the header row, the columns and the formats of a file on its own. */
+export function autoMap(rows: readonly string[][], currency: CurrencyCode): AutoMapping {
+  const headerRow = detectHeaderRow(rows);
+  const header = rows[headerRow] ?? [];
+  const mapping = guessMapping(header, rows.slice(headerRow + 1));
+  const options = guessOptions(rows, headerRow, mapping);
+  return { mapping, options, confident: isConfident(rows, header, mapping, options, currency) };
+}
+
+function isConfident(
+  rows: readonly string[][],
+  header: readonly string[],
+  mapping: CsvMapping,
+  options: CsvOptions,
+  currency: CurrencyCode,
+): boolean {
+  if (!looksLikeHeader(header) || !isCompleteMapping(mapping)) return false;
+  const named = (field: MappingField) => {
+    const column = mapping[field];
+    if (column === undefined) return false;
+    const cell = foldText(header[column] ?? '');
+    return HEADER_HINTS[field].some((pattern) => pattern.test(cell));
+  };
+  const amounts: MappingField[] = mapping.amount !== undefined ? ['amount'] : ['debit', 'credit'];
+  if (!(['date', 'description', ...amounts] as const).every(named)) return false;
+  const parsed = extractRows(rows, mapping, options, currency);
+  if (parsed.length === 0) return false;
+  const dates = parsed.filter((row) => row.date !== null).length;
+  const values = parsed.filter((row) => row.amount !== null).length;
+  return dates * 2 >= parsed.length && values * 2 >= parsed.length;
 }
 
 /** Reads the rows below the header with the mapping. Empty rows are left out. */
@@ -339,7 +404,10 @@ export function fromColumnMap(map: Readonly<Record<string, string>>): CsvMapping
     return value !== undefined && /^\d+$/.test(value) ? Number(value) : undefined;
   };
   const mapping: CsvMapping = { date: read('date') ?? -1, description: read('description') ?? -1 };
-  for (const field of ['amount', 'debit', 'credit', 'installment'] as const) {
+  // Every optional column comes back, so a saved account-statement mapping keeps its
+  // Referans and İşlem Türü / İşlem columns (D17).
+  for (const field of MAPPING_FIELDS) {
+    if (field === 'date' || field === 'description') continue;
     const column = read(field);
     if (column !== undefined) mapping[field] = column;
   }

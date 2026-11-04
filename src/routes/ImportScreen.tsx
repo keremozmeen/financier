@@ -9,11 +9,11 @@ import { ScreenHeader } from '../components/ui/ScreenHeader';
 import { SelectField } from '../components/ui/TextField';
 import { draftRows, type DraftRow } from '../core/import';
 import {
+  autoMap,
   decodeText,
   detectHeaderRow,
   extractRows,
   fromColumnMap,
-  guessMapping,
   guessOptions,
   headerSignature,
   isAccountStatement,
@@ -44,7 +44,7 @@ type Step =
       options: CsvOptions;
       drafts: DraftRow[];
       statement: StatementKind;
-      profile?: { id: string; name: string; used: boolean };
+      profileId?: string;
     }
   | { kind: 'done'; cardId: string };
 
@@ -83,29 +83,39 @@ export function ImportScreen() {
     if (isAccountStatement(rows[headerRow] ?? []) && card.type !== 'debit') {
       return setError('import.error.accountNeedsDebit');
     }
-    // A saved profile for these headers skips the wizard (D3).
+    // A saved profile for these headers skips the mapping (D3).
     const profile = await importsRepo.findProfile(headerSignature(rows[headerRow] ?? []));
     const saved = profile && fromColumnMap(profile.columnMap);
     if (profile && saved) {
-      const options = { ...profile.options, headerRow };
-      toReview(csv, saved, options, { id: profile.id, name: profile.name, used: true });
+      // Columns and sign come from the profile; number and date formats are read from this
+      // file, since the same bank's .xlsx and HTML .xls write numbers differently (D18).
+      const { decimal, dateOrder } = guessOptions(rows, headerRow, saved);
+      toReview(csv, saved, { ...profile.options, headerRow, decimal, dateOrder }, profile.id);
       return;
     }
-    const mapping = guessMapping(rows[headerRow] ?? [], rows.slice(headerRow + 1));
-    setStep({
-      kind: 'mapping',
-      file: csv,
-      mapping,
-      options: guessOptions(rows, headerRow, mapping),
+    // Otherwise Financier reads the columns on its own, and asks only when it can't (D20).
+    const auto = autoMap(rows, card.currency);
+    if (auto.confident) {
+      toReview(csv, auto.mapping, auto.options, await saveProfile(csv, auto));
+      return;
+    }
+    setStep({ kind: 'mapping', file: csv, mapping: auto.mapping, options: auto.options });
+  }
+
+  /** Remembers how a file is read, so the next one like it opens straight in review. */
+  function saveProfile(
+    file: CsvFile,
+    { mapping, options }: { mapping: CsvMapping; options: CsvOptions },
+  ): Promise<string> {
+    return importsRepo.saveProfile({
+      name: card?.bank || file.name,
+      headerSignature: headerSignature(file.rows[options.headerRow] ?? []),
+      columnMap: toColumnMap(mapping),
+      options,
     });
   }
 
-  function toReview(
-    file: CsvFile,
-    mapping: CsvMapping,
-    options: CsvOptions,
-    profile?: { id: string; name: string; used: boolean },
-  ) {
+  function toReview(file: CsvFile, mapping: CsvMapping, options: CsvOptions, profileId?: string) {
     if (!card) return;
     const kind: StatementKind = isAccountStatement(file.rows[options.headerRow] ?? [])
       ? 'account'
@@ -119,22 +129,12 @@ export function ImportScreen() {
       options,
       drafts,
       statement: kind,
-      ...(profile ? { profile } : {}),
+      ...(profileId ? { profileId } : {}),
     });
   }
 
   async function finishMapping(file: CsvFile, result: MappingResult) {
-    let profile: { id: string; name: string; used: boolean } | undefined;
-    if (result.profileName) {
-      const id = await importsRepo.saveProfile({
-        name: result.profileName,
-        headerSignature: headerSignature(file.rows[result.options.headerRow] ?? []),
-        columnMap: toColumnMap(result.mapping),
-        options: result.options,
-      });
-      profile = { id, name: result.profileName, used: false };
-    }
-    toReview(file, result.mapping, result.options, profile);
+    toReview(file, result.mapping, result.options, await saveProfile(file, result));
   }
 
   async function commit(review: Extract<Step, { kind: 'review' }>) {
@@ -147,7 +147,7 @@ export function ImportScreen() {
         rows: review.drafts,
         source: 'csv',
         today,
-        ...(review.profile ? { profileId: review.profile.id } : {}),
+        ...(review.profileId ? { profileId: review.profileId } : {}),
       });
       setStep({ kind: 'done', cardId: card.id });
     } finally {
@@ -190,7 +190,6 @@ export function ImportScreen() {
               label: `${c.name} · ${t(c.type === 'credit' ? 'cards.type.credit' : 'cards.type.debit')}`,
             }))}
           />
-          {card.type === 'debit' && <p className="text-sm text-muted">{t('import.debitNote')}</p>}
           <FileDrop onFile={(file) => void openFile(file)} />
           {error && (
             <p role="alert" className="rounded-xl border border-alert/40 bg-alert/10 p-4 text-sm">
@@ -203,8 +202,8 @@ export function ImportScreen() {
         <MappingWizard
           rows={step.file.rows}
           currency={card.currency}
+          cardType={card.type}
           initial={step}
-          defaultName={card.bank ? `${card.bank} CSV` : step.file.name}
           onCancel={() => setStep({ kind: 'start' })}
           onSubmit={(result) => void finishMapping(step.file, result)}
         />
@@ -212,17 +211,16 @@ export function ImportScreen() {
         <div className="space-y-4">
           <p className="text-sm">
             <span className="font-medium">{card.name}</span> · {step.file.name}
+            {step.statement === 'account' && ` · ${t('import.accountStatement')}`}
           </p>
-          {step.statement === 'account' && (
-            <p className="text-sm text-muted">{t('import.accountDetected')}</p>
-          )}
-          {step.profile?.used && (
-            <p className="text-sm text-muted">
-              {t('import.profileUsed', { name: step.profile.name })}
-            </p>
-          )}
+          <p className="text-sm text-muted">
+            {t('import.columns', {
+              list: readColumns(step.file.rows[step.options.headerRow] ?? [], step.mapping, t),
+            })}
+          </p>
           <div className="flex flex-wrap gap-2">
             <Button
+              variant="ghost"
               onClick={() =>
                 setStep({
                   kind: 'mapping',
@@ -269,4 +267,20 @@ export function ImportScreen() {
       )}
     </section>
   );
+}
+
+/** "Tarih: İşlem Tarihi · Açıklama: Açıklama · Tutar: Tutar (TL)": how the file was read. */
+function readColumns(header: readonly string[], mapping: CsvMapping, t: ReturnType<typeof useT>) {
+  const name = (column: number) => header[column]?.trim() || t('mapping.column', { n: column + 1 });
+  const fields: [MessageKey, number | undefined][] = [
+    ['mapping.field.date', mapping.date],
+    ['mapping.field.description', mapping.description],
+    ['mapping.field.amount', mapping.amount],
+    ['mapping.field.debit', mapping.debit],
+    ['mapping.field.credit', mapping.credit],
+  ];
+  return fields
+    .filter((field): field is [MessageKey, number] => field[1] !== undefined)
+    .map(([label, column]) => `${t(label)}: ${name(column)}`)
+    .join(' · ');
 }
