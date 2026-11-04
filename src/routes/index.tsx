@@ -1,6 +1,5 @@
 import { Navigate, type RouteObject } from 'react-router';
 import { AppShell } from '../components/AppShell';
-import { PlaceholderScreen } from '../components/PlaceholderScreen';
 import { AddTransactionScreen } from './AddTransactionScreen';
 import { CardDetailScreen } from './CardDetailScreen';
 import { EditCardScreen, NewCardScreen } from './CardFormScreen';
@@ -24,7 +23,11 @@ export const routes: RouteObject[] = [
         // Loaded with the tab: CSV parsing, and SheetJS on demand, stay out of the main bundle (D18).
         lazy: async () => ({ Component: (await import('./ImportScreen')).ImportScreen }),
       },
-      { path: 'sub-radar', element: <PlaceholderScreen title="nav.subRadar" /> },
+      {
+        path: 'sub-radar',
+        // Its own chunk, like the import screen, so the main bundle stays under the limit.
+        lazy: async () => ({ Component: (await import('./SubRadarScreen')).SubRadarScreen }),
+      },
       { path: 'settings', element: <SettingsScreen /> },
       { path: '*', element: <Navigate to="/" replace /> },
     ],

@@ -76,6 +76,8 @@ export const subscriptionsRepo = {
 export interface SubRadarData {
   radar: Radar;
   cardById: Map<string, Card>;
+  /** When each cancelled series was marked cancelled. */
+  cancelledAt: Map<string, IsoDate>;
 }
 
 /**
@@ -94,5 +96,8 @@ export async function loadSubRadar(today: IsoDate): Promise<SubRadarData> {
   return {
     radar: buildRadar(detectSeries(transactions, today), choices),
     cardById: new Map(cards.map((card) => [card.id, card])),
+    cancelledAt: new Map(
+      choices.flatMap((choice) => (choice.cancelledAt ? [[choice.id, choice.cancelledAt]] : [])),
+    ),
   };
 }
