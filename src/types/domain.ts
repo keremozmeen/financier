@@ -148,14 +148,23 @@ export interface Payment {
 
 export type SubscriptionStatus = 'active' | 'ignored' | 'cancelled';
 
+/**
+ * The user's Sub-Radar choice for one detected series (D19). Series, cadence and amounts
+ * are computed from transactions; only this is stored.
+ */
 export interface Subscription {
+  /** The series key: `merchant | currency`, plus `#amount` when one merchant has several. */
   id: string;
   normalizedMerchant: string;
-  cadenceDays: number;
-  lastAmount: number;
-  previousAmount: number;
+  currency: CurrencyCode;
   status: SubscriptionStatus;
   confirmedByUser: boolean;
+  /** Set when marked cancelled; a charge after it raises an alert. */
+  cancelledAt?: IsoDate;
+  /** The increased price the user acknowledged ("Got it"). */
+  hikeSeenAmount?: number;
+  /** Double charges the user said are fine, by the second charge's transaction id. */
+  dismissedDuplicates?: string[];
 }
 
 /** Settings that tell the CSV reader how a bank formats its export (D3). */
