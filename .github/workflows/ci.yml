@@ -21,6 +21,8 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      # Verify vendored tarballs before npm installs them (D18).
+      - run: npm run check:vendor
       - run: npm ci
       - run: npm run lint
       - run: npm run format:check

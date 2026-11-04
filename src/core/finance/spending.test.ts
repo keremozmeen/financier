@@ -3,6 +3,20 @@ import { monthlySpend, spendingInMonth } from './spending';
 const tx = (date: string, amount: number, currency = 'TRY') => ({ date, amount, currency });
 
 describe('spendingInMonth', () => {
+  it('leaves income out: it is not a refund (D17)', () => {
+    expect(
+      spendingInMonth(
+        [
+          { date: '2026-10-03', amount: 50_000, currency: 'TRY' },
+          { date: '2026-10-01', amount: -4_500_000, currency: 'TRY', income: true },
+          { date: '2026-10-05', amount: -10_000, currency: 'TRY' },
+        ],
+        '2026-10',
+        'TRY',
+      ),
+    ).toBe(40_000);
+  });
+
   it('sums charges minus refunds dated in the month', () => {
     expect(
       spendingInMonth(

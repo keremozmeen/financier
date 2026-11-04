@@ -26,10 +26,25 @@ Financier is a **Progressive Web App (PWA)**, meaning you don't need to visit an
 
 All processing happens **on your phone**. No file is ever uploaded anywhere.
 
-1. Open **Financier** and navigate to the **Import / Upload** section.
-2. Drag and drop your bank statement file (**PDF** or **CSV** format) or select it from your device files.
-3. Kipp will automatically extract your transactions, identify credit card details, and calculate statement balances.
-4. Review the parsed items and tap **Save to Local Storage**.
+1. Download your statement as **CSV** or **Excel** (`.xls`, `.xlsx`) from your bank's website or app. Card statements and bank account statements (hesap hareketleri) both work. PDF import comes in a later version.
+2. Open the **Import** tab, pick the card the statement belongs to, and choose or drag in the file.
+3. The first time, match the columns (date, description, amount, and optionally the installment column). Financier remembers the mapping and reuses it for files with the same headers.
+4. Review every row before anything is saved. Each row shows its type, which you can change:
+   * **Charges, refunds and fees** (interest, BSMV, KKDF, card fees) are added as entries; fees are marked so you can see what the bank charged.
+   * **Installment slices** ("TAKSİT 3/6") join your existing installment plan, or create a plan for the installments left. They never count twice.
+   * **Bill payments** ("HESAPTAN ÖDEME") are recorded against the statement they paid, unless you already recorded that payment (or automatic payment covers it).
+   * **Balance lines** ("ÖNCEKİ DÖNEM BAKİYESİ", "DÖNEM BORCU") are skipped.
+   * Entries you already typed in by hand are shown as **Already logged** and merged, and rows you imported before are skipped, so importing the same file twice adds nothing.
+5. Tap **Import**. Changed your mind? **Import history** lets you undo a whole import.
+
+Debit card files work the same way, without installments. Money coming into a debit card is **income** (salary, incoming EFT/Havale/FAST, or any other money in), unless it says it is a refund ("İADE", "İPTAL"). Income is never counted as spending.
+
+**Bank account statements (hesap hareketleri)** are imported onto the account's debit card. Financier recognizes:
+* **Income** (salary, incoming EFT/Havale/FAST): saved as income, never counted as spending. Untick it to leave it out.
+* **Card purchases** (POS, internet, contactless) and **automatic bills** (electricity, water, gas, internet, phone): saved as spending; bills are marked so Sub-Radar can track them.
+* **Credit card payments:** recorded as a payment on the credit card they paid, matched by its last 4 digits or picked by you, and never counted as spending. A payment you already recorded, or one automatic payment made, is not added again.
+* **Transfers and ATM withdrawals:** skipped unless you tap **Count as spending**.
+* Balance columns are ignored, and rows are matched by the bank's reference number, so importing the same file again adds nothing.
 
 ---
 
@@ -38,7 +53,7 @@ All processing happens **on your phone**. No file is ever uploaded anywhere.
 Financier tracks two kinds of cards. You pick the type when you add a card, and it cannot change once the card has entries.
 
 * **Credit cards (kredi kartı):** have a limit, a statement day and a payment due day. They show a **limit gauge** (limit, used, available), support installment purchases, appear in upcoming payments and debt totals, and Financier stops you from recording a charge your bank would decline.
-* **Debit cards (banka kartı):** spend straight from your bank account, so they have no limit, statements, due dates or installments. They show **this month's spending** instead of a gauge, and their charges count in your spending totals, recent activity, imports and Sub-Radar.
+* **Debit cards (banka kartı):** spend straight from your bank account, so they have no limit, statements, due dates or installments. They show **this month's spending** instead of a gauge, and their charges count in your spending totals, recent activity, imports and Sub-Radar. You can also add **income** (salary, money sent to you) to a debit card; it is kept apart from refunds and never counts as spending.
 
 * **Card Gauges:** View your total limit vs. current spent amount across all your credit cards in real time.
 * **Cash Flow Forecast:** Check the **Installment Projection** chart to see your exact fixed liabilities for the next 3 to 12 months (credit cards).

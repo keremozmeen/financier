@@ -19,7 +19,11 @@ export const routes: RouteObject[] = [
       { path: 'cards/:id', element: <CardDetailScreen /> },
       { path: 'cards/:id/edit', element: <EditCardScreen /> },
       { path: 'cards/:id/add', element: <AddTransactionScreen /> },
-      { path: 'import', element: <PlaceholderScreen title="nav.import" /> },
+      {
+        path: 'import',
+        // Loaded with the tab: CSV parsing, and SheetJS on demand, stay out of the main bundle (D18).
+        lazy: async () => ({ Component: (await import('./ImportScreen')).ImportScreen }),
+      },
       { path: 'sub-radar', element: <PlaceholderScreen title="nav.subRadar" /> },
       { path: 'settings', element: <SettingsScreen /> },
       { path: '*', element: <Navigate to="/" replace /> },

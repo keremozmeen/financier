@@ -84,6 +84,13 @@ describe('D12 entry form', () => {
     expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
   });
 
+  it('offers no income on a credit card (D17)', async () => {
+    const card = await seedCard(45_000);
+    renderApp(`/cards/${card.id}/add`);
+    await screen.findByRole('button', { name: 'Refund' });
+    expect(screen.queryByRole('button', { name: 'Income' })).not.toBeInTheDocument();
+  });
+
   it('lets the user update the bank balance without losing the entry', async () => {
     const card = await seedCard(45_000);
     renderApp(`/cards/${card.id}/add`);

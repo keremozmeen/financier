@@ -8,7 +8,8 @@ export interface ManualEntry {
   description: string;
   /** Positive minor units. */
   amount: number;
-  kind: 'charge' | 'refund';
+  /** Income is money coming into a debit card's account (D17); credit cards have none. */
+  kind: 'charge' | 'refund' | 'income';
   /** 1 for a single payment; more creates an installment plan (charges only). */
   installments: number;
 }
@@ -25,8 +26,8 @@ export const transactionsRepo = {
   },
 
   /**
-   * Saves a manually entered charge or refund. An installment purchase is stored as
-   * one plan plus one linked purchase transaction (DECISIONS.md D11).
+   * Saves a manually entered charge, refund or income (debit cards only). An installment
+   * purchase is stored as one plan plus one linked purchase transaction (DECISIONS.md D11).
    */
   async addManual(entry: ManualEntry): Promise<string> {
     const { card, date, kind, installments } = entry;
@@ -34,11 +35,14 @@ export const transactionsRepo = {
     if (!Number.isSafeInteger(entry.amount) || entry.amount <= 0) {
       throw new RangeError('Amount must be a positive integer in minor units');
     }
-    if (kind === 'refund' && installments !== 1) {
-      throw new RangeError('Refunds cannot be split into installments');
+    if (kind !== 'charge' && installments !== 1) {
+      throw new RangeError('Only charges can be split into installments');
+    }
+    if (kind === 'income' && card.type !== 'debit') {
+      throw new RangeError('Only debit cards have income (D17)');
     }
 
-    const amount = kind === 'refund' ? -entry.amount : entry.amount;
+    const amount = kind === 'charge' ? entry.amount : -entry.amount;
     const transaction: Transaction = {
       id: newId(),
       cardId: card.id,
@@ -50,6 +54,7 @@ export const transactionsRepo = {
       category: 'uncategorized',
       fingerprint: transactionFingerprint(card.id, date, amount, description),
       source: 'manual',
+      ...(kind === 'income' ? { income: true } : {}),
     };
 
     if (installments === 1) {

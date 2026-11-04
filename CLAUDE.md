@@ -87,3 +87,12 @@ Work phase by phase. Finish each phase with passing checks and a pull request (o
 - Prefer small, focused commits. Keep dependencies minimal and justify each new one.
 - When something is ambiguous at the product level, ask Kerem; when it is purely technical, decide, and note the choice in the PR description.
 - Test data must be synthetic. Never commit real financial data.
+- **`synthetic/` is the local manual-testing folder.** It holds synthetic statement files (CSV, Excel, later PDF) and test instructions (`TEST-TALIMATLARI.md`) for manual testing. It is gitignored and is never committed or pushed. For each task, create or update the files there that the manual tests need, keep the instructions' expected results in sync with the code, and leave the existing files in place unless a task changes what they expect. Automated test fixtures stay in the repo next to their tests, as before.
+
+## Commits and pull requests
+
+These rules apply to every commit message and every pull request (title, description and comments):
+
+- Always write in the first person plural ("we add", "we skip") or the imperative mood ("add", "skip").
+- Never append "🤖 Generated with Claude Code", "Generated with Claude Code" or any similar signature, footer or trailer.
+- Never refer to Kerem in the third person (e.g. not "Kerem's bank exports records like this"). Describe the thing neutrally ("the bank's export", "the sample export") or say "we".

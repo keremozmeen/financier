@@ -126,6 +126,20 @@ describe('debit card screens (D13)', () => {
     expect(within(panel).getByText('₺250,000.00')).toBeInTheDocument();
   });
 
+  it('adds income that is not counted as spending', async () => {
+    const card = await seedDebitCard();
+    renderApp(`/cards/${card.id}/add`);
+
+    await user.type(await screen.findByLabelText('Amount'), '45,000');
+    await user.click(screen.getByRole('button', { name: 'Income' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    const panel = (await screen.findByText("This month's spending")).parentElement!;
+    expect(within(panel).getByText('₺0.00')).toBeInTheDocument();
+    expect(screen.getByText('Income')).toBeInTheDocument();
+    expect(screen.getByText('-₺45,000.00')).toBeInTheDocument();
+  });
+
   it('lists debit and credit cards together on the dashboard', async () => {
     await seedDebitCard();
     await cardsRepo.create({

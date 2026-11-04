@@ -50,6 +50,7 @@ export const cardsRepo = {
         db.balanceOverrides,
         db.statements,
         db.payments,
+        db.imports,
       ],
       async () => {
         await db.transactions.where('cardId').equals(id).delete();
@@ -57,6 +58,7 @@ export const cardsRepo = {
         await db.balanceOverrides.where('cardId').equals(id).delete();
         await db.statements.where('cardId').equals(id).delete();
         await db.payments.where('cardId').equals(id).delete();
+        await db.imports.where('cardId').equals(id).delete();
         await db.cards.delete(id);
       },
     );

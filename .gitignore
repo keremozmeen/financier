@@ -5,3 +5,6 @@ dev-dist
 coverage
 *.local
 *.tsbuildinfo
+
+# Synthetic import test files (local only)
+synthetic/

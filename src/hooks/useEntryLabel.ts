@@ -9,9 +9,13 @@ import type { Transaction } from '../types/domain';
 export function useEntryLabel() {
   const t = useT();
   return useCallback(
-    (tx: Pick<Transaction, 'description' | 'amount' | 'installmentPlanId'>) => {
+    (
+      tx: Pick<Transaction, 'description' | 'amount' | 'installmentPlanId'> &
+        Partial<Pick<Transaction, 'income'>>,
+    ) => {
       if (tx.description.trim()) return tx.description;
       if (tx.installmentPlanId) return t('tx.fallback.installment');
+      if (tx.income) return t('tx.fallback.income');
       return tx.amount < 0 ? t('tx.fallback.refund') : t('tx.fallback.charge');
     },
     [t],

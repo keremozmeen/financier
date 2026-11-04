@@ -23,7 +23,11 @@ export const paymentsRepo = {
     bill: Bill,
     amount: number,
     date: IsoDate,
-    { method = 'manual', now = new Date() }: { method?: PaymentMethod; now?: Date } = {},
+    {
+      method = 'manual',
+      now = new Date(),
+      importId,
+    }: { method?: PaymentMethod; now?: Date; importId?: string } = {},
   ): Promise<string> {
     if (card.type !== 'credit') {
       throw new RangeError('Only credit cards have statements and payments (D13, D14)');
@@ -63,6 +67,7 @@ export const paymentsRepo = {
         currency: card.currency,
         createdAt: now.toISOString(),
         method,
+        ...(importId ? { importId } : {}),
       });
     });
     return id;
