@@ -28,7 +28,7 @@ All processing happens **on your phone**. No file is ever uploaded anywhere.
 
 1. Download your statement as **CSV** or **Excel** (`.xls`, `.xlsx`) from your bank's website or app. Card statements and bank account statements (hesap hareketleri) both work. PDF import comes in a later version.
 2. Open the **Import** tab, pick the card the statement belongs to, and choose or drag in the file.
-3. The first time, match the columns (date, description, amount, and optionally the installment column). Financier remembers the mapping and reuses it for files with the same headers.
+3. Financier reads the columns on its own: it skips the bank's info rows, finds the date, description and amount columns by their names, and works out the number and date formats. The review screen shows how it read the file ("Columns: Date: İşlem Tarihi · …"); tap **Change columns** if something is off. Only when a file's columns can't be recognized does it ask which column is which, using the file's own column names, and it remembers your answer for the next file from that bank.
 4. Review every row before anything is saved. Each row shows its type, which you can change:
    * **Charges, refunds and fees** (interest, BSMV, KKDF, card fees) are added as entries; fees are marked so you can see what the bank charged.
    * **Installment slices** ("TAKSİT 3/6") join your existing installment plan, or create a plan for the installments left. They never count twice.

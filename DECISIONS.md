@@ -35,7 +35,7 @@ This file records the decisions that turn the open questions in `WORKFLOWS.md` i
 **Decision:** Build import in three layers, in this order:
 
 1. **Manual entry** for cards, transactions and installments. Always available, and the fallback for anything a parser misses.
-2. **CSV import with a column-mapping wizard.** The user maps columns (date, description, amount, installments) once; the mapping is saved as a named profile ("Garanti BBVA CSV") and reused automatically when a file with the same headers is imported.
+2. **CSV import with automatic column mapping.** Financier finds the header row (skipping the bank's info rows above it), the columns (date, description, amount or a Borç/Alacak pair, installments, and for account statements Referans and İşlem Türü / İşlem) and the formats (decimal separator, date order, and whether charges are negative) on its own. It imports without asking when it is confident: the header row names known columns, the date, description and amount columns were found by their header names, and at least half of the rows read a date and an amount. Otherwise a short screen asks only for the columns, by the file's own header names, with the formats folded away unless the preview finds unreadable values. Either way the mapping is saved as a profile, without asking, and reused for the next file with the same headers. A profile keeps the columns and the sign; number and date formats are read from each file, because a bank's .xlsx and HTML .xls of the same statement write numbers differently (D18). The review screen shows how the file was read ("Columns: Date: İşlem Tarihi · …") with a way to change it.
 3. **PDF import via bank adapters.** `pdfjs-dist` extracts positioned text locally; each supported bank gets a small adapter that turns that text into transactions. Start with the most common Turkish credit cards, one bank at a time, each developed against an anonymized sample statement:
    - Garanti BBVA (Bonus), Yapı Kredi (World), İş Bankası (Maximum), Akbank (Axess), QNB (CardFinans), Enpara.
    - A **generic heuristic adapter** (date + description + amount line detection) handles unknown banks, with lower confidence.
@@ -330,7 +330,7 @@ Financier is for everyday users as much as for people who track every kuruş. A 
 - **Alerts only when worth acting on:** red is for things the user should do something about. Small changes are shown quietly and still counted (D19 price increases).
 - **Ask only what can't be inferred:** prefer values the app can read from an import or compute over form fields, and never ask the user to confirm something the app can safely assume (Sub-Radar has no confirm step).
 - **Plain words:** no technical terms on screen ("mapping", "fingerprint", "detected"); the same idea uses the same word everywhere, in both languages.
-- **Scope:** applied to Sub-Radar in Phase 4. The design pass before Phase 5 applies it to cards, import (mapping only when the guess fails, a review screen that opens on the rows needing a look) and the dashboard; every later phase follows it.
+- **Scope:** applied to Sub-Radar and to import column mapping (D3) in Phase 4. The design pass before Phase 5 applies it to cards, the import review screen (opening on the rows needing a look, with less text) and the dashboard; every later phase follows it.
 
 ---
 
