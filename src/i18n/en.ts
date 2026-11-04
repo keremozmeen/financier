@@ -368,7 +368,7 @@ export const en = {
   'radar.meta.last': 'last {date}',
   'radar.meta.next': 'next {date}',
   'radar.meta.cancelled': 'cancelled {date}',
-  'radar.history': 'Charges ({count})',
+  'radar.details': 'Charges and actions ({count})',
 
   'settings.language': 'Language',
   'settings.theme': 'Theme',

@@ -57,7 +57,7 @@ export function SeriesList({
           const hidden = item.state === 'ignored' || item.state === 'cancelled';
           const cancelled = cancelledAt?.get(item.key);
           return (
-            <li key={item.key} className="space-y-2 p-4">
+            <li key={item.key} className="px-4 pt-3 pb-1">
               <div className="flex items-start gap-3">
                 <span
                   aria-hidden="true"
@@ -65,31 +65,32 @@ export function SeriesList({
                   style={{ backgroundColor: card?.color ?? 'currentColor' }}
                 />
                 <div className="min-w-0 flex-1">
-                  <p className="flex flex-wrap items-center gap-2 font-medium">
-                    <span className="truncate">{item.name}</span>
+                  <p className="font-medium break-words">{item.name}</p>
+                  <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
                     {item.state === 'detected' && (
-                      <span className="rounded bg-surface-raised px-1.5 py-0.5 text-xs text-accent">
+                      <span className="rounded bg-surface-raised px-1.5 py-0.5 text-accent">
                         {t('radar.badge.detected')}
                       </span>
                     )}
                     {item.increase && !hidden && !bill && (
-                      <span className="inline-flex items-center gap-1 rounded bg-alert/15 px-1.5 py-0.5 text-xs text-alert">
+                      <span className="inline-flex items-center gap-1 rounded bg-alert/15 px-1.5 py-0.5 text-alert">
                         <TrendingUp aria-hidden="true" size={12} />
                         {t('radar.badge.increase')}
                       </span>
                     )}
-                  </p>
-                  <p className="text-xs text-muted">
-                    {[
-                      t(CADENCE[item.cadence]),
-                      card?.name,
-                      t('radar.meta.last', { date: format.date(item.latest.date) }),
-                      cancelled
-                        ? t('radar.meta.cancelled', { date: format.date(cancelled) })
-                        : item.active && t('radar.meta.next', { date: format.date(item.nextDate) }),
-                    ]
-                      .filter(Boolean)
-                      .join(' · ')}
+                    <span>
+                      {[
+                        t(CADENCE[item.cadence]),
+                        card?.name,
+                        t('radar.meta.last', { date: format.date(item.latest.date) }),
+                        cancelled
+                          ? t('radar.meta.cancelled', { date: format.date(cancelled) })
+                          : item.active &&
+                            t('radar.meta.next', { date: format.date(item.nextDate) }),
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </span>
                   </p>
                 </div>
                 <div className="shrink-0 text-right">
@@ -105,11 +106,12 @@ export function SeriesList({
                   )}
                 </div>
               </div>
+              {/* Charges and actions stay folded so a long list stays short on a phone. */}
               <details className="pl-5.5 text-sm">
-                <summary className="inline-flex min-h-11 cursor-pointer items-center text-muted">
-                  {t('radar.history', { count: item.charges.length })}
+                <summary className="flex min-h-11 cursor-pointer items-center text-muted">
+                  {t('radar.details', { count: item.charges.length })}
                 </summary>
-                <ul className="mt-1 space-y-1 text-muted">
+                <ul className="space-y-1 text-muted">
                   {[...item.charges].reverse().map((charge) => (
                     <li key={charge.id} className="flex justify-between gap-3 tabular-nums">
                       <span>{format.date(charge.date)}</span>
@@ -117,28 +119,28 @@ export function SeriesList({
                     </li>
                   ))}
                 </ul>
-              </details>
-              <div className="flex flex-wrap gap-2 pl-5.5">
-                {hidden ? (
-                  <Button onClick={() => actions.onRestore(item)}>
-                    {t('radar.action.restore')}
-                  </Button>
-                ) : (
-                  <>
-                    {item.state === 'detected' && (
-                      <Button onClick={() => actions.onConfirm(item)}>
-                        {t('radar.action.confirm')}
+                <div className="flex flex-wrap gap-2 py-3">
+                  {hidden ? (
+                    <Button onClick={() => actions.onRestore(item)}>
+                      {t('radar.action.restore')}
+                    </Button>
+                  ) : (
+                    <>
+                      {item.state === 'detected' && (
+                        <Button onClick={() => actions.onConfirm(item)}>
+                          {t('radar.action.confirm')}
+                        </Button>
+                      )}
+                      <Button onClick={() => actions.onCancel(item)}>
+                        {t('radar.action.cancel')}
                       </Button>
-                    )}
-                    <Button onClick={() => actions.onCancel(item)}>
-                      {t('radar.action.cancel')}
-                    </Button>
-                    <Button variant="ghost" onClick={() => actions.onIgnore(item)}>
-                      {t('radar.action.ignore')}
-                    </Button>
-                  </>
-                )}
-              </div>
+                      <Button variant="ghost" onClick={() => actions.onIgnore(item)}>
+                        {t('radar.action.ignore')}
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </details>
             </li>
           );
         })}

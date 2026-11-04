@@ -368,7 +368,7 @@ export const tr: Record<MessageKey, string> = {
   'radar.meta.last': 'son {date}',
   'radar.meta.next': 'sonraki {date}',
   'radar.meta.cancelled': '{date} iptal edildi',
-  'radar.history': 'Çekimler ({count})',
+  'radar.details': 'Çekimler ve işlemler ({count})',
 
   'settings.language': 'Dil',
   'settings.theme': 'Tema',

@@ -90,7 +90,10 @@ describe('Sub-Radar tab (D19)', () => {
     await seedMonthly(card, 'NETFLIX.COM', [22_999, 22_999, 22_999]);
     renderApp('/sub-radar');
 
-    await user.click(await screen.findByRole('button', { name: 'Confirm' }));
+    // Actions sit with the charges, folded under each row.
+    await user.click(await screen.findByText('Charges and actions (3)'));
+    expect(within(subscriptions()).getAllByText('₺229.99')).toHaveLength(3);
+    await user.click(screen.getByRole('button', { name: 'Confirm' }));
     await waitFor(() =>
       expect(within(subscriptions()).queryByText('Detected')).not.toBeInTheDocument(),
     );
@@ -100,6 +103,7 @@ describe('Sub-Radar tab (D19)', () => {
     const cancelled = screen.getByRole('region', { name: 'Cancelled' });
     expect(within(cancelled).getByText('NETFLIX.COM')).toBeInTheDocument();
 
+    await user.click(within(cancelled).getByText('Charges and actions (3)'));
     await user.click(within(cancelled).getByRole('button', { name: 'Restore' }));
     expect(await screen.findByRole('region', { name: 'Active subscriptions' })).toBeInTheDocument();
   });
