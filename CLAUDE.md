@@ -87,3 +87,8 @@ Work phase by phase. Finish each phase with passing checks and a pull request (o
 - Prefer small, focused commits. Keep dependencies minimal and justify each new one.
 - When something is ambiguous at the product level, ask Kerem; when it is purely technical, decide, and note the choice in the PR description.
 - Test data must be synthetic. Never commit real financial data.
+
+## Pull requests and writing
+
+- Do not end pull request descriptions with "🤖 Generated with Claude Code" or any similar signature line.
+- In pull requests, commit messages, docs and chat, never refer to Kerem in the third person (e.g. not "Kerem's bank exports records like this"). Address Kerem directly ("your export") or describe the thing neutrally ("the bank's export", "the sample export").
