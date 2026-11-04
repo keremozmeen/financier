@@ -40,72 +40,78 @@ async function seedMonthly(cardId: string, description: string, amounts: [number
   );
 }
 
-const subscriptions = () => screen.getByRole('region', { name: 'Active subscriptions' });
+const list = () => screen.getByRole('list', { name: 'Active subscriptions' });
 
-describe('Sub-Radar tab (D19)', () => {
+describe('Sub-Radar tab (D19, D20)', () => {
   it('explains what it needs when nothing repeats yet', async () => {
     renderApp('/sub-radar');
     expect(await screen.findByText('No subscriptions found yet')).toBeInTheDocument();
   });
 
-  it('lists subscriptions and bills with their totals', async () => {
+  it('shows one total and a short list of names and prices', async () => {
     const card = await seedDebitCard();
     await seedMonthly(card, 'NETFLIX.COM', [22_999, 22_999, 22_999]);
-    await seedMonthly(card, 'SPOTIFY', [5_999, 5_999, 5_999]);
+    await seedMonthly(card, 'IYZICO *SPOTIFY P1A2B3', [5_999, 5_999, 5_999]);
     await seedMonthly(card, 'ENERJISA ELEKTRIK', [40_000, 50_000, 60_000]);
     renderApp('/sub-radar');
 
-    const list = await screen.findByRole('region', { name: 'Active subscriptions' });
-    expect(within(list).getByText('NETFLIX.COM')).toBeInTheDocument();
-    expect(within(list).getAllByText('Detected')).toHaveLength(2);
-    const summary = screen.getByRole('region', { name: 'Summary' });
-    expect(within(summary).getByText('₺289.98 / month')).toBeInTheDocument();
-    expect(within(summary).getByText('₺3,479.76 / year')).toBeInTheDocument();
-    expect(within(summary).getByText('₺500.00 / month')).toBeInTheDocument();
-    expect(
-      within(screen.getByRole('region', { name: 'Bills' })).getByText('ENERJISA ELEKTRIK'),
-    ).toBeInTheDocument();
+    expect(await screen.findByText('₺289.98 / month')).toBeInTheDocument();
+    expect(screen.getByText('₺3,479.76 a year · 2 subscriptions')).toBeInTheDocument();
+    expect(within(list()).getByText('Netflix')).toBeInTheDocument();
+    expect(within(list()).getByText('Spotify')).toBeInTheDocument();
+    expect(screen.queryByText('Needs your attention', { exact: false })).not.toBeInTheDocument();
+
+    // Bills stay folded in one line.
+    await user.click(screen.getByText('Bills · about ₺500.00 a month'));
+    expect(screen.getByText('Enerjisa')).toBeInTheDocument();
   });
 
-  it('alerts on a small price increase until it is acknowledged', async () => {
+  it('keeps the details and actions behind a tap', async () => {
+    const card = await seedDebitCard();
+    await seedMonthly(card, 'NETFLIX.COM', [22_999, 22_999, 22_999]);
+    renderApp('/sub-radar');
+
+    await user.click(
+      await within(await screen.findByRole('list', { name: 'Active subscriptions' })).findByText(
+        'Netflix',
+      ),
+    );
+    expect(screen.getByText('On your statement: NETFLIX.COM')).toBeInTheDocument();
+    expect(within(list()).getAllByText('₺229.99')).toHaveLength(3);
+
+    await user.click(screen.getByRole('button', { name: 'I cancelled it' }));
+    await user.click(await screen.findByText('Past and hidden (1)'));
+    await user.click(screen.getByText('Netflix'));
+    await user.click(screen.getByRole('button', { name: 'Restore' }));
+    expect(await screen.findByRole('list', { name: 'Active subscriptions' })).toBeInTheDocument();
+  });
+
+  it('alerts on a notable raise until it is acknowledged', async () => {
     const card = await seedDebitCard();
     await seedMonthly(card, 'NETFLIX.COM', [22_999, 22_999, 23_999]);
     renderApp('/sub-radar');
 
-    expect(
-      await screen.findByText('NETFLIX.COM went up from ₺229.99 to ₺239.99 (+₺10.00, +4.3%)'),
-    ).toBeInTheDocument();
-    expect(screen.getByText('+₺10.00 / month from price increases')).toBeInTheDocument();
+    await user.click(await screen.findByText('Needs your attention (1)'));
+    expect(screen.getByText('Netflix went up by ₺10.00: ₺229.99 → ₺239.99')).toBeInTheDocument();
+    expect(screen.getByText(/raises add ₺10\.00 a month/)).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Got it' }));
     await waitFor(() =>
-      expect(screen.queryByRole('region', { name: 'Alerts' })).not.toBeInTheDocument(),
+      expect(screen.queryByText('Needs your attention (1)')).not.toBeInTheDocument(),
     );
-    // The increase still counts in the summary after "Got it".
-    expect(screen.getByText('+₺10.00 / month from price increases')).toBeInTheDocument();
+    // The raise still counts after "Got it".
+    expect(screen.getByText(/raises add ₺10\.00 a month/)).toBeInTheDocument();
   });
 
-  it('confirms, cancels and restores a subscription', async () => {
+  it('keeps a 50 kuruş raise quiet: counted, shown in the details, no alert', async () => {
     const card = await seedDebitCard();
-    await seedMonthly(card, 'NETFLIX.COM', [22_999, 22_999, 22_999]);
+    await seedMonthly(card, 'GOOGLE *YOUTUBE PREMIUM', [5_799, 5_799, 5_849]);
     renderApp('/sub-radar');
 
-    // Actions sit with the charges, folded under each row.
-    await user.click(await screen.findByText('Charges and actions (3)'));
-    expect(within(subscriptions()).getAllByText('₺229.99')).toHaveLength(3);
-    await user.click(screen.getByRole('button', { name: 'Confirm' }));
-    await waitFor(() =>
-      expect(within(subscriptions()).queryByText('Detected')).not.toBeInTheDocument(),
-    );
-
-    await user.click(screen.getByRole('button', { name: 'Mark cancelled' }));
-    await user.click(await screen.findByText('Not seen lately, cancelled and ignored (1)'));
-    const cancelled = screen.getByRole('region', { name: 'Cancelled' });
-    expect(within(cancelled).getByText('NETFLIX.COM')).toBeInTheDocument();
-
-    await user.click(within(cancelled).getByText('Charges and actions (3)'));
-    await user.click(within(cancelled).getByRole('button', { name: 'Restore' }));
-    expect(await screen.findByRole('region', { name: 'Active subscriptions' })).toBeInTheDocument();
+    expect(await screen.findByText(/raises add ₺0\.50 a month/)).toBeInTheDocument();
+    expect(screen.queryByText('Needs your attention', { exact: false })).not.toBeInTheDocument();
+    await user.click(screen.getByText('YouTube Premium'));
+    expect(screen.getByText('Small price change: +₺0.50 (₺57.99 → ₺58.49)')).toBeInTheDocument();
   });
 
   it('shows the screen in Turkish', async () => {
@@ -114,10 +120,9 @@ describe('Sub-Radar tab (D19)', () => {
     await seedMonthly(card, 'NETFLIX.COM', [22_999, 22_999, 23_999]);
     renderApp('/sub-radar');
 
-    expect(await screen.findByRole('heading', { name: 'Abonelik Radarı' })).toBeInTheDocument();
-    expect(
-      await screen.findByText('NETFLIX.COM zamlandı: ₺229,99 → ₺239,99 (+₺10,00, +%4,3)'),
-    ).toBeInTheDocument();
+    await user.click(await screen.findByText('Dikkatini isteyenler (1)'));
+    expect(screen.getByText('Netflix ₺10,00 zamlandı: ₺229,99 → ₺239,99')).toBeInTheDocument();
+    expect(screen.getByText('₺239,99 / ay', { selector: 'p' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Anladım' })).toBeInTheDocument();
   });
 });

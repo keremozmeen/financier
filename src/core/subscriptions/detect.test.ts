@@ -1,4 +1,4 @@
-import { detectSeries, type RadarTransaction } from './detect';
+import { detectSeries, isNotableIncrease, type RadarTransaction } from './detect';
 
 const TODAY = '2026-10-20';
 let n = 0;
@@ -26,7 +26,8 @@ describe('detectSeries (D19)', () => {
       expect(series).toMatchObject({
         key: 'netflix|TRY',
         merchant: 'netflix',
-        name: 'NETFLIX.COM',
+        name: 'Netflix',
+        bankText: 'NETFLIX.COM',
         kind: 'subscription',
         cadence: 'monthly',
         amount: 22_999,
@@ -147,11 +148,11 @@ describe('detectSeries (D19)', () => {
 
   describe('price increases', () => {
     it.each([
-      ['a clear raise', [22_999, 22_999, 23_999]],
-      ['a small raise of 50 kuruş', [22_999, 22_999, 23_049]],
-    ])('flags %s', (_, amounts) => {
+      ['a clear raise as notable', [22_999, 22_999, 23_999], true],
+      ['a raise of 50 kuruş as small', [22_999, 22_999, 23_049], false],
+    ])('flags %s', (_, amounts, notable) => {
       const [series] = detectSeries(monthly('NETFLIX', amounts), TODAY);
-      expect(series?.increase).toMatchObject({ from: 22_999, to: amounts[2] });
+      expect(series?.increase).toMatchObject({ from: 22_999, to: amounts[2], notable });
       expect(series?.amount).toBe(amounts[2]);
     });
 
@@ -174,6 +175,18 @@ describe('detectSeries (D19)', () => {
       expect(
         detectSeries(monthly('NETFLIX', [23_999, 23_999, 22_999]), TODAY)[0]?.increase,
       ).toBeUndefined();
+    });
+  });
+
+  describe('isNotableIncrease', () => {
+    it.each([
+      [22_999, 23_999, true], // +₺10, +4.3%
+      [100_000, 100_500, true], // +₺5 on a ₺1.000 plan: 0.5%, but 5 units
+      [9_900, 10_200, true], // +₺3, +3.0%
+      [5_799, 5_849, false], // +₺0,50, +0.9%
+      [70_000, 70_490, false], // +₺4,90, +0.7%: exchange-rate drift
+    ])('%i → %i is notable: %s', (from, to, notable) => {
+      expect(isNotableIncrease(from, to, 'TRY')).toBe(notable);
     });
   });
 

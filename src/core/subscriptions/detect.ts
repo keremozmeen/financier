@@ -1,8 +1,8 @@
 import { ACCOUNT_BILL_KEYWORDS, keywordRegex } from '../../parsers/common/keywords';
 import { foldText } from '../../parsers/common/text';
 import type { CurrencyCode, IsoDate, Transaction } from '../../types/domain';
-import { addDays, addMonths, daysBetween, dayOf, monthOf } from '../finance';
-import { merchantKey } from './merchant';
+import { addDays, addMonths, daysBetween, dayOf, minorUnitDigits, monthOf } from '../finance';
+import { displayName, merchantKey } from './merchant';
 
 export type Cadence = 'weekly' | 'monthly' | 'yearly';
 export type SeriesKind = 'subscription' | 'bill';
@@ -28,6 +28,11 @@ export interface PriceIncrease {
   to: number;
   date: IsoDate;
   transactionId: string;
+  /**
+   * Worth a red alert: at least 5 units of the currency (₺5) or 3% (D19). Smaller raises,
+   * like ₺0,50 or exchange-rate drift, are shown quietly and still counted in the total.
+   */
+  notable: boolean;
 }
 
 export interface DoubleCharge {
@@ -40,8 +45,10 @@ export interface DetectedSeries {
   /** Stable id for the user's choices: `merchant | currency`, plus `#amount` when needed. */
   key: string;
   merchant: string;
-  /** The latest charge's description, as the bank wrote it. */
+  /** A readable name: "Netflix" for "IYZICO *NETFLIX.COM" (D19). */
   name: string;
+  /** The latest charge's description, as the bank wrote it. */
+  bankText: string;
   currency: CurrencyCode;
   kind: SeriesKind;
   cadence: Cadence;
@@ -83,6 +90,15 @@ const DOUBLE_DAYS = 3;
 const REFUND_DAYS = 30;
 /** An increase must beat this many charges before it. */
 const INCREASE_LOOKBACK = 3;
+/** A raise is notable (a red alert) from this many units of the currency, or this share. */
+const NOTABLE_UNITS = 5;
+const NOTABLE_SHARE = 0.03;
+
+/** Whether a raise is worth a red alert (D19): ₺5 or 3% and up. */
+export function isNotableIncrease(from: number, to: number, currency: CurrencyCode): boolean {
+  const diff = to - from;
+  return diff >= NOTABLE_UNITS * 10 ** minorUnitDigits(currency) || diff >= from * NOTABLE_SHARE;
+}
 
 const BILL = keywordRegex(ACCOUNT_BILL_KEYWORDS);
 
@@ -174,17 +190,23 @@ function findCadence(
 }
 
 /** The latest increase among the last few charges: higher than each of the 3 before it. */
-function findIncrease(run: readonly SeriesCharge[], cadence: Cadence): PriceIncrease | undefined {
+function findIncrease(
+  run: readonly SeriesCharge[],
+  cadence: Cadence,
+  currency: CurrencyCode,
+): PriceIncrease | undefined {
   const oldest = Math.max(1, run.length - CADENCES[cadence].increaseWindow);
   for (let i = run.length - 1; i >= oldest; i--) {
     const charge = run[i]!;
     const before = run.slice(Math.max(0, i - INCREASE_LOOKBACK), i);
     if (before.every((earlier) => charge.amount > earlier.amount)) {
+      const from = run[i - 1]!.amount;
       return {
-        from: run[i - 1]!.amount,
+        from,
         to: charge.amount,
         date: charge.date,
         transactionId: charge.id,
+        notable: isNotableIncrease(from, charge.amount, currency),
       };
     }
   }
@@ -242,11 +264,12 @@ export function detectSeries(
       const amount = group.bill
         ? Math.round(lastThree.reduce((sum, c) => sum + c.amount, 0) / lastThree.length)
         : latest.amount;
-      const increase = group.bill ? undefined : findIncrease(run, cadence);
+      const increase = group.bill ? undefined : findIncrease(run, cadence, currency);
       found.push({
         key: groupKey,
         merchant,
-        name: latest.description,
+        name: displayName(latest.description),
+        bankText: latest.description,
         currency,
         kind: group.bill ? 'bill' : 'subscription',
         cadence,

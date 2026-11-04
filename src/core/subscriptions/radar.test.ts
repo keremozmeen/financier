@@ -21,7 +21,6 @@ const monthly = (description: string, amounts: number[], patch: Partial<RadarTra
 const choice = (id: string, patch: Partial<SubscriptionChoice> = {}): SubscriptionChoice => ({
   id,
   status: 'active',
-  confirmedByUser: true,
   ...patch,
 });
 
@@ -29,15 +28,15 @@ const radarOf = (rows: RadarTransaction[], choices: SubscriptionChoice[] = [], t
   buildRadar(detectSeries(rows, today), choices);
 
 describe('buildRadar (D19)', () => {
-  it('shows a new series as detected and adds it to the totals', () => {
+  it('counts a found series as active without confirming, and adds it to the totals', () => {
     const radar = radarOf([
       ...monthly('NETFLIX', [22_999, 22_999, 22_999]),
       ...monthly('SPOTIFY', [5_999, 5_999, 5_999]),
       ...monthly('ENERJISA', [40_000, 50_000, 60_000]),
     ]);
     expect(radar.subscriptions.map((s) => [s.merchant, s.state])).toEqual([
-      ['netflix', 'detected'],
-      ['spotify', 'detected'],
+      ['netflix', 'active'],
+      ['spotify', 'active'],
     ]);
     expect(radar.bills.map((s) => s.merchant)).toEqual(['enerjisa']);
     expect(radar.totals).toEqual([
@@ -51,15 +50,9 @@ describe('buildRadar (D19)', () => {
     ]);
   });
 
-  it('marks a confirmed series and keeps it in the totals', () => {
-    const radar = radarOf(monthly('NETFLIX', [22_999, 22_999, 22_999]), [choice('netflix|TRY')]);
-    expect(radar.subscriptions[0]?.state).toBe('confirmed');
-    expect(radar.totals[0]?.subscriptionsMonthly).toBe(22_999);
-  });
-
   it('hides an ignored series from lists, totals and alerts', () => {
     const radar = radarOf(monthly('NETFLIX', [22_999, 22_999, 23_999]), [
-      choice('netflix|TRY', { status: 'ignored', confirmedByUser: false }),
+      choice('netflix|TRY', { status: 'ignored' }),
     ]);
     expect(radar.subscriptions).toEqual([]);
     expect(radar.ignored).toHaveLength(1);
@@ -107,7 +100,18 @@ describe('buildRadar (D19)', () => {
       expect(radar.alerts).toMatchObject([{ kind: 'increase', increase: { to: 24_999 } }]);
     });
 
-    it('sums small raises across subscriptions', () => {
+    it('counts a small raise in the total without an alert', () => {
+      const radar = radarOf(monthly('YOUTUBE', [5_799, 5_799, 5_849]));
+      expect(radar.subscriptions[0]?.increase).toMatchObject({
+        from: 5_799,
+        to: 5_849,
+        notable: false,
+      });
+      expect(radar.totals[0]?.increasesMonthly).toBe(50);
+      expect(radar.alerts).toEqual([]);
+    });
+
+    it('sums raises across subscriptions', () => {
       const raised = (name: string) => monthly(name, [10_000, 10_000, 11_000]);
       const radar = radarOf([...raised('EXXEN'), ...raised('BLUTV'), ...raised('GAIN')]);
       expect(radar.totals[0]?.increasesMonthly).toBe(3_000);

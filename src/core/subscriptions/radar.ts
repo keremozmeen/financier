@@ -7,12 +7,12 @@ import {
   type SeriesCharge,
 } from './detect';
 
-/** How a series looks to the user (D19): no stored choice means "detected". */
-export type RadarState = 'detected' | 'confirmed' | 'ignored' | 'cancelled';
+/** How a series looks to the user (D19): found series count as active, no confirming needed. */
+export type RadarState = 'active' | 'ignored' | 'cancelled';
 
 export type SubscriptionChoice = Pick<
   Subscription,
-  'status' | 'confirmedByUser' | 'cancelledAt' | 'hikeSeenAmount' | 'dismissedDuplicates'
+  'status' | 'cancelledAt' | 'hikeSeenAmount' | 'dismissedDuplicates'
 > & { id: string };
 
 export interface RadarItem extends DetectedSeries {
@@ -46,10 +46,7 @@ export interface Radar {
 }
 
 function stateOf(choice: SubscriptionChoice | undefined): RadarState {
-  if (!choice) return 'detected';
-  if (choice.status === 'ignored') return 'ignored';
-  if (choice.status === 'cancelled') return 'cancelled';
-  return choice.confirmedByUser ? 'confirmed' : 'detected';
+  return choice?.status ?? 'active';
 }
 
 const byMonthly = (a: RadarItem, b: RadarItem) =>
@@ -129,7 +126,8 @@ export function buildRadar(
     if (item.increase) {
       const { from, to } = item.increase;
       sum.increasesMonthly += cadenceCost(to - from, item.cadence).monthly;
-      if ((choice?.hikeSeenAmount ?? 0) < to) {
+      // Small raises stay quiet (D19): they count above but are no alert.
+      if (item.increase.notable && (choice?.hikeSeenAmount ?? 0) < to) {
         increases.push({ kind: 'increase', item, increase: item.increase });
       }
     }

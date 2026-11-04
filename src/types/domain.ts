@@ -158,7 +158,6 @@ export interface Subscription {
   normalizedMerchant: string;
   currency: CurrencyCode;
   status: SubscriptionStatus;
-  confirmedByUser: boolean;
   /** Set when marked cancelled; a charge after it raises an alert. */
   cancelledAt?: IsoDate;
   /** The increased price the user acknowledged ("Got it"). */

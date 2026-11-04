@@ -13,7 +13,6 @@ async function change(series: SeriesRef, apply: (row: Subscription) => void): Pr
       normalizedMerchant: series.merchant,
       currency: series.currency,
       status: 'active',
-      confirmedByUser: false,
     };
     apply(row);
     await db.subscriptions.put(row);
@@ -24,14 +23,6 @@ async function change(series: SeriesRef, apply: (row: Subscription) => void): Pr
 export const subscriptionsRepo = {
   list(): Promise<Subscription[]> {
     return db.subscriptions.toArray();
-  },
-
-  /** Removes the Detected badge. */
-  confirm(series: SeriesRef) {
-    return change(series, (row) => {
-      row.status = 'active';
-      row.confirmedByUser = true;
-    });
   },
 
   /** Hides the series from lists, totals and alerts. */
@@ -49,11 +40,10 @@ export const subscriptionsRepo = {
     });
   },
 
-  /** Back to an active, confirmed subscription (from ignored, cancelled, or "Still active"). */
+  /** Back to an active subscription (from ignored, cancelled, or "Still active"). */
   restore(series: SeriesRef) {
     return change(series, (row) => {
       row.status = 'active';
-      row.confirmedByUser = true;
       delete row.cancelledAt;
     });
   },

@@ -1,4 +1,4 @@
-import { merchantKey } from './merchant';
+import { displayName, merchantKey } from './merchant';
 
 describe('merchantKey (D19)', () => {
   it.each([
@@ -37,5 +37,29 @@ describe('merchantKey (D19)', () => {
   it('is empty when nothing names a merchant', () => {
     expect(merchantKey('')).toBe('');
     expect(merchantKey('  12345 / 678 ')).toBe('');
+  });
+});
+
+describe('displayName (D19)', () => {
+  it.each([
+    ['IYZICO *NETFLIX.COM', 'Netflix'],
+    ['GOOGLE *YOUTUBE PREMIUM', 'YouTube Premium'],
+    ['OPENAI *CHATGPT SUBSCR', 'ChatGPT'],
+    ['APPLE.COM/BILL', 'Apple'],
+    ['IGDAS DOGALGAZ', 'İGDAŞ'],
+    ['TURKCELL FATURA', 'Turkcell'],
+  ])('names %s as %s', (description, name) => {
+    expect(displayName(description)).toBe(name);
+  });
+
+  it('title-cases unknown merchants without billing words, processors or references', () => {
+    expect(displayName('KAHVE DÜNYASI ABONELİK')).toBe('Kahve Dünyası');
+    expect(displayName('KAHVE DUNYASI ABONELIK')).toBe('Kahve Dunyasi');
+    expect(displayName('PAYTR *ACME SPOR KULUBU 4829')).toBe('Acme Spor Kulubu');
+    expect(displayName('ENERJISA ELEKTRIK FATURA')).toBe('Enerjisa');
+  });
+
+  it('falls back to the bank text when nothing is left', () => {
+    expect(displayName('ABONELIK 123')).toBe('ABONELIK 123');
   });
 });

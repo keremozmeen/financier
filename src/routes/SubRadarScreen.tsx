@@ -1,20 +1,24 @@
-import { Radar as RadarIcon, TrendingUp } from 'lucide-react';
+import { ChevronDown, Radar as RadarIcon } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { RadarAlerts, type AlertActions } from '../components/subRadar/RadarAlerts';
-import { SeriesList, type SeriesActions } from '../components/subRadar/SeriesList';
-import type { RadarTotals } from '../core/subscriptions';
+import { SeriesRow, type SeriesActions } from '../components/subRadar/SeriesRow';
+import type { RadarItem, RadarTotals } from '../core/subscriptions';
 import { subscriptionsRepo } from '../db';
 import { useSubRadar, useToday } from '../hooks/useFinance';
 import { useFormat } from '../hooks/useFormat';
 import { useT } from '../i18n';
 
-/** Sub-Radar (D19): subscriptions and bills across credit and debit cards. */
+/**
+ * Sub-Radar (D19, D20): one total, a short list of names and prices, and one line when
+ * something needs a look. Details and actions open on tap.
+ */
 export function SubRadarScreen() {
   const t = useT();
   const today = useToday();
   const data = useSubRadar();
+  const { money } = useFormat();
 
   const seriesActions: SeriesActions = {
-    onConfirm: (item) => void subscriptionsRepo.confirm(item),
     onIgnore: (item) => void subscriptionsRepo.ignore(item),
     onCancel: (item) => void subscriptionsRepo.cancel(item, today),
     onRestore: (item) => void subscriptionsRepo.restore(item),
@@ -37,111 +41,139 @@ export function SubRadarScreen() {
     );
   }
 
-  const { radar, cardById } = data;
-  const more = radar.inactive.length + radar.cancelled.length + radar.ignored.length;
-  const empty = radar.subscriptions.length + radar.bills.length + more === 0;
+  const { radar, cardById, cancelledAt } = data;
+  const past = [...radar.inactive, ...radar.cancelled, ...radar.ignored];
+  const attention = new Set(radar.alerts.map((alert) => alert.item.key));
+  const rows = (items: readonly RadarItem[]) =>
+    items.map((item) => (
+      <SeriesRow
+        key={item.key}
+        item={item}
+        card={cardById.get(item.latest.cardId)}
+        actions={seriesActions}
+        attention={attention.has(item.key)}
+        cancelledAt={item.state === 'cancelled' ? cancelledAt.get(item.key) : undefined}
+      />
+    ));
 
-  return (
-    <section className="space-y-5">
-      <h1 className="text-2xl font-semibold">{t('nav.subRadar')}</h1>
-      {empty ? (
+  if (radar.subscriptions.length + radar.bills.length + past.length === 0) {
+    return (
+      <section className="space-y-5">
+        <h1 className="text-2xl font-semibold">{t('nav.subRadar')}</h1>
         <div className="rounded-xl border border-border bg-surface p-6 text-center">
           <RadarIcon aria-hidden="true" className="mx-auto text-muted" size={32} />
           <h2 className="mt-3 font-semibold">{t('radar.empty.title')}</h2>
           <p className="mt-1 text-sm text-muted">{t('radar.empty.body')}</p>
         </div>
-      ) : (
-        <>
-          {radar.totals.length > 0 && <Summary totals={radar.totals} />}
-          <RadarAlerts alerts={radar.alerts} actions={alertActions} />
-          <SeriesList
-            title={t('radar.section.subscriptions')}
-            items={radar.subscriptions}
-            cardById={cardById}
-            actions={seriesActions}
-          />
-          <SeriesList
-            title={t('radar.section.bills')}
-            items={radar.bills}
-            cardById={cardById}
-            actions={seriesActions}
-          />
-          {more > 0 && (
-            <details className="space-y-4">
-              <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium text-muted">
-                {t('radar.section.more', { count: more })}
-              </summary>
-              <div className="mt-2 space-y-5">
-                <SeriesList
-                  title={t('radar.section.inactive')}
-                  items={radar.inactive}
-                  cardById={cardById}
-                  actions={seriesActions}
-                />
-                <SeriesList
-                  title={t('radar.section.cancelled')}
-                  items={radar.cancelled}
-                  cardById={cardById}
-                  actions={seriesActions}
-                  cancelledAt={data.cancelledAt}
-                />
-                <SeriesList
-                  title={t('radar.section.ignored')}
-                  items={radar.ignored}
-                  cardById={cardById}
-                  actions={seriesActions}
-                />
-              </div>
-            </details>
-          )}
-        </>
+      </section>
+    );
+  }
+
+  return (
+    <section className="space-y-4">
+      <h1 className="text-2xl font-semibold">{t('nav.subRadar')}</h1>
+      <Total totals={radar.totals} count={radar.subscriptions.length} />
+      <RadarAlerts alerts={radar.alerts} actions={alertActions} />
+      {radar.subscriptions.length > 0 && (
+        <ul
+          aria-label={t('radar.section.subscriptions')}
+          className="divide-y divide-border rounded-xl border border-border bg-surface"
+        >
+          {rows(radar.subscriptions)}
+        </ul>
+      )}
+      {radar.bills.length > 0 && (
+        <Group
+          title={t('radar.section.bills', {
+            amount: joinMoney(radar.totals, (total) => total.billsMonthly, money),
+          })}
+        >
+          {rows(radar.bills)}
+        </Group>
+      )}
+      {past.length > 0 && (
+        <Group title={t('radar.section.past', { count: past.length })} quiet>
+          {rows(past)}
+        </Group>
       )}
     </section>
   );
 }
 
-function Summary({ totals }: { totals: readonly RadarTotals[] }) {
-  const t = useT();
-  const format = useFormat();
-  const join = (pick: (total: RadarTotals) => number) =>
-    totals
-      .filter((total) => pick(total) > 0)
-      .map((total) => format.money(pick(total), total.currency))
-      .join(' + ');
+type MoneyFormat = (amount: number, currency: string) => string;
 
-  const monthly = join((total) => total.subscriptionsMonthly);
-  const yearly = join((total) => total.subscriptionsYearly);
-  const bills = join((total) => total.billsMonthly);
-  const increases = join((total) => total.increasesMonthly);
+function joinMoney(
+  totals: readonly RadarTotals[],
+  pick: (total: RadarTotals) => number,
+  money: MoneyFormat,
+): string {
+  return totals
+    .filter((total) => pick(total) > 0)
+    .map((total) => money(pick(total), total.currency))
+    .join(' + ');
+}
+
+/** The one number that matters: what subscriptions cost per month. */
+function Total({ totals, count }: { totals: readonly RadarTotals[]; count: number }) {
+  const t = useT();
+  const { money } = useFormat();
+  const monthly = joinMoney(totals, (total) => total.subscriptionsMonthly, money);
+  if (!monthly) return null;
+  const yearly = joinMoney(totals, (total) => total.subscriptionsYearly, money);
+  const increases = joinMoney(totals, (total) => total.increasesMonthly, money);
 
   return (
-    <section
-      aria-label={t('radar.summary.title')}
-      className="space-y-3 rounded-xl border border-border bg-surface p-4"
-    >
-      {monthly && (
-        <div>
-          <p className="text-sm text-muted">{t('radar.summary.subscriptions')}</p>
-          <p className="text-xl font-semibold tabular-nums">
-            {t('radar.perMonth', { amount: monthly })}
-          </p>
-          <p className="text-sm text-muted tabular-nums">
-            {t('radar.perYear', { amount: yearly })}
-          </p>
-        </div>
-      )}
-      {bills && (
-        <div>
-          <p className="text-sm text-muted">{t('radar.summary.bills')}</p>
-          <p className="font-semibold tabular-nums">{t('radar.perMonth', { amount: bills })}</p>
-        </div>
-      )}
-      {increases && (
-        <p className="flex items-center gap-2 text-sm font-semibold text-alert">
-          <TrendingUp aria-hidden="true" size={16} />
-          {t('radar.summary.increases', { amount: increases })}
-        </p>
-      )}
-    </section>
+    <div className="rounded-xl border border-border bg-surface p-4">
+      <p className="text-sm text-muted">{t('radar.total.label')}</p>
+      <p className="text-2xl font-semibold tabular-nums">
+        {t('radar.perMonth', { amount: monthly })}
+      </p>
+      <p className="mt-1 text-sm text-muted">
+        {[
+          t('radar.total.yearly', { amount: yearly }),
+          t('radar.total.count', { count }),
+          increases && t('radar.total.increases', { amount: increases }),
+        ]
+          .filter(Boolean)
+          .join(' · ')}
+      </p>
+    </div>
+  );
+}
+
+/** A folded group: bills, or the past and hidden ones. */
+function Group({
+  title,
+  quiet = false,
+  children,
+}: {
+  title: string;
+  quiet?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <details className="group">
+      <summary
+        className={`flex min-h-12 cursor-pointer list-none items-center gap-3 [&::-webkit-details-marker]:hidden ${
+          quiet
+            ? 'text-sm text-muted'
+            : 'rounded-xl border border-border bg-surface px-4 font-medium group-open:rounded-b-none'
+        }`}
+      >
+        <span className="flex-1">{title}</span>
+        <ChevronDown
+          aria-hidden="true"
+          size={16}
+          className="shrink-0 text-muted transition-transform group-open:rotate-180"
+        />
+      </summary>
+      <ul
+        className={`divide-y divide-border border border-border bg-surface ${
+          quiet ? 'rounded-xl' : 'rounded-b-xl border-t-0'
+        }`}
+      >
+        {children}
+      </ul>
+    </details>
   );
 }

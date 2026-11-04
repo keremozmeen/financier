@@ -61,17 +61,18 @@ describe('subscriptionsRepo and loadSubRadar (D19)', () => {
 
     const { radar, cardById } = await loadSubRadar(TODAY);
     expect(radar.subscriptions).toHaveLength(1);
-    expect(radar.subscriptions[0]).toMatchObject({ key: 'netflix|TRY', state: 'detected' });
+    expect(radar.subscriptions[0]).toMatchObject({
+      key: 'netflix|TRY',
+      name: 'Netflix',
+      state: 'active',
+    });
     expect(cardById.get(radar.subscriptions[0]!.latest.cardId)?.name).toBe('Maaş');
   });
 
-  it('confirms, ignores, cancels and restores a series', async () => {
+  it('ignores, cancels and restores a series', async () => {
     const cards = await createCards();
     await netflix(cards);
     const item = (await series()).subscriptions[0]!;
-
-    await subscriptionsRepo.confirm(item);
-    expect((await series()).subscriptions[0]?.state).toBe('confirmed');
 
     await subscriptionsRepo.ignore(item);
     expect((await series()).ignored).toHaveLength(1);
@@ -82,7 +83,7 @@ describe('subscriptionsRepo and loadSubRadar (D19)', () => {
     expect(cancelled.alerts).toEqual([]);
 
     await subscriptionsRepo.restore(item);
-    expect((await series()).subscriptions[0]?.state).toBe('confirmed');
+    expect((await series()).subscriptions[0]?.state).toBe('active');
     expect(await db.subscriptions.get('netflix|TRY')).not.toHaveProperty('cancelledAt');
   });
 

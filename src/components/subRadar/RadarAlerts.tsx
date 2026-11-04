@@ -1,5 +1,4 @@
-import { TriangleAlert } from 'lucide-react';
-import { useMemo } from 'react';
+import { ChevronDown } from 'lucide-react';
 import type { RadarAlert } from '../../core/subscriptions';
 import { useFormat } from '../../hooks/useFormat';
 import { useT } from '../../i18n';
@@ -12,7 +11,10 @@ export interface AlertActions {
   onDismissAfterCancel: (alert: Extract<RadarAlert, { kind: 'afterCancel' }>) => void;
 }
 
-/** Red alerts: price increases, double charges and charges after a cancellation (D19). */
+/**
+ * One line that says how many things need a look, opening to the alerts (D19, D20): notable
+ * price increases, double charges and charges after a cancellation.
+ */
 export function RadarAlerts({
   alerts,
   actions,
@@ -22,37 +24,33 @@ export function RadarAlerts({
 }) {
   const t = useT();
   const format = useFormat();
-  // Small raises matter (D19), so the percentage keeps one decimal: +0,2%, not +0%.
-  const percent = useMemo(
-    () => new Intl.NumberFormat(format.locale, { style: 'percent', maximumFractionDigits: 1 }),
-    [format.locale],
-  );
   if (alerts.length === 0) return null;
 
   return (
-    <section
-      aria-labelledby="radar-alerts"
-      className="rounded-xl border border-alert/40 bg-alert/10 p-4"
-    >
-      <h2 id="radar-alerts" className="mb-2 flex items-center gap-2 font-semibold text-alert">
-        <TriangleAlert aria-hidden="true" size={18} />
-        {t('radar.alerts.title')}
-      </h2>
-      <ul className="divide-y divide-alert/20">
+    <details className="group rounded-xl border border-alert/40 bg-alert/10">
+      <summary className="flex min-h-12 cursor-pointer list-none items-center gap-3 px-4 font-medium [&::-webkit-details-marker]:hidden">
+        <span aria-hidden="true" className="size-2.5 shrink-0 rounded-full bg-alert" />
+        <span className="flex-1">{t('radar.attention', { count: alerts.length })}</span>
+        <ChevronDown
+          aria-hidden="true"
+          size={16}
+          className="shrink-0 text-muted transition-transform group-open:rotate-180"
+        />
+      </summary>
+      <ul className="divide-y divide-alert/20 px-4 pb-2">
         {alerts.map((alert) => {
           const { item } = alert;
           const money = (amount: number) => format.money(amount, item.currency);
           if (alert.kind === 'increase') {
             const { from, to } = alert.increase;
             return (
-              <li key={`increase-${item.key}`} className="space-y-2 py-3 first:pt-0 last:pb-0">
-                <p className="text-sm font-medium">
+              <li key={`increase-${item.key}`} className="space-y-2 py-3">
+                <p className="text-sm">
                   {t('radar.alert.increase', {
                     name: item.name,
+                    diff: money(to - from),
                     from: money(from),
                     to: money(to),
-                    diff: money(to - from),
-                    percent: percent.format((to - from) / from),
                   })}
                 </p>
                 <Button onClick={() => actions.onAcknowledge(alert)}>
@@ -64,8 +62,8 @@ export function RadarAlerts({
           if (alert.kind === 'double') {
             const { first, second } = alert.double;
             return (
-              <li key={`double-${second.id}`} className="space-y-2 py-3 first:pt-0 last:pb-0">
-                <p className="text-sm font-medium">
+              <li key={`double-${second.id}`} className="space-y-2 py-3">
+                <p className="text-sm">
                   {t('radar.alert.double', {
                     name: item.name,
                     amount: money(second.amount),
@@ -80,8 +78,8 @@ export function RadarAlerts({
             );
           }
           return (
-            <li key={`cancel-${item.key}`} className="space-y-2 py-3 first:pt-0 last:pb-0">
-              <p className="text-sm font-medium">
+            <li key={`cancel-${item.key}`} className="space-y-2 py-3">
+              <p className="text-sm">
                 {t('radar.alert.afterCancel', {
                   name: item.name,
                   amount: money(alert.charge.amount),
@@ -100,6 +98,6 @@ export function RadarAlerts({
           );
         })}
       </ul>
-    </section>
+    </details>
   );
 }

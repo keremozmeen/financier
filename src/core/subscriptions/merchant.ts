@@ -65,6 +65,50 @@ const CITIES = new Set([
   'cork',
 ]);
 
+/** Words that say how something is billed, not who bills it: left out of display names. */
+const GENERIC = new Set([
+  'fatura',
+  'faturasi',
+  'abonelik',
+  'aboneligi',
+  'uyelik',
+  'subscr',
+  'subscription',
+  'odeme',
+  'odemesi',
+  'payment',
+  'otomatik',
+  'talimat',
+  'talimati',
+  'bill',
+]);
+
+/** Common services, by merchant key, with the name people know them by. */
+const BRANDS: Record<string, string> = {
+  netflix: 'Netflix',
+  spotify: 'Spotify',
+  'google youtube': 'YouTube Premium',
+  'google one': 'Google One',
+  'apple bill': 'Apple',
+  'amazon prime': 'Amazon Prime',
+  openai: 'ChatGPT',
+  disney: 'Disney+',
+  exxen: 'Exxen',
+  blutv: 'BluTV',
+  gain: 'Gain',
+  mubi: 'MUBI',
+  tod: 'TOD',
+  adobe: 'Adobe',
+  macfit: 'MACFit',
+  turkcell: 'Turkcell',
+  vodafone: 'Vodafone',
+  'turk telekom': 'Türk Telekom',
+  superonline: 'Superonline',
+  enerjisa: 'Enerjisa',
+  igdas: 'İGDAŞ',
+  iski: 'İSKİ',
+};
+
 /** Platforms that bill several services under one name: the key keeps the next word too. */
 const PLATFORMS = new Set(['google', 'apple', 'amazon', 'microsoft', 'paypal', 'turk', 'the']);
 
@@ -83,4 +127,35 @@ export function merchantKey(description: string): string {
   const [first, second] = unique;
   if (!first) return '';
   return PLATFORMS.has(first) && second ? `${first} ${second}` : first;
+}
+
+/**
+ * A readable name for a series (D19): a known brand ("Netflix", "YouTube Premium"), else
+ * the description's own words without processors, noise and billing words, in title case
+ * ("KAHVE DÜNYASI ABONELİK" → "Kahve Dünyası"). The bank's text stays in the details.
+ */
+export function displayName(description: string): string {
+  const key = merchantKey(description);
+  const brand = BRANDS[key];
+  if (brand) return brand;
+  const words = description.split(/[^\p{L}\p{N}]+/u).filter((word) => {
+    const folded = normalizeDescription(word);
+    return (
+      folded.length > 1 &&
+      !/\d/.test(folded) &&
+      !NOISE.has(folded) &&
+      !CITIES.has(folded) &&
+      !GENERIC.has(folded)
+    );
+  });
+  while (words.length > 1 && PROCESSORS.has(normalizeDescription(words[0]!))) words.shift();
+  // All-caps ASCII ("DUNYASI") is not Turkish-cased, or it reads "Dunyası".
+  const locale = /[çğıöşüÇĞİÖŞÜ]/.test(description) ? 'tr' : 'en';
+  const name = words
+    .slice(0, 3)
+    .map(
+      (word) => word.charAt(0).toLocaleUpperCase(locale) + word.slice(1).toLocaleLowerCase(locale),
+    )
+    .join(' ');
+  return name || description.trim();
 }
