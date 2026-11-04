@@ -41,7 +41,8 @@ export function TransactionList({
                     {t('tx.badge.installments', { count })}
                   </span>
                 )}
-                {tx.income && (
+                {/* Without a description the label already reads "Income". */}
+                {tx.income && tx.description.trim() && (
                   <span className="rounded bg-surface-raised px-1.5 py-0.5 text-success">
                     {t('tx.badge.income')}
                   </span>

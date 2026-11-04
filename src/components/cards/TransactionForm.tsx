@@ -56,7 +56,7 @@ export function TransactionForm({
   // An installment purchase is checked by its full total: the bank blocks all of it (D11).
   const spend: SpendCheck =
     spendGuard && parsedAmount
-      ? spendGuard.check({ kind, amount: parsedAmount })
+      ? spendGuard.check({ kind: kind === 'charge' ? 'charge' : 'refund', amount: parsedAmount })
       : { allowed: true };
 
   function submit(event: FormEvent) {
@@ -98,6 +98,10 @@ export function TransactionForm({
         options={[
           { value: 'charge', label: t('tx.kind.charge') },
           { value: 'refund', label: t('tx.kind.refund') },
+          // Money coming into the account; a credit card has no income (D17).
+          ...(card.type === 'debit'
+            ? [{ value: 'income' as const, label: t('tx.kind.income') }]
+            : []),
         ]}
       />
       <TextField

@@ -191,20 +191,17 @@ export function planImport(rows: readonly DraftRow[], context: ImportContext): P
     // card, D13).
     if (imported.has(fingerprint)) return { kind: 'duplicate' };
     const flag = FLAGS[row.type];
-    // Manual entries are charges and refunds; income is never one of them.
-    const match =
-      row.type === 'income'
-        ? undefined
-        : manual
-            .filter(
-              (tx) =>
-                !claimedManual.has(tx.id) &&
-                tx.amount === amount &&
-                Math.abs(daysBetween(tx.date, date)) <= MATCH_WINDOW_DAYS,
-            )
-            .sort(
-              (a, b) => Math.abs(daysBetween(a.date, date)) - Math.abs(daysBetween(b.date, date)),
-            )[0];
+    // Income merges only with manual income, and charges and refunds never with it.
+    const income = row.type === 'income';
+    const match = manual
+      .filter(
+        (tx) =>
+          !claimedManual.has(tx.id) &&
+          !!tx.income === income &&
+          tx.amount === amount &&
+          Math.abs(daysBetween(tx.date, date)) <= MATCH_WINDOW_DAYS,
+      )
+      .sort((a, b) => Math.abs(daysBetween(a.date, date)) - Math.abs(daysBetween(b.date, date)))[0];
     if (match && !row.unmerged) {
       claimedManual.add(match.id);
       return { kind: 'merge', transactionId: match.id, fillDescription: !match.description.trim() };

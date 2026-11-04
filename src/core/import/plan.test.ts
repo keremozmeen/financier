@@ -617,6 +617,31 @@ describe('account statements (D17)', () => {
     });
   });
 
+  it('merges income with a manual income entry and fills its description', () => {
+    const manual = tx({ cardId: debit.id, amount: -4_500_000, income: true }, debit);
+    const planned = planImport(
+      [row({ type: 'income', description: 'MAAŞ', amount: 4_500_000 })],
+      account({ transactions: [manual] }),
+    );
+    expect(planned[0]?.outcome).toEqual({
+      kind: 'merge',
+      transactionId: manual.id,
+      fillDescription: true,
+    });
+  });
+
+  it('never merges income with a manual refund, or a refund with manual income', () => {
+    const refund = tx({ cardId: debit.id, amount: -150_000 }, debit);
+    const income = tx({ cardId: debit.id, amount: -150_000, income: true }, debit);
+    expect(
+      outcomes([row({ type: 'income', amount: 150_000 })], account({ transactions: [refund] }))[0],
+    ).toMatchObject({ kind: 'add', flag: 'income' });
+    expect(
+      outcomes([row({ type: 'refund', amount: 150_000 })], account({ transactions: [income] }))[0]
+        ?.kind,
+    ).toBe('add');
+  });
+
   it('skips transfers and ATM withdrawals unless counted as spending', () => {
     const transfer = row({ type: 'transfer', description: 'ATM KADIKOY' });
     expect(outcomes([transfer], account())[0]).toEqual({ kind: 'skip', reason: 'transfer' });

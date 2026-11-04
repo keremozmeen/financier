@@ -46,7 +46,7 @@ This file records the decisions that turn the open questions in `WORKFLOWS.md` i
 - Nothing is saved until the user confirms the **review screen**, which shows each parsed row with a confidence flag and lets the user edit or drop it.
 - **Duplicate protection:** each transaction gets a fingerprint (`cardId + date + amount + normalized description`); re-importing the same statement does not create duplicates. Fingerprint dedup applies to imports only: manual entries are never deduplicated, so two identical dinners on the same card and day both save.
 - **Imports vs. manual entries:** at import review (Phase 3), an imported charge that matches a manual entry (same card, same amount, date within ±3 days) is flagged "Already logged" and merged by default, taking the bank's description if the manual entry has none. The user can unmerge it on the review screen.
-- **Manual descriptions are optional.** An entry without one is shown as "Charge", "Refund" or "Installment purchase" (from `src/i18n/`).
+- **Manual descriptions are optional.** An entry without one is shown as "Charge", "Refund", "Income" or "Installment purchase" (from `src/i18n/`).
 - The PDF.js worker is **bundled locally** (no CDN), and password-protected PDFs prompt for the password locally.
 - Itemized receipt splitting (Module 2's invoice feature) is **deferred to after v1**. It is a large feature and not needed for the core value.
 
@@ -243,7 +243,8 @@ A card statement is more than purchases: it also lists installment slices, the b
 | Type | Recognized by | Credit card | Debit card (D13) |
 | :--- | :--- | :--- | :--- |
 | **Charge** | Any other row with a positive amount | Imported as a transaction | Same |
-| **Refund** | Any other row with a negative (credit) amount ("İADE", "REFUND" raise confidence) | Imported as a negative transaction | Same |
+| **Refund** | Any other row with a negative (credit) amount ("İADE", "REFUND" raise confidence) | Imported as a negative transaction | Only with a refund keyword ("İADE", "İPTAL", "REFUND"); other money in is income |
+| **Income** | Money in on a debit card that is not a refund: maaş, gelen EFT/Havale/FAST (high confidence), or any other money in (medium) | Never: money in on a credit card is a refund or a payment | Saved as income (D17), never counted as spending |
 | **Installment slice** | "TAKSİT 3/6", "3/6 TAKSİT", "3. TAKSİT", "(3/6)", "3/6", "installment 3 of 6", or the mapped installment column | Linked to an existing plan, or creates the plan for the remaining installments; never a separate charge | Ignored: imported as a plain charge |
 | **Bill payment** | "ÖDEME", "HESAPTAN ÖDEME", "OTOMATİK ÖDEME", "KART ÖDEMESİ", "PAYMENT", "AUTOPAY"… on a credit (negative) row | Offered as a payment against its statement (D14), unless already recorded; never a refund | Recorded on the credit card it paid (D17); skipped when the app has no credit card. An outflow named "KREDİ KARTI ÖDEMESİ", "KK ÖDEME" or "CREDIT CARD PAYMENT" is also a payment, never spending |
 | **Balance or summary line** | "ÖNCEKİ DÖNEM BAKİYESİ", "DÖNEM BORCU", "ASGARİ ÖDEME", "TOPLAM", "PREVIOUS BALANCE", "MINIMUM PAYMENT"… | Skipped | Skipped |
@@ -280,6 +281,7 @@ A bank account export lists more than card purchases: salary and incoming transf
 | **Fee** | masraf, ücret, komisyon (as D16) | A charge with `fee: true` |
 | **Summary** | as D16 | Skipped |
 
+- **Income on debit cards everywhere:** income is not limited to account statements. A debit card's own CSV export classifies money in the same way (D16), the review screen offers Income on every debit card, and manual entry on a debit card offers Charge / Refund / Income. A credit card never has income: money in on it is a refund or a bill payment. An imported income row merges (D3) only with a manual income entry, and a charge or refund never merges with one, so a salary is never taken for a refund of the same amount.
 - **Referans:** when the file has a reference column, a row's fingerprint is `cardId + "ref" + reference` instead of date + amount + description (D3), so a re-export with a reworded description is still recognized.
 - **Undo** (D16) also removes the payments the import recorded on credit cards.
 

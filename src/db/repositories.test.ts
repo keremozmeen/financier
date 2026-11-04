@@ -133,6 +133,29 @@ describe('transactionsRepo', () => {
     expect((await db.transactions.get(id))?.amount).toBe(-5_000);
   });
 
+  it('stores income on a debit card as a negative amount flagged as income', async () => {
+    const card = await createDebitCard();
+    const income = { card, date: '2026-11-02', description: 'Maaş', amount: 4_500_000 };
+    const id = await transactionsRepo.addManual({ ...income, kind: 'income', installments: 1 });
+    expect(await db.transactions.get(id)).toMatchObject({ amount: -4_500_000, income: true });
+
+    const refund = await transactionsRepo.addManual({ ...income, kind: 'refund', installments: 1 });
+    expect(await db.transactions.get(refund)).not.toHaveProperty('income');
+  });
+
+  it('rejects income on a credit card and income in installments', async () => {
+    const credit = await createCard();
+    const debit = await createDebitCard();
+    const entry = { date: '2026-11-02', description: '', amount: 1_000, kind: 'income' } as const;
+    await expect(
+      transactionsRepo.addManual({ ...entry, card: credit, installments: 1 }),
+    ).rejects.toThrow(RangeError);
+    await expect(
+      transactionsRepo.addManual({ ...entry, card: debit, installments: 3 }),
+    ).rejects.toThrow(RangeError);
+    expect(await db.transactions.count()).toBe(0);
+  });
+
   it('saves identical manual entries without deduplicating them (D3)', async () => {
     const card = await createCard();
     const dinner = {

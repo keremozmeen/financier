@@ -29,6 +29,33 @@ describe('classifyRow (D16)', () => {
     });
   });
 
+  describe('money in on a debit card', () => {
+    it.each(['HAVALE GELEN AHMET', 'ACME MAAŞ', 'GELEN FAST AYŞE YILMAZ', 'GELEN EFT'])(
+      'reads %s as income',
+      (description) => {
+        expect(debit(description, -150_000)).toEqual({ type: 'income', confidence: 'high' });
+      },
+    );
+
+    it('keeps a row that says refund a refund', () => {
+      expect(debit('TRENDYOL IADE', -12_000)).toEqual({ type: 'refund', confidence: 'high' });
+    });
+
+    it('treats unlabelled money in as income with medium confidence, as in D17', () => {
+      expect(debit('AHMET YILMAZ', -150_000)).toEqual({ type: 'income', confidence: 'medium' });
+    });
+
+    it('never reads money in on a credit card as income', () => {
+      expect(credit('HAVALE GELEN AHMET', -150_000).type).not.toBe('income');
+      expect(credit('ACME MAAŞ', -150_000).type).not.toBe('income');
+    });
+
+    it('offers income on debit cards only', () => {
+      expect(rowTypesFor('debit')).toContain('income');
+      expect(rowTypesFor('credit')).not.toContain('income');
+    });
+  });
+
   describe('installment slices', () => {
     it.each([
       ['TEKNOSA TAKSİT 3/6', 3, 6],

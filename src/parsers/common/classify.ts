@@ -64,9 +64,12 @@ const BILL = keywordRegex(ACCOUNT_BILL_KEYWORDS);
 /**
  * Classifies one imported row (D16). Summary lines are checked first, so "ASGARİ ÖDEME
  * TUTARI" is not a payment. A credit row is a refund when it says so, else a bill
- * payment when it has a payment keyword, else a refund with medium confidence. On a
- * debit card, a "KREDİ KARTI ÖDEMESİ" outflow is a payment too. A charge row is a fee when it has a fee keyword, else an installment slice when it carries a
- * marker (credit cards only), else a charge.
+ * payment when it has a payment keyword. On a debit card, money in is otherwise income
+ * (high confidence for salary or an incoming transfer, medium without a keyword), as in
+ * D17; on a credit card it is a refund with medium confidence. On a debit card, a
+ * "KREDİ KARTI ÖDEMESİ" outflow is a payment too. A charge row is a fee when it has a
+ * fee keyword, else an installment slice when it carries a marker (credit cards only),
+ * else a charge.
  */
 export function classifyRow(input: ClassifyInput): Classification {
   const text = foldText(input.description);
@@ -74,6 +77,11 @@ export function classifyRow(input: ClassifyInput): Classification {
 
   if (input.amount < 0) {
     if (REFUND.test(text)) return { type: 'refund', confidence: 'high' };
+    if (input.cardType === 'debit') {
+      if (INCOME.test(text) || TRANSFER.test(text)) return { type: 'income', confidence: 'high' };
+      if (PAYMENT.test(text)) return { type: 'payment', confidence: 'high' };
+      return { type: 'income', confidence: 'medium' };
+    }
     if (PAYMENT.test(text)) return { type: 'payment', confidence: 'high' };
     return { type: 'refund', confidence: 'medium' };
   }
@@ -143,8 +151,9 @@ export function classifyAccountRow(input: ClassifyAccountInput): Classification 
 }
 
 /**
- * The types the review screen offers: no installments on debit cards (D13), and income,
- * transfers and bills only on account statements (D17).
+ * The types the review screen offers: no installments on debit cards (D13), income only
+ * on debit cards and account statements, transfers and bills only on account statements
+ * (D17).
  */
 export function rowTypesFor(cardType: CardType, kind: StatementKind = 'card'): ImportRowType[] {
   if (kind === 'account') {
@@ -152,7 +161,7 @@ export function rowTypesFor(cardType: CardType, kind: StatementKind = 'card'): I
   }
   return cardType === 'credit'
     ? ['charge', 'refund', 'installment', 'payment', 'fee', 'summary']
-    : ['charge', 'refund', 'payment', 'fee', 'summary'];
+    : ['charge', 'income', 'refund', 'payment', 'fee', 'summary'];
 }
 
 /** Whether the row's amount is money in (refund, payment to the card, income) for its type. */

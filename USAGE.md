@@ -37,7 +37,7 @@ All processing happens **on your phone**. No file is ever uploaded anywhere.
    * Entries you already typed in by hand are shown as **Already logged** and merged, and rows you imported before are skipped, so importing the same file twice adds nothing.
 5. Tap **Import**. Changed your mind? **Import history** lets you undo a whole import.
 
-Debit card files work the same way, without installments.
+Debit card files work the same way, without installments. Money coming into a debit card is **income** (salary, incoming EFT/Havale/FAST, or any other money in), unless it says it is a refund ("İADE", "İPTAL"). Income is never counted as spending.
 
 **Bank account statements (hesap hareketleri)** are imported onto the account's debit card. Financier recognizes:
 * **Income** (salary, incoming EFT/Havale/FAST): saved as income, never counted as spending. Untick it to leave it out.
@@ -53,7 +53,7 @@ Debit card files work the same way, without installments.
 Financier tracks two kinds of cards. You pick the type when you add a card, and it cannot change once the card has entries.
 
 * **Credit cards (kredi kartı):** have a limit, a statement day and a payment due day. They show a **limit gauge** (limit, used, available), support installment purchases, appear in upcoming payments and debt totals, and Financier stops you from recording a charge your bank would decline.
-* **Debit cards (banka kartı):** spend straight from your bank account, so they have no limit, statements, due dates or installments. They show **this month's spending** instead of a gauge, and their charges count in your spending totals, recent activity, imports and Sub-Radar.
+* **Debit cards (banka kartı):** spend straight from your bank account, so they have no limit, statements, due dates or installments. They show **this month's spending** instead of a gauge, and their charges count in your spending totals, recent activity, imports and Sub-Radar. You can also add **income** (salary, money sent to you) to a debit card; it is kept apart from refunds and never counts as spending.
 
 * **Card Gauges:** View your total limit vs. current spent amount across all your credit cards in real time.
 * **Cash Flow Forecast:** Check the **Installment Projection** chart to see your exact fixed liabilities for the next 3 to 12 months (credit cards).
