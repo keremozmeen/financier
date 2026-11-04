@@ -87,7 +87,7 @@ Work phase by phase. Finish each phase with passing checks and a pull request (o
 - Prefer small, focused commits. Keep dependencies minimal and justify each new one.
 - When something is ambiguous at the product level, ask Kerem; when it is purely technical, decide, and note the choice in the PR description.
 - Test data must be synthetic. Never commit real financial data.
-- **`synthetic/` is the local manual-testing folder.** It holds synthetic statement files (CSV, Excel, later PDF) and test instructions (`TEST-TALIMATLARI.md`) for Kerem's manual tests. It is gitignored and is never committed or pushed. For each task, create or update the files there that the manual tests need, keep the instructions' expected results in sync with the code, and leave the existing files in place unless a task changes what they expect. Automated test fixtures stay in the repo next to their tests, as before.
+- **`synthetic/` is the local manual-testing folder.** It holds synthetic statement files (CSV, Excel, later PDF) and test instructions (`TEST-TALIMATLARI.md`) for manual testing. It is gitignored and is never committed or pushed. For each task, create or update the files there that the manual tests need, keep the instructions' expected results in sync with the code, and leave the existing files in place unless a task changes what they expect. Automated test fixtures stay in the repo next to their tests, as before.
 
 ## Commits and pull requests
 
