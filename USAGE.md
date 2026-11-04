@@ -64,15 +64,14 @@ Financier tracks two kinds of cards. You pick the type when you add a card, and 
 
 ## 🔍 Spotting Subscriptions & Hidden Fees
 
-1. Go to the **Sub-Radar** tab. It looks at the charges on all your cards, credit and debit, and finds the ones that repeat:
-   * **Monthly** (about every 28–31 days, allowing a few days of bank posting delay) and **weekly** charges after 3 charges, **yearly** ones after 2.
-   * The same merchant written differently ("NETFLIX.COM", "IYZICO *NETFLIX") counts as one, even after you move it to another card.
-2. The top shows what your subscriptions cost **per month and per year**, and your **bills** (electricity, gas, water, phone) as a monthly average in their own section.
-3. **Red alerts** flag:
-   * **Price increases**, however small: ₺229,99 → ₺239,99 is flagged, and so is a 50 kuruş raise. The top of the tab adds them up ("+₺100 / month from price increases"), so many small raises can't hide. Prices that move with the exchange rate alert only when they reach a new high. Tap **Got it** to clear the alert; a later raise alerts again.
-   * **Possible double charges:** the same amount from the same subscription within 3 days. A refund of that amount clears it, or tap **Not a duplicate**.
+1. Go to the **Sub-Radar** tab. It finds the charges that repeat on your cards, credit and debit, and shows them by name ("Netflix", "YouTube Premium"), even when the bank writes them differently or you moved one to another card.
+2. The top tells you what your subscriptions cost **per month**, with the yearly cost and how much **raises** have added. Every raise is counted, however small.
+3. If something needs a look, one line says **Needs your attention**. Tap it to see:
+   * **Price increases** of ₺5 or 3% and up. Smaller ones (₺0,50, or exchange-rate drift) don't raise an alert; you see them in grey in the subscription's details. Tap **Got it** to clear an alert.
+   * **Double charges:** the same amount twice within 3 days. A refund of that amount clears it, or tap **Not a duplicate**.
    * **Charges after you cancelled:** tap **Still active** or **Dismiss**.
-4. New finds are marked **Detected**. Tap **Confirm** to keep one, **Mark cancelled** when you cancel it with the provider, or **Ignore** if it isn't a subscription. Cancelled, ignored and no-longer-charged ones are listed at the bottom, where **Restore** brings them back.
+4. Tap a subscription to see its dates, recent charges and the bank's text. There you can tap **I cancelled it** or **Not a subscription**. Nothing needs confirming: found subscriptions just count.
+5. **Bills** (electricity, gas, water, phone) are one line with their monthly average; tap it to see them. Cancelled, hidden and no-longer-charged ones are under **Past and hidden**, where **Restore** brings them back.
 
 ---
 
