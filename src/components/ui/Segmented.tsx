@@ -18,10 +18,13 @@ export function Segmented<T extends string>({
 }: SegmentedProps<T>) {
   return (
     <fieldset disabled={disabled} className={`disabled:opacity-60 ${framed ? 'panel p-4' : ''}`}>
-      <legend className={`text-sm font-medium ${framed ? 'px-1 text-muted' : 'mb-1'}`}>
+      {/* Floated so the legend sits inside the panel instead of on its edge. */}
+      <legend
+        className={`float-left w-full text-sm font-medium ${framed ? 'mb-2 text-muted' : 'mb-1'}`}
+      >
         {label}
       </legend>
-      <div className="grid grid-flow-col gap-1 rounded-full bg-surface-raised p-1">
+      <div className="clear-both grid grid-flow-col gap-1 rounded-full bg-surface-raised p-1">
         {options.map((option) => (
           <button
             key={option.value}
@@ -29,7 +32,7 @@ export function Segmented<T extends string>({
             aria-pressed={option.value === value}
             onClick={() => onChange(option.value)}
             className={`min-h-10 rounded-full px-3 text-sm font-medium transition-colors ${
-              option.value === value ? 'bg-surface text-fg shadow-sm' : 'text-muted hover:text-fg'
+              option.value === value ? 'bg-selected text-fg shadow-sm' : 'text-muted hover:text-fg'
             }`}
           >
             {option.label}
