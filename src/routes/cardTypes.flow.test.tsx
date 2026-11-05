@@ -140,7 +140,8 @@ describe('debit card screens (D13)', () => {
     expect(screen.getByText('-₺45,000.00')).toBeInTheDocument();
   });
 
-  it('lists debit and credit cards together on the dashboard', async () => {
+  it('lists debit and credit cards together on the detailed dashboard', async () => {
+    window.localStorage.setItem('financier.detailedView', 'on');
     await seedDebitCard();
     await cardsRepo.create({
       type: 'credit',

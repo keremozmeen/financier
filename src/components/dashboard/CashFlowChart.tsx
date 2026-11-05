@@ -39,7 +39,7 @@ export default function CashFlowChart({
 
   return (
     <section aria-labelledby="cash-flow-title" className="space-y-3">
-      <h2 id="cash-flow-title" className="text-sm font-medium text-muted">
+      <h2 id="cash-flow-title" className="font-display text-lg font-bold tracking-tight">
         {t('dashboard.cashFlow.title')}
       </h2>
       <div className="space-y-3 panel p-4">

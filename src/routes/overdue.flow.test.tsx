@@ -58,21 +58,33 @@ describe('overdue bills (D14)', () => {
     expect(screen.getByText('Paid outside the app')).toBeInTheDocument();
   });
 
-  it('lists the overdue bill first on the dashboard and in the banner', async () => {
+  it('lists the overdue bill first, in red, until it is paid outside the app', async () => {
     await seedOverdueCard();
     renderApp('/');
 
-    const banner = await screen.findByRole('region', { name: 'Due soon' });
-    expect(within(banner).getByText(/^Axess: ₺1,000\.00 overdue since /)).toBeInTheDocument();
+    const due = await screen.findByRole('region', { name: 'Due in the next 30 days' });
+    const [first, second] = within(due).getAllByRole('button', { name: /^Axess, / });
+    expect(first).toHaveAccessibleName('Axess, ₺1,000.00, Overdue');
+    expect(within(first!).getByText('Overdue')).toHaveClass('text-alert');
+    expect(second).toBeUndefined();
 
-    const upcoming = screen.getByRole('region', { name: 'Upcoming payments' });
+    await user.click(first!);
+    const dialog = screen.getByRole('dialog', { name: 'Axess' });
+    expect(within(dialog).getByText(/^Overdue since /)).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Paid outside the app' }));
+    await waitFor(() =>
+      expect(within(due).queryByRole('button', { name: /Overdue$/ })).not.toBeInTheDocument(),
+    );
+  });
+
+  it('lists the overdue bill first in the detailed payments list', async () => {
+    window.localStorage.setItem('financier.detailedView', 'on');
+    await seedOverdueCard();
+    renderApp('/');
+
+    const upcoming = await screen.findByRole('region', { name: 'Upcoming payments' });
     const [first, second] = within(upcoming).getAllByRole('listitem');
     expect(first).toHaveTextContent('Overdue');
     expect(second).not.toHaveTextContent('Overdue');
-
-    await user.click(within(upcoming).getByRole('button', { name: 'Paid outside the app: Axess' }));
-    await waitFor(() =>
-      expect(screen.queryByRole('region', { name: 'Due soon' })).not.toBeInTheDocument(),
-    );
   });
 });

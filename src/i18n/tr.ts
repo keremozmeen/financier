@@ -39,13 +39,19 @@ export const tr: Record<MessageKey, string> = {
   'dashboard.recent.title': 'Son hareketler',
   'dashboard.recent.empty': 'Henüz kayıt yok.',
 
-  'due.banner.title': 'Ödemesi yaklaşanlar',
-  'due.today': 'bugün',
-  'due.tomorrow': 'yarın',
-  'due.inDays': '{count} gün içinde',
-  'due.item': '{card}: {amount}, son ödeme {when}',
-
-  'due.overdueItem': '{card}: {amount}, {date} tarihinden beri gecikmiş',
+  'due.tag.overdue': 'Gecikti',
+  'due.tag.auto': 'Otomatik',
+  'due.tag.today': 'Bugün',
+  'due.tag.tomorrow': 'Yarın',
+  'due.tag.inDays': '{count} gün sonra',
+  'due.overdueSince': '{date} tarihinden beri gecikmiş',
+  'dashboard.due.title': '30 gün içinde ödenecek',
+  'dashboard.due.none': 'Önümüzdeki 30 günde ödenecek bir şey yok.',
+  'dashboard.due.row': '{card}, {amount}, {when}',
+  'dashboard.due.openCard': 'Kartı aç',
+  'dashboard.tile.month': 'Bu ay',
+  'dashboard.subs.title': 'Abonelikler',
+  'dashboard.subs.attention': '{count} tanesine bakman gerek',
   'calendar.add': 'Takvime ekle',
   'calendar.help':
     'Her son ödeme gününden 3 gün önce hatırlatan aylık etkinlikler içeren bir takvim dosyası indirir. Dosyada yalnızca kart adları var, ama takvim uygulaman onu kendi bulutuna eşitleyebilir.',
@@ -367,6 +373,9 @@ export const tr: Record<MessageKey, string> = {
   'radar.meta.cancelled': '{date} iptal edildi',
 
   'settings.language': 'Dil',
+  'settings.detailed': 'Ayrıntılı görünüm',
+  'settings.detailed.hint':
+    'Her ekranda kart göstergelerini, nakit akışı grafiğini ve tüm satırları göster.',
   'settings.theme': 'Tema',
   'settings.theme.dark': 'Koyu',
   'settings.theme.system': 'Cihaz',

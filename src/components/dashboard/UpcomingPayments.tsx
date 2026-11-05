@@ -1,15 +1,14 @@
 import { CalendarPlus, Check, CircleAlert } from 'lucide-react';
 import { useState } from 'react';
-import { buildDueDateCalendar, type Bill } from '../../core/finance';
+import type { Bill } from '../../core/finance';
 import { paymentsRepo, type UpcomingBill } from '../../db';
-import { useToday } from '../../hooks/useFinance';
 import { useFormat } from '../../hooks/useFormat';
 import { useT } from '../../i18n';
-import { downloadTextFile } from '../../platform/download';
 import type { CreditCard } from '../../types/domain';
 import { PaymentForm } from '../cards/PaymentForm';
 import { Button } from '../ui/Button';
 import { Dialog } from '../ui/Dialog';
+import { useCalendarExport } from './useCalendarExport';
 
 /**
  * Overdue bills and each credit card's next bill with "Mark as paid", plus the
@@ -18,24 +17,13 @@ import { Dialog } from '../ui/Dialog';
 export function UpcomingPayments({ bills }: { bills: readonly UpcomingBill[] }) {
   const t = useT();
   const format = useFormat();
-  const today = useToday();
+  const exportCalendar = useCalendarExport(bills);
   const [paying, setPaying] = useState<{ card: CreditCard; bill: Bill }>();
 
   if (bills.length === 0) return null;
-
-  function exportCalendar() {
-    // A card can be listed twice (an overdue bill and its next bill); one event each.
-    const cards = [...new Map(bills.map(({ card }) => [card.id, card])).values()];
-    const ics = buildDueDateCalendar(cards, today, new Date(), {
-      summary: (name) => t('calendar.summary', { name }),
-      description: t('calendar.description'),
-    });
-    downloadTextFile('financier-due-dates.ics', ics, 'text/calendar;charset=utf-8');
-  }
-
   return (
     <section aria-labelledby="upcoming-title">
-      <h2 id="upcoming-title" className="mb-2 text-sm font-medium text-muted">
+      <h2 id="upcoming-title" className="mb-3 font-display text-lg font-bold tracking-tight">
         {t('dashboard.upcoming.title')}
       </h2>
       <ul className="divide-y divide-border panel">

@@ -99,7 +99,8 @@ describe('cards flow', () => {
     expect(await cardsRepo.list({ includeArchived: true })).toHaveLength(1);
   });
 
-  it('shows gauges on the dashboard', async () => {
+  it('shows gauges on the detailed dashboard', async () => {
+    window.localStorage.setItem('financier.detailedView', 'on');
     await cardsRepo.create({
       type: 'credit',
       name: 'World',

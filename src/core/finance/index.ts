@@ -1,6 +1,7 @@
 export * from './activity';
 export * from './calendar';
 export * from './dates';
+export * from './due';
 export * from './fingerprint';
 export * from './installments';
 export * from './money';

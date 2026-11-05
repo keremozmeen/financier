@@ -38,13 +38,19 @@ export const en = {
   'dashboard.recent.title': 'Recent activity',
   'dashboard.recent.empty': 'No entries yet.',
 
-  'due.banner.title': 'Due soon',
-  'due.today': 'today',
-  'due.tomorrow': 'tomorrow',
-  'due.inDays': 'in {count} days',
-  'due.item': '{card}: {amount} due {when}',
-
-  'due.overdueItem': '{card}: {amount} overdue since {date}',
+  'due.tag.overdue': 'Overdue',
+  'due.tag.auto': 'Automatic',
+  'due.tag.today': 'Today',
+  'due.tag.tomorrow': 'Tomorrow',
+  'due.tag.inDays': 'In {count} days',
+  'due.overdueSince': 'Overdue since {date}',
+  'dashboard.due.title': 'Due in the next 30 days',
+  'dashboard.due.none': 'Nothing to pay in the next 30 days.',
+  'dashboard.due.row': '{card}, {amount}, {when}',
+  'dashboard.due.openCard': 'Open card',
+  'dashboard.tile.month': 'This month',
+  'dashboard.subs.title': 'Subscriptions',
+  'dashboard.subs.attention': '{count} need a look',
   'calendar.add': 'Add to calendar',
   'calendar.help':
     'Downloads a calendar file with a monthly reminder 3 days before each due date. It holds only card names, but your calendar app may sync it to its cloud.',
@@ -367,6 +373,9 @@ export const en = {
   'radar.meta.cancelled': 'cancelled {date}',
 
   'settings.language': 'Language',
+  'settings.detailed': 'Detailed view',
+  'settings.detailed.hint':
+    'Show every card’s gauge, the cash-flow chart and every row on each screen.',
   'settings.theme': 'Theme',
   'settings.theme.dark': 'Dark',
   'settings.theme.system': 'Device',

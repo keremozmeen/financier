@@ -1,3 +1,4 @@
+import { cardColor } from '../cards/colors';
 import { ChevronDown } from 'lucide-react';
 import type { Cadence, RadarItem } from '../../core/subscriptions';
 import { useToday } from '../../hooks/useFinance';
@@ -63,7 +64,7 @@ export function SeriesRow({
           <span
             aria-hidden="true"
             className="size-2.5 shrink-0 rounded-full"
-            style={{ backgroundColor: card?.color ?? 'currentColor' }}
+            style={{ backgroundColor: card ? cardColor(card) : 'currentColor' }}
           />
           <span className="min-w-0 flex-1 font-medium break-words">
             {item.name}
