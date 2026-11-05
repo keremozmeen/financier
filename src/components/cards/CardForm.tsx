@@ -138,7 +138,7 @@ export function CardForm({ initial, hasEntries = false, onSubmit, onCancel }: Ca
         onToggle={(event) => setMore(event.currentTarget.open)}
         className="group panel"
       >
-        <summary className="flex min-h-14 cursor-pointer list-none items-center gap-3 px-4 [&::-webkit-details-marker]:hidden">
+        <summary className="flex min-h-14 cursor-pointer list-none items-center gap-3 px-4 py-3 [&::-webkit-details-marker]:hidden">
           <span className="flex-1">
             <span className="block font-semibold">{t('cards.more')}</span>
             <span className="block text-sm text-muted">
