@@ -304,14 +304,34 @@ describe('cardBills: overdue bills (D14)', () => {
     ]);
   });
 
-  it('lists several overdue bills oldest first', () => {
-    // The 1.200 ₺ plan bills 400 ₺ in each of November, December and January.
+  it('flags only the latest closed statement, not older ones without a payment', () => {
+    // The 1.200 ₺ plan bills 400 ₺ in each of November, December and January. The
+    // November bill was carried into December's statement by the bank, so only
+    // December's is overdue.
     const items = cardBills(billing(), '2027-01-02');
     expect(items.map(({ bill, overdue }) => [bill.periodEnd, overdue])).toEqual([
-      ['2026-11-10', true],
       ['2026-12-10', true],
       ['2027-01-10', false],
     ]);
+  });
+
+  it('keeps a year of imported statements without payments out of the overdue list', () => {
+    // A subscription charged on the 1st of every month from November 2025, imported
+    // without the payments made at the bank.
+    const months = Array.from({ length: 12 }, (_, i) => {
+      const date = new Date(Date.UTC(2025, 10 + i, 1)).toISOString().slice(0, 10);
+      return charge(date, 100);
+    });
+    const input = billing({ transactions: months, plans: [] });
+    const overdue = (today: string) =>
+      cardBills(input, today)
+        .filter((item) => item.overdue)
+        .map(({ bill }) => bill.periodEnd);
+
+    // October's statement closed on the 10th and was due on the 20th: only it is overdue.
+    expect(overdue('2026-10-25')).toEqual(['2026-10-10']);
+    // November's statement has closed with nothing to pay: nothing is overdue.
+    expect(overdue('2026-11-25')).toEqual([]);
   });
 
   it('never flags statements covered by a bank balance override', () => {

@@ -232,9 +232,9 @@ export interface CardBill {
 }
 
 /**
- * The bills a credit card shows (D14): every overdue bill, oldest first, then the next
- * bill — the last closed statement while it is due and not fully paid, otherwise the
- * statement that is still open. A bill stays overdue until payments cover it (including
+ * The bills a credit card shows (D14): the latest closed statement when it is overdue,
+ * then the next bill — the last closed statement while it is due and not fully paid,
+ * otherwise the statement that is still open. A bill stays overdue until payments cover it (including
  * "Paid outside the app"); statements covered by a bank balance override never are.
  */
 export function cardBills(input: BillingInput, today: IsoDate): CardBill[] {
@@ -244,11 +244,18 @@ export function cardBills(input: BillingInput, today: IsoDate): CardBill[] {
     chain.at(-2) ??
     computeBill(statementPeriodFor(addDays(current.periodStart, -1), input.card), input);
   const autoPay = Boolean(input.card.autoPay);
-  // Overdue never applies to auto-pay cards: the bank pays on the due date.
-  const overdue = autoPay ? [] : chain.filter((bill) => bill.dueDate < today && bill.remaining > 0);
+  // Only the latest closed statement can be overdue: once a newer statement closes, the
+  // bank has carried any unpaid amount into it, and older statements without a payment
+  // in the app are history (usually imported, paid at the bank). Overdue never applies
+  // to auto-pay cards: the bank pays on the due date.
+  const latestClosed = chain.at(-2);
+  const overdue =
+    !autoPay && latestClosed && latestClosed.dueDate < today && latestClosed.remaining > 0
+      ? latestClosed
+      : undefined;
   const next = previous.dueDate >= today && previous.remaining > 0 ? previous : current;
   return [
-    ...overdue.map((bill) => ({ bill, overdue: true, autoPay })),
+    ...(overdue ? [{ bill: overdue, overdue: true, autoPay }] : []),
     { bill: next, overdue: false, autoPay },
   ];
 }
