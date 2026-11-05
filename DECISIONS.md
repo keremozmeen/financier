@@ -331,7 +331,22 @@ Financier is for everyday users as much as for people who track every kuruş. A 
 - **Alerts only when worth acting on:** red is for things the user should do something about. Small changes are shown quietly and still counted (D19 price increases).
 - **Ask only what can't be inferred:** prefer values the app can read from an import or compute over form fields, and never ask the user to confirm something the app can safely assume (Sub-Radar has no confirm step).
 - **Plain words:** no technical terms on screen ("mapping", "fingerprint", "detected"); the same idea uses the same word everywhere, in both languages.
-- **Scope:** applied to Sub-Radar and to import column mapping (D3) in Phase 4. The design pass before Phase 5 applies it to cards, the import review screen (opening on the rows needing a look, with less text) and the dashboard; every later phase follows it.
+- **Detailed view:** a setting, off by default, for people who track every kuruş. When it is on, the full sections come back inline (a limit gauge per card, the cash-flow chart, every transaction and import row). Simple screens never hide a function: everything stays reachable on tap.
+- **Dashboard:** leads with the total due in the next 30 days and the list of those payments. A payment is plain text until 2 days before its due date, amber from then until the due date, and red only once overdue. There is no separate due-soon panel; the app icon badge still counts payments due within 7 days (D5).
+- **Card setup:** asks for the name, the type and, for a credit card, the limit. The statement and due days come from the first imported statement when the file states them; until then the card shows one line asking for the due day, and has no bills.
+- **Scope:** applied to Sub-Radar and to import column mapping (D3) in Phase 4. The Phase 4.5 design pass applies it to cards, the import review screen (opening on the rows needing a look, with less text) and the dashboard; every later phase follows it.
+
+---
+
+## D21. Visual identity
+
+Testers found the first look generic ("looks AI-made"): navy, Inter, mint and a bordered box around every section. Phase 4.5 replaces it; Phase 8 tunes it.
+
+- **Layout:** white (or charcoal) rounded panels on a soft ground, no borders around sections; lists separated by hairlines; one large figure per screen. Cards appear as small colored cards in their own color.
+- **Type:** Bricolage Grotesque for headings and large figures, DM Sans for text; both self-hosted (D8) and checked to contain ₺ and every Turkish letter. Figures use tabular numbers.
+- **Colors:** light ground #eef0f3 with white panels; dark is warm charcoal (#121412 ground, #1c1f1b panels), never navy. Kipp green (#b8e986 in dark, a deeper green in light) is the accent. Status colors are amber for "soon" and red for "act now", each with a tinted label background, and pass 4.5:1 contrast in both themes.
+- **Theme:** follows the device setting until the user picks light or dark in Settings.
+- **Bank marks:** a card shows its bank's mark next to its name. The app ships a local list of Turkish banks (name, brand color, mark); the card's bank text is matched against it, so no data changes. Until a bank's logo file is added, the mark is its initials on its brand color. Logos are local files only (D8), added when their use is cleared.
 
 ---
 

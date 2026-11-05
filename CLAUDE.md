@@ -66,6 +66,13 @@ Work phase by phase. Finish each phase with passing checks and a pull request (o
 - Sub-Radar tab: active subscriptions, monthly/yearly cost, red alert for price hikes, confirm/ignore/mark cancelled.
 - Debit: subscriptions are detected across credit and debit cards.
 
+### Phase 4.5 — Design pass
+- Apply `DECISIONS.md` D20 to the dashboard, cards, card setup and the import review screen, with a "Detailed view" setting (off by default) that brings back the full sections.
+- New look per D21: layout, type, colors (light and charcoal dark) and bank marks on cards.
+- Dashboard leads with what is due in the next 30 days; no separate due-soon panel.
+- Card setup asks for name, type and (credit) limit; statement and due days come from the first import when the file has them.
+- Import review opens on the rows needing a look.
+
 ### Phase 5 — Kipp
 - `core/insights`: the rules listed in `DECISIONS.md` D4, ranked by severity, each with its numbers and a suggested action.
 - `core/kipp`: Turkish/English intent parser with fuzzy card-name matching; answers built from `core/finance` functions.
@@ -81,6 +88,10 @@ Work phase by phase. Finish each phase with passing checks and a pull request (o
 - Debit: backup and restore include the card type.
 - Settings: language, theme, monthly income, primary currency, storage persistence status, privacy explanation.
 - First-run onboarding with Kipp, empty states, accessibility pass (contrast, labels, touch targets ≥ 44px), Lighthouse PWA check.
+
+### Phase 8 — Final UI polish
+- After every functional phase is in: a last pass over every screen with tester feedback (spacing, motion, empty and loading states, copy, icons, bank logos), in light and dark, at phone and desktop widths.
+- Only presentation changes: no new features or data model changes. Anything functional that comes up goes back to the owning phase's module.
 
 ## Working style
 
