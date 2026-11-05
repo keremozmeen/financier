@@ -27,7 +27,8 @@ export function buildDueDateCalendar(
     .replace(/[-:]/g, '')
     .replace(/\.\d{3}/, '');
   const events = cards.flatMap((card) => {
-    if (card.type !== 'credit') return [];
+    // Debit cards have no due date, and a credit card has none until its days are known.
+    if (card.type !== 'credit' || card.dueDay === undefined) return [];
     const start = dayOf(monthOf(today), card.dueDay).replace(/-/g, '');
     return [
       'BEGIN:VEVENT',

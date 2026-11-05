@@ -44,6 +44,8 @@ function rowFor(text: string) {
 
 describe('import flow (D3, D16)', () => {
   it('maps, reviews, imports, re-imports and undoes a statement', async () => {
+    // The columns read and how "used" is worked out show in the detailed view (D20).
+    window.localStorage.setItem('financier.detailedView', 'on');
     await seedCredit();
     renderApp('/import');
 
@@ -112,6 +114,8 @@ describe('import flow (D3, D16)', () => {
   });
 
   it("asks only for the columns it can't read, by their header names, and remembers them", async () => {
+    // The columns read and how "used" is worked out show in the detailed view (D20).
+    window.localStorage.setItem('financier.detailedView', 'on');
     await seedCredit();
     renderApp('/import');
     const file = 'Gün;Ne;Kaç TL\n15.09.2026;MIGROS KADIKOY;1.234,56\n16.09.2026;SHELL;850,00\n';
@@ -220,5 +224,33 @@ describe('import flow (D3, D16)', () => {
     expect(
       await screen.findByText('Add a card first, then import its statement.'),
     ).toBeInTheDocument();
+  });
+
+  it('fills a new card’s statement and due days from the statement (D20)', async () => {
+    const id = await cardsRepo.create({
+      type: 'credit',
+      name: 'Bonus',
+      bank: 'Garanti BBVA',
+      last4: '',
+      currency: 'TRY',
+      limit: 10_000_000,
+      color: '#1f7a4d',
+    });
+    renderApp('/import');
+    await upload(
+      csvFile(
+        CREDIT_CARD_CSV.replace(
+          'Hesap Kesim Tarihi;10.10.2026',
+          'Hesap Kesim Tarihi;10.10.2026\nSon Ödeme Tarihi;20.10.2026',
+        ),
+      ),
+    );
+
+    expect(
+      await screen.findByText(
+        'Added to your card from this statement: statement day 10, due day 20.',
+      ),
+    ).toBeInTheDocument();
+    expect(await cardsRepo.get(id)).toMatchObject({ statementDay: 10, dueDay: 20 });
   });
 });

@@ -24,7 +24,7 @@ import type {
 import { cardsRepo } from './cards';
 import { db, newId } from './database';
 import { paymentsRepo } from './payments';
-import { loadUsageInputs } from './usage';
+import { billingInput, loadUsageInputs } from './usage';
 
 export interface CommitRequest {
   card: Card;
@@ -111,8 +111,10 @@ export const importsRepo = {
       for (const payment of changes.payments) {
         const target = await db.cards.get(payment.cardId);
         if (target?.type !== 'credit') continue;
-        const [input] = await loadUsageInputs([target], today);
-        const bill = computeBill(statementPeriodFor(payment.periodEnd, target), input!);
+        const [loaded] = await loadUsageInputs([target], today);
+        const input = billingInput(loaded!);
+        if (!input) continue;
+        const bill = computeBill(statementPeriodFor(payment.periodEnd, input.card), input);
         if (bill.amountDue <= 0) continue;
         await paymentsRepo.record(target, bill, payment.amount, payment.date, { importId, now });
         payments++;

@@ -20,6 +20,32 @@ async function createCardThroughForm() {
 const meter = () => screen.getByRole('meter');
 
 describe('cards flow', () => {
+  it('creates a credit card from a name and a limit, in its bank’s color (D20, D21)', async () => {
+    renderApp('/cards/new');
+    expect(await screen.findByText('More options')).toBeInTheDocument();
+    await user.type(screen.getByLabelText('Card name'), 'Axess Platinum');
+    await user.type(screen.getByLabelText('Credit limit'), '30,000.00');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await screen.findByRole('heading', { level: 1, name: 'Axess Platinum' });
+    const [card] = await cardsRepo.list();
+    expect(card).toMatchObject({ type: 'credit', limit: 3_000_000, color: '#c8102e' });
+    expect(card).not.toHaveProperty('statementDay');
+    // The card asks for its days in one line instead of showing bills.
+    expect(screen.getByText('Add your statement and due days')).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Next bill' })).not.toBeInTheDocument();
+  });
+
+  it('rejects a day outside 1–31 but accepts an empty one', async () => {
+    renderApp('/cards/new');
+    await user.type(await screen.findByLabelText('Card name'), 'Bonus');
+    await user.type(screen.getByLabelText('Credit limit'), '1,000');
+    await user.type(screen.getByLabelText('Statement closing day'), '45');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(screen.getByText('Enter a day between 1 and 31.')).toBeInTheDocument();
+    expect(await cardsRepo.list()).toHaveLength(0);
+  });
+
   it('validates the card form', async () => {
     renderApp('/cards/new');
     await user.click(await screen.findByRole('button', { name: 'Save' }));
@@ -29,6 +55,8 @@ describe('cards flow', () => {
   });
 
   it('creates a card, blocks an installment purchase and applies a bank balance', async () => {
+    // The columns read and how "used" is worked out show in the detailed view (D20).
+    window.localStorage.setItem('financier.detailedView', 'on');
     await createCardThroughForm();
     expect(meter()).toHaveAttribute('aria-valuenow', '0');
 

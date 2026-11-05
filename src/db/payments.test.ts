@@ -1,4 +1,11 @@
-import { cardsRepo, loadCardSummaries, loadUsageInputs, paymentsRepo, transactionsRepo } from '.';
+import {
+  billingInput,
+  cardsRepo,
+  loadCardSummaries,
+  loadUsageInputs,
+  paymentsRepo,
+  transactionsRepo,
+} from '.';
 import { paidInstallments, upcomingBill } from '../core/finance';
 import type { CreditCard, DebitCard } from '../types/domain';
 import { db } from './database';
@@ -38,7 +45,7 @@ async function state(card: CreditCard) {
   const [summary] = await loadCardSummaries([card], today);
   return {
     input: input!,
-    bill: upcomingBill(input!, today),
+    bill: upcomingBill(billingInput(input!)!, today),
     used: 'usage' in summary! ? summary.usage.used : undefined,
   };
 }
@@ -211,7 +218,7 @@ describe('auto-pay (D14)', () => {
 
     // A manual payment on that statement keeps the mark.
     const [input] = await loadUsageInputs([card], '2026-11-26');
-    const bill = upcomingBill(input!, '2026-11-12');
+    const bill = upcomingBill(billingInput(input!)!, '2026-11-12');
     await paymentsRepo.record(card, bill, 10_000, '2026-11-26');
     expect(await db.statements.toArray()).toEqual([
       expect.objectContaining({ autoPaySkipped: true }),

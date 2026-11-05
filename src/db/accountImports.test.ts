@@ -9,7 +9,7 @@ import { db } from './database';
 import { importsRepo } from './imports';
 import { paymentsRepo } from './payments';
 import { transactionsRepo } from './transactions';
-import { loadUsageInputs } from './usage';
+import { billingInput, loadUsageInputs } from './usage';
 
 const TODAY = '2026-10-31';
 
@@ -128,8 +128,8 @@ describe('account statement dedup (D17)', () => {
 
   it('does not record a payment already entered by hand', async () => {
     const { debit, credit } = await setup();
-    const [input] = await loadUsageInputs([credit], TODAY);
-    const bill = computeBill(statementPeriodFor('2026-09-30', credit), input!);
+    const input = billingInput((await loadUsageInputs([credit], TODAY))[0]!)!;
+    const bill = computeBill(statementPeriodFor('2026-09-30', input.card), input);
     await paymentsRepo.record(credit, bill, 425_000, '2026-10-08');
     await commit(debit, await rowsFrom('xlsx', debit));
     expect(await db.payments.count()).toBe(1);

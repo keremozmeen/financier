@@ -5,12 +5,14 @@ import {
   recentActivity,
   spendingInMonth,
   cardBills,
+  hasCycle,
   upcomingBills,
   type MonthAmount,
   type BillingInput,
   type CardBill,
   type CardUsage,
   type CardUsageInput,
+  type CycledCard,
 } from '../core/finance';
 import type {
   BalanceOverride,
@@ -39,7 +41,7 @@ export type CardSummary =
 export type UpcomingBill = { card: CreditCard } & CardBill;
 
 /** Everything D11, D12 and D14 need for one credit card. */
-export interface CreditCardInput extends CardUsageInput, BillingInput {
+export interface CreditCardInput extends CardUsageInput, Omit<BillingInput, 'card'> {
   card: CreditCard;
   transactions: Transaction[];
   plans: InstallmentPlan[];
@@ -70,6 +72,17 @@ export async function loadUsageInputs(
     payments: byCard(payments, card.id),
     today,
   }));
+}
+
+/**
+ * The billing input of a credit card whose statement and due days are known; a card
+ * without them has no bills yet (D20).
+ */
+export function billingInput(
+  input: CreditCardInput,
+): (CreditCardInput & { card: CycledCard }) | undefined {
+  const { card } = input;
+  return hasCycle(card) ? { ...input, card } : undefined;
 }
 
 export async function loadCardSummaries(
@@ -131,7 +144,12 @@ async function loadCards(cards: readonly Card[], today: IsoDate) {
   const summaries = cards.map((card): CardSummary => {
     if (card.type === 'credit') {
       const input = creditInputs[credit.indexOf(card)]!;
-      return { card, usage: computeCardUsage(input), bills: cardBills(input, today) };
+      const billing = billingInput(input);
+      return {
+        card,
+        usage: computeCardUsage(input),
+        bills: billing ? cardBills(billing, today) : [],
+      };
     }
     return {
       card,

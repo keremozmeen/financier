@@ -18,6 +18,13 @@ export function useImportHistory() {
 export function useImportContext(card: Card | undefined) {
   return useLiveQuery(
     () => (card ? importsRepo.loadContext(card) : undefined),
-    [card?.id, card?.type, card?.type === 'credit' ? card.autoPay : undefined],
+    [
+      card?.id,
+      card?.type,
+      card?.type === 'credit' ? card.autoPay : undefined,
+      // Days filled in from a statement change the bills its payments are matched to (D20).
+      card?.type === 'credit' ? card.statementDay : undefined,
+      card?.type === 'credit' ? card.dueDay : undefined,
+    ],
   );
 }

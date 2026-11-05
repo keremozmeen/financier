@@ -22,7 +22,21 @@ import {
 import { splitInstallments } from './installments';
 import { currentOverride } from './overrides';
 
-type CycleDays = Pick<CreditCard, 'statementDay' | 'dueDay'>;
+/** A credit card's statement and due days, once both are known (D20). */
+export interface CycleDays {
+  statementDay: number;
+  dueDay: number;
+}
+
+/** A credit card whose statement and due days are known, so it has bills (D14, D20). */
+export type CycledCard<C extends Pick<CreditCard, 'statementDay' | 'dueDay'> = CreditCard> = C &
+  CycleDays;
+
+export function hasCycle<C extends Pick<CreditCard, 'statementDay' | 'dueDay'>>(
+  card: C,
+): card is CycledCard<C> {
+  return card.statementDay !== undefined && card.dueDay !== undefined;
+}
 
 export interface StatementPeriod {
   /** The day after the previous statement day. */
@@ -88,7 +102,7 @@ export type BillingPayment = Pick<
 >;
 
 export interface BillingInput {
-  card: Pick<CreditCard, 'statementDay' | 'dueDay' | 'currency' | 'autoPay' | 'autoPaySince'>;
+  card: CycleDays & Pick<CreditCard, 'currency' | 'autoPay' | 'autoPaySince'>;
   transactions: readonly Pick<Transaction, 'date' | 'amount' | 'currency' | 'installmentPlanId'>[];
   plans: readonly ScheduledPlan[];
   /** Statements stored when payments were recorded. */
@@ -119,10 +133,7 @@ export interface Bill extends StatementPeriod {
 }
 
 /** The statement after `period`. */
-export function nextStatementPeriod(
-  period: StatementPeriod,
-  days: Pick<CreditCard, 'statementDay' | 'dueDay'>,
-): StatementPeriod {
+export function nextStatementPeriod(period: StatementPeriod, days: CycleDays): StatementPeriod {
   return statementPeriodFor(addDays(period.periodEnd, 1), days);
 }
 
@@ -293,7 +304,7 @@ export function upcomingBills<C extends Card>(
 ): ({ card: Extract<C, CreditCard> } & CardBill)[] {
   return inputs
     .flatMap(({ card, ...rest }) =>
-      card.type === 'credit'
+      card.type === 'credit' && hasCycle(card)
         ? cardBills({ ...rest, card }, today).map((item) => ({
             card: card as Extract<C, CreditCard>,
             ...item,

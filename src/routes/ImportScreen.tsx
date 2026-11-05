@@ -18,11 +18,14 @@ import {
   headerSignature,
   isAccountStatement,
   parseCsv,
+  readStatementCycle,
+  type StatementCycle,
   toColumnMap,
   type CsvMapping,
   type CsvOptions,
 } from '../parsers/csv';
-import { importsRepo } from '../db';
+import { cardsRepo, importsRepo } from '../db';
+import { useDetailedView } from '../hooks/useDetailedView';
 import { readSpreadsheet, sniffSheetFormat } from '../parsers/sheet';
 import { useCards, useToday } from '../hooks/useFinance';
 import { useImportContext } from '../hooks/useImports';
@@ -44,6 +47,8 @@ type Step =
       options: CsvOptions;
       drafts: DraftRow[];
       statement: StatementKind;
+      /** The statement and due days this file filled in on the card (D20). */
+      filled: StatementCycle;
       profileId?: string;
     }
   | { kind: 'done'; cardId: string };
@@ -57,6 +62,7 @@ export function ImportScreen() {
   const [error, setError] = useState<MessageKey>();
   const [busy, setBusy] = useState(false);
 
+  const [detailed] = useDetailedView();
   const card: Card | undefined = cards?.find((c) => c.id === cardId) ?? cards?.[0];
   const context = useImportContext(step.kind === 'review' ? card : undefined);
 
@@ -90,13 +96,13 @@ export function ImportScreen() {
       // Columns and sign come from the profile; number and date formats are read from this
       // file, since the same bank's .xlsx and HTML .xls write numbers differently (D18).
       const { decimal, dateOrder } = guessOptions(rows, headerRow, saved);
-      toReview(csv, saved, { ...profile.options, headerRow, decimal, dateOrder }, profile.id);
+      await toReview(csv, saved, { ...profile.options, headerRow, decimal, dateOrder }, profile.id);
       return;
     }
     // Otherwise Financier reads the columns on its own, and asks only when it can't (D20).
     const auto = autoMap(rows, card.currency);
     if (auto.confident) {
-      toReview(csv, auto.mapping, auto.options, await saveProfile(csv, auto));
+      await toReview(csv, auto.mapping, auto.options, await saveProfile(csv, auto));
       return;
     }
     setStep({ kind: 'mapping', file: csv, mapping: auto.mapping, options: auto.options });
@@ -115,8 +121,18 @@ export function ImportScreen() {
     });
   }
 
-  function toReview(file: CsvFile, mapping: CsvMapping, options: CsvOptions, profileId?: string) {
+  async function toReview(
+    file: CsvFile,
+    mapping: CsvMapping,
+    options: CsvOptions,
+    profileId?: string,
+  ) {
     if (!card) return;
+    // A credit card without statement or due days takes them from the statement (D20).
+    const filled =
+      card.type === 'credit'
+        ? await cardsRepo.fillCycle(card.id, readStatementCycle(file.rows, options.headerRow))
+        : {};
     const kind: StatementKind = isAccountStatement(file.rows[options.headerRow] ?? [])
       ? 'account'
       : 'card';
@@ -129,12 +145,13 @@ export function ImportScreen() {
       options,
       drafts,
       statement: kind,
+      filled,
       ...(profileId ? { profileId } : {}),
     });
   }
 
   async function finishMapping(file: CsvFile, result: MappingResult) {
-    toReview(file, result.mapping, result.options, await saveProfile(file, result));
+    await toReview(file, result.mapping, result.options, await saveProfile(file, result));
   }
 
   async function commit(review: Extract<Step, { kind: 'review' }>) {
@@ -198,16 +215,19 @@ export function ImportScreen() {
         />
       ) : step.kind === 'review' ? (
         <div className="space-y-4">
-          <p className="text-sm">
-            <span className="font-medium">{card.name}</span> · {step.file.name}
+          <p className="text-sm text-muted">
+            <span className="font-medium text-fg">{card.name}</span> · {step.file.name}
             {step.statement === 'account' && ` · ${t('import.accountStatement')}`}
           </p>
-          <p className="text-sm text-muted">
-            {t('import.columns', {
-              list: readColumns(step.file.rows[step.options.headerRow] ?? [], step.mapping, t),
-            })}
-          </p>
-          <div className="flex flex-wrap gap-2">
+          {detailed && (
+            <p className="text-sm text-muted">
+              {t('import.columns', {
+                list: readColumns(step.file.rows[step.options.headerRow] ?? [], step.mapping, t),
+              })}
+            </p>
+          )}
+          <CycleFilled filled={step.filled} />
+          <div className="-ml-3 flex flex-wrap gap-1">
             <Button
               variant="ghost"
               onClick={() =>
@@ -272,4 +292,19 @@ function readColumns(header: readonly string[], mapping: CsvMapping, t: ReturnTy
     .filter((field): field is [MessageKey, number] => field[1] !== undefined)
     .map(([label, column]) => `${t(label)}: ${name(column)}`)
     .join(' · ');
+}
+
+/** One line when the statement filled in the card's statement or due day (D20). */
+function CycleFilled({ filled }: { filled: StatementCycle }) {
+  const t = useT();
+  const parts = [
+    filled.statementDay !== undefined && t('import.cycle.statement', { day: filled.statementDay }),
+    filled.dueDay !== undefined && t('import.cycle.due', { day: filled.dueDay }),
+  ].filter(Boolean);
+  if (parts.length === 0) return null;
+  return (
+    <p className="rounded-2xl bg-accent-soft px-4 py-3 text-sm">
+      {t('import.cycle.filled', { list: parts.join(', ') })}
+    </p>
+  );
 }

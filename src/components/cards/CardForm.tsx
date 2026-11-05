@@ -1,4 +1,4 @@
-import { CalendarDays, Info } from 'lucide-react';
+import { CalendarDays, ChevronDown, Info } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import {
   formatMoneyInput,
@@ -15,7 +15,7 @@ import { Button } from '../ui/Button';
 import { Checkbox } from '../ui/Checkbox';
 import { Segmented } from '../ui/Segmented';
 import { SelectField, TextField } from '../ui/TextField';
-import { CARD_COLORS, DEFAULT_CARD_COLOR } from './colors';
+import { CARD_COLORS, DEFAULT_CARD_COLOR, suggestedCardColor } from './colors';
 
 interface CardFormProps {
   initial?: Card;
@@ -49,16 +49,22 @@ export function CardForm({ initial, hasEntries = false, onSubmit, onCancel }: Ca
   const [statementDay, setStatementDay] = useState(String(credit?.statementDay ?? ''));
   const [dueDay, setDueDay] = useState(String(credit?.dueDay ?? ''));
   const [color, setColor] = useState(initial?.color ?? DEFAULT_CARD_COLOR);
+  const [colorTouched, setColorTouched] = useState(false);
+  // New cards ask only for the essentials; the rest folds under "More options" (D20).
+  const [more, setMore] = useState(initial !== undefined);
   const [autoPay, setAutoPay] = useState(credit?.autoPay ?? false);
   const today = useToday();
   const [errors, setErrors] = useState<Errors>({});
 
   function submit(event: FormEvent) {
     event.preventDefault();
-    const common = { name: name.trim(), bank: bank.trim(), last4, currency, color };
+    // A new card takes its bank's color unless the user picked one (D21).
+    const chosen = initial || colorTouched ? color : suggestedCardColor(bank, name);
+    const common = { name: name.trim(), bank: bank.trim(), last4, currency, color: chosen };
     const next: Errors = {};
     if (!common.name) next.name = t('cards.error.name');
     if (last4 && !/^\d{4}$/.test(last4)) next.last4 = t('cards.error.last4');
+    if (next.last4) setMore(true);
 
     if (type === 'debit') {
       setErrors(next);
@@ -67,19 +73,23 @@ export function CardForm({ initial, hasEntries = false, onSubmit, onCancel }: Ca
     }
 
     const parsedLimit = parseMoneyInput(limit, currency, locale);
+    // The days are optional: the first imported statement can fill them in (D20).
     const parsedStatement = parseDay(statementDay);
     const parsedDue = parseDay(dueDay);
     if (!parsedLimit) next.limit = t('cards.error.limit');
-    if (!parsedStatement) next.statementDay = t('cards.error.day');
-    if (!parsedDue) next.dueDay = t('cards.error.day');
+    if (statementDay.trim() && !parsedStatement) next.statementDay = t('cards.error.day');
+    if (dueDay.trim() && !parsedDue) next.dueDay = t('cards.error.day');
     setErrors(next);
-    if (Object.keys(next).length > 0 || !parsedLimit || !parsedStatement || !parsedDue) return;
+    if (Object.keys(next).length > 0 || !parsedLimit) {
+      if (next.statementDay || next.dueDay) setMore(true);
+      return;
+    }
     onSubmit({
       ...common,
       type: 'credit',
       limit: parsedLimit,
-      statementDay: parsedStatement,
-      dueDay: parsedDue,
+      ...(parsedStatement ? { statementDay: parsedStatement } : {}),
+      ...(parsedDue ? { dueDay: parsedDue } : {}),
       // Auto-pay counts from the day it is turned on; keep that day while it stays on (D14).
       ...(autoPay
         ? { autoPay: true, autoPaySince: (credit?.autoPay && credit.autoPaySince) || today }
@@ -112,109 +122,135 @@ export function CardForm({ initial, hasEntries = false, onSubmit, onCancel }: Ca
         maxLength={40}
         autoComplete="off"
       />
-      <TextField
-        label={t('cards.field.bank')}
-        hint={t('common.optional')}
-        value={bank}
-        onChange={setBank}
-        maxLength={40}
-        autoComplete="off"
-      />
-      {type === 'credit' ? (
-        <div className="grid grid-cols-2 gap-3">
-          <TextField
-            label={t('cards.field.last4')}
-            hint={t('common.optional')}
-            error={errors.last4}
-            value={last4}
-            onChange={(value) => setLast4(value.replace(/\D/g, '').slice(0, 4))}
-            inputMode="numeric"
-            autoComplete="off"
-          />
-          <SelectField
-            label={t('cards.field.currency')}
-            value={currency}
-            onChange={setCurrency}
-            disabled={hasEntries}
-            hint={hasEntries ? t('cards.field.currency.locked') : undefined}
-            options={SUPPORTED_CURRENCIES.map((code) => ({ value: code, label: code }))}
-          />
-        </div>
-      ) : (
+      {type === 'credit' && (
         <TextField
-          label={t('cards.field.last4')}
-          hint={t('common.optional')}
-          error={errors.last4}
-          value={last4}
-          onChange={(value) => setLast4(value.replace(/\D/g, '').slice(0, 4))}
-          inputMode="numeric"
+          label={t('cards.field.limit')}
+          error={errors.limit}
+          value={limit}
+          onChange={setLimit}
+          inputMode="decimal"
+          placeholder={locale === 'tr' ? '50.000,00' : '50,000.00'}
           autoComplete="off"
         />
       )}
-      {type === 'credit' && (
-        <>
+      <details
+        open={more}
+        onToggle={(event) => setMore(event.currentTarget.open)}
+        className="group panel"
+      >
+        <summary className="flex min-h-14 cursor-pointer list-none items-center gap-3 px-4 [&::-webkit-details-marker]:hidden">
+          <span className="flex-1">
+            <span className="block font-semibold">{t('cards.more')}</span>
+            <span className="block text-sm text-muted">
+              {t(type === 'credit' ? 'cards.more.hint' : 'cards.more.hint.debit')}
+            </span>
+          </span>
+          <ChevronDown
+            aria-hidden="true"
+            size={18}
+            className="shrink-0 text-muted transition-transform group-open:rotate-180"
+          />
+        </summary>
+        <div className="space-y-4 px-4 pb-4">
           <TextField
-            label={t('cards.field.limit')}
-            error={errors.limit}
-            value={limit}
-            onChange={setLimit}
-            inputMode="decimal"
-            placeholder={locale === 'tr' ? '50.000,00' : '50,000.00'}
+            label={t('cards.field.bank')}
+            hint={t('common.optional')}
+            value={bank}
+            onChange={setBank}
+            maxLength={40}
             autoComplete="off"
           />
-          <div className="space-y-2">
+          {type === 'credit' ? (
             <div className="grid grid-cols-2 gap-3">
               <TextField
-                label={t('cards.field.statementDay')}
-                hint={t('cards.field.day.hint')}
-                error={errors.statementDay}
-                value={statementDay}
-                onChange={setStatementDay}
+                label={t('cards.field.last4')}
+                hint={t('common.optional')}
+                error={errors.last4}
+                value={last4}
+                onChange={(value) => setLast4(value.replace(/\D/g, '').slice(0, 4))}
                 inputMode="numeric"
-                maxLength={2}
+                autoComplete="off"
               />
-              <TextField
-                label={t('cards.field.dueDay')}
-                hint={t('cards.field.day.hint')}
-                error={errors.dueDay}
-                value={dueDay}
-                onChange={setDueDay}
-                inputMode="numeric"
-                maxLength={2}
+              <SelectField
+                label={t('cards.field.currency')}
+                value={currency}
+                onChange={setCurrency}
+                disabled={hasEntries}
+                hint={hasEntries ? t('cards.field.currency.locked') : undefined}
+                options={SUPPORTED_CURRENCIES.map((code) => ({ value: code, label: code }))}
               />
             </div>
-            <StatementPreview statementDay={statementDay} dueDay={dueDay} />
-          </div>
-          <Checkbox
-            label={t('cards.field.autoPay')}
-            hint={t('cards.field.autoPay.hint')}
-            checked={autoPay}
-            onChange={setAutoPay}
-          />
-        </>
-      )}
-      <fieldset>
-        <legend className="mb-2 text-sm font-medium">{t('cards.field.color')}</legend>
-        <div className="flex flex-wrap gap-2">
-          {CARD_COLORS.map((option, index) => (
-            <label
-              key={option}
-              className="relative inline-flex size-11 cursor-pointer items-center justify-center rounded-full has-checked:ring-2 has-checked:ring-fg has-focus-visible:ring-2 has-focus-visible:ring-accent"
-            >
-              <input
-                type="radio"
-                name="card-color"
-                value={option}
-                checked={color === option}
-                onChange={() => setColor(option)}
-                aria-label={t(`color.${index}` as MessageKey)}
-                className="sr-only"
+          ) : (
+            <TextField
+              label={t('cards.field.last4')}
+              hint={t('common.optional')}
+              error={errors.last4}
+              value={last4}
+              onChange={(value) => setLast4(value.replace(/\D/g, '').slice(0, 4))}
+              inputMode="numeric"
+              autoComplete="off"
+            />
+          )}
+          {type === 'credit' && (
+            <>
+              <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-3">
+                  <TextField
+                    label={t('cards.field.statementDay')}
+                    hint={t('cards.field.day.optional')}
+                    error={errors.statementDay}
+                    value={statementDay}
+                    onChange={setStatementDay}
+                    inputMode="numeric"
+                    maxLength={2}
+                  />
+                  <TextField
+                    label={t('cards.field.dueDay')}
+                    hint={t('cards.field.day.optional')}
+                    error={errors.dueDay}
+                    value={dueDay}
+                    onChange={setDueDay}
+                    inputMode="numeric"
+                    maxLength={2}
+                  />
+                </div>
+                <StatementPreview statementDay={statementDay} dueDay={dueDay} />
+              </div>
+              <Checkbox
+                label={t('cards.field.autoPay')}
+                hint={t('cards.field.autoPay.hint')}
+                checked={autoPay}
+                onChange={setAutoPay}
               />
-              <span className="size-8 rounded-full" style={{ backgroundColor: option }} />
-            </label>
-          ))}
+            </>
+          )}
+          <fieldset>
+            <legend className="mb-2 text-sm font-medium">{t('cards.field.color')}</legend>
+            <div className="flex flex-wrap gap-2">
+              {CARD_COLORS.map((option, index) => (
+                <label
+                  key={option}
+                  className="relative inline-flex size-11 cursor-pointer items-center justify-center rounded-full has-checked:ring-2 has-checked:ring-fg has-focus-visible:ring-2 has-focus-visible:ring-accent"
+                >
+                  <input
+                    type="radio"
+                    name="card-color"
+                    value={option}
+                    checked={color === option}
+                    onChange={() => {
+                      setColor(option);
+                      setColorTouched(true);
+                    }}
+                    aria-label={t(`color.${index}` as MessageKey)}
+                    className="sr-only"
+                  />
+                  <span className="size-8 rounded-full" style={{ backgroundColor: option }} />
+                </label>
+              ))}
+            </div>
+          </fieldset>
         </div>
-      </fieldset>
+      </details>
       <div className="flex justify-end gap-2 pt-2">
         <Button variant="ghost" onClick={onCancel}>
           {t('common.cancel')}

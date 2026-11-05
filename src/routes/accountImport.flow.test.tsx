@@ -48,6 +48,8 @@ async function openFile(file: File) {
 
 describe('account statement import flow (D17, D18)', () => {
   it('reads an HTML-as-.xls account statement and pays the credit card', async () => {
+    // The columns read and how "used" is worked out show in the detailed view (D20).
+    window.localStorage.setItem('financier.detailedView', 'on');
     await seed();
     renderApp('/import');
     await user.click(await screen.findByRole('radio', { name: 'İş Bankası' }, { timeout: 5000 }));

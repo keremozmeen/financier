@@ -333,7 +333,7 @@ Financier is for everyday users as much as for people who track every kuruş. A 
 - **Plain words:** no technical terms on screen ("mapping", "fingerprint", "detected"); the same idea uses the same word everywhere, in both languages.
 - **Detailed view:** a setting, off by default, for people who track every kuruş. When it is on, the full sections come back inline (a limit gauge per card, the cash-flow chart, every transaction and import row). Simple screens never hide a function: everything stays reachable on tap.
 - **Dashboard:** leads with the total due in the next 30 days and the list of those payments. A payment is plain text until 2 days before its due date, amber from then until the due date, and red only once overdue. There is no separate due-soon panel; the app icon badge still counts payments due within 7 days (D5).
-- **Card setup:** asks for the name, the type and, for a credit card, the limit. The statement and due days come from the first imported statement when the file states them; until then the card shows one line asking for the due day, and has no bills.
+- **Card setup:** asks for the name, the type and, for a credit card, the limit. Bank, last 4 digits, currency, statement and due days, automatic payment and color fold under "More options"; a new card takes its bank's color unless the user picks one. The statement and due days come from the first imported statement when it states them ("Hesap Kesim Tarihi", "Son Ödeme Tarihi" and English equivalents above the header); only missing days are filled, and the review screen says which. Until both days are known the card has no bills, due dates, auto-pay or calendar event, counts in usage like any other, bills new installments from the following month, and shows one line asking for its days. No schema version change: the fields were already unindexed.
 - **Scope:** applied to Sub-Radar and to import column mapping (D3) in Phase 4. The Phase 4.5 design pass applies it to cards, the import review screen (opening on the rows needing a look, with less text) and the dashboard; every later phase follows it.
 
 ---
@@ -356,7 +356,7 @@ Testers found the first look generic ("looks AI-made"): navy, Inter, mint and a 
 
 | Table | Key fields |
 | :--- | :--- |
-| `cards` | `id`, `type` (`credit` / `debit`), `name`, `bank`, `last4`, `currency`, `color`, `archived`; credit only: `limit`, `statementDay`, `dueDay`, `autoPay?`, `autoPaySince?` (D14) |
+| `cards` | `id`, `type` (`credit` / `debit`), `name`, `bank`, `last4`, `currency`, `color`, `archived`; credit only: `limit`, `statementDay?`, `dueDay?` (missing until entered or read from a statement, D20), `autoPay?`, `autoPaySince?` (D14) |
 | `transactions` | `id`, `cardId`, `date`, `description`, `normalizedMerchant`, `amount`, `currency`, `category`, `installmentPlanId?`, `fingerprint`, `source` (`manual` / `csv` / `pdf`), `importId?`, `fee?` (interest or bank fee, D16), `income?`, `bill?`, `transfer?` (account statements, D17; income is excluded from spending) |
 | `installmentPlans` | `id`, `cardId`, `description`, `totalAmount`, `count`, `purchaseDate`, `firstDueMonth`, `currency`, `importId?` (created by an import, D16; indexed in schema v4) |
 | `balanceOverrides` | `id`, `cardId`, `balance` (negative for a credit balance, D15), `currency`, `asOf`, `createdAt` (history of bank balances entered by the user, D11) |

@@ -35,6 +35,30 @@ export const cardsRepo = {
     });
   },
 
+  /**
+   * Fills a credit card's missing statement or due day from an imported statement
+   * (D20). Days the card already has are kept. Returns the days it set.
+   */
+  async fillCycle(
+    id: string,
+    cycle: { statementDay?: number; dueDay?: number },
+  ): Promise<{ statementDay?: number; dueDay?: number }> {
+    return db.transaction('rw', db.cards, async () => {
+      const card = await db.cards.get(id);
+      if (card?.type !== 'credit') return {};
+      const set = {
+        ...(card.statementDay === undefined && cycle.statementDay !== undefined
+          ? { statementDay: cycle.statementDay }
+          : {}),
+        ...(card.dueDay === undefined && cycle.dueDay !== undefined
+          ? { dueDay: cycle.dueDay }
+          : {}),
+      };
+      if (Object.keys(set).length > 0) await db.cards.put({ ...card, ...set });
+      return set;
+    });
+  },
+
   async setArchived(id: string, archived: boolean): Promise<void> {
     await db.cards.update(id, { archived });
   },

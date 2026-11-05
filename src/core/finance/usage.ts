@@ -13,6 +13,7 @@ import {
   paidInstallments,
   statementPeriodFor,
   sum,
+  type CycleDays,
   type BillingPayment,
   type BillingStatement,
 } from './statements';
@@ -70,7 +71,7 @@ export type UsagePlan = Pick<
  * the app. Returns the last day they cover and the due month of the last of them.
  */
 export function settledThrough(
-  card: Pick<CreditCard, 'statementDay' | 'dueDay'>,
+  card: CycleDays,
   today: IsoDate,
 ): { date: IsoDate; dueMonth: string } {
   const open = statementPeriodFor(today, card);
