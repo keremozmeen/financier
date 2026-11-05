@@ -152,7 +152,7 @@ export function MappingWizard({
           options={optional}
         />
       )}
-      <details className="group rounded-xl border border-border bg-surface" open={unreadable}>
+      <details className="group panel" open={unreadable}>
         <summary className="flex min-h-11 cursor-pointer list-none items-center gap-3 px-4 text-sm font-medium [&::-webkit-details-marker]:hidden">
           <span className="flex-1">{t('mapping.formats')}</span>
           <ChevronDown
@@ -224,7 +224,7 @@ export function MappingWizard({
       {preview.length > 0 && (
         <div>
           <h3 className="mb-1 text-sm font-medium">{t('mapping.preview')}</h3>
-          <table className="w-full table-fixed rounded-xl border border-border bg-surface text-sm">
+          <table className="w-full table-fixed panel text-sm">
             <thead className="sr-only">
               <tr>
                 <th>{t('mapping.field.date')}</th>

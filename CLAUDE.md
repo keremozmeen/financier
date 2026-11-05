@@ -5,8 +5,9 @@ You are the developer of **Financier**, a mobile-first, 100% local, zero-cloud p
 ## Read first
 
 1. `DECISIONS.md` — the binding architecture decisions (storage, money, parsing, Kipp, backup, i18n, privacy, stack, data model). Follow them. If a decision turns out to be wrong in practice, stop and propose an edit to that file instead of silently deviating.
-2. `WORKFLOWS.md` — product vision, modules and folder structure.
-3. `USAGE.md` — the user-facing behavior the app must match.
+2. `PLAN.md` — the phased build plan.
+3. `WORKFLOWS.md` — product vision, modules and folder structure.
+4. `USAGE.md` — the user-facing behavior the app must match.
 
 ## Non-negotiable rules
 
@@ -32,55 +33,7 @@ A task is done only when `lint`, `test` and `build` all pass. New logic in `core
 
 ## Build plan
 
-Work phase by phase. Finish each phase with passing checks and a pull request (or commit) titled after the phase, then summarize what was built and what is next. Do not start a later phase's features early.
-
-### Phase 0 — Foundation
-- Scaffold Vite + React + TypeScript (strict), Tailwind v4, ESLint, Prettier, Vitest.
-- Folder structure from `WORKFLOWS.md`, plus `src/i18n/`, `src/platform/`, `src/core/insights/`, `src/core/kipp/`, `src/parsers/common/`.
-- CSP meta tag, self-hosted font, dark theme tokens (light theme toggle), hash router, app shell with bottom tab navigation: Dashboard, Cards, Import, Sub-Radar, Settings.
-- `vite-plugin-pwa`: manifest (name, icons, theme color), offline precache, update prompt.
-- i18n module with `en`/`tr` and locale detection.
-- GitHub Actions: lint, test, build, zero-cloud source check, deploy to GitHub Pages (`base: '/financier/'`).
-
-### Phase 1 — Data layer and cards
-- Dexie schema v1 from the data model in `DECISIONS.md`; repositories; `navigator.storage.persist()`.
-- Money and date utilities with tests (formatting per locale, installment split with remainder on the first installment).
-- Cards CRUD screen; manual transaction entry with optional installment count.
-- Card limit gauges (SVG) on the dashboard: limit, used, available, utilization color.
-
-### Phase 2 — Finance core and cash flow
-- Statements and bill payments per `DECISIONS.md` D14: computed statements, upcoming payments with "Mark as paid", full vs. partial payment effect on used and installments, weekend due-date shift.
-- `core/finance`: available limit, utilization, total debt, statement period for a date, due-date calculation, installment schedule, 3/6/12-month liability projection, fixed vs. variable monthly spend.
-- Dashboard: cash-flow bar chart (Recharts) with 3/6/12 toggle, upcoming payments list, recent activity.
-- Due-soon banner, app badge, and `.ics` calendar export for due dates.
-- Debit: liabilities, statements, payments and due dates are credit-only; debit counts in spending and recent activity.
-
-### Phase 3 — CSV import
-- Import screen with file picker and drag-and-drop.
-- PapaParse parsing, Turkish number/date utilities, column-mapping wizard, saved import profiles matched by header signature.
-- Review screen (edit/drop rows, confidence flags), fingerprint deduplication, import history with undo.
-- Debit: an import is assigned to one card of either type; installment columns are ignored for debit cards.
-
-### Phase 4 — Sub-Radar
-- `core/subscriptions`: merchant normalization, recurring detection (cadence 28–31 days, also weekly and yearly), price-hike detection, duplicate-charge detection.
-- Sub-Radar tab: active subscriptions, monthly/yearly cost, red alert for price hikes, confirm/ignore/mark cancelled.
-- Debit: subscriptions are detected across credit and debit cards.
-
-### Phase 5 — Kipp
-- `core/insights`: the rules listed in `DECISIONS.md` D4, ranked by severity, each with its numbers and a suggested action.
-- `core/kipp`: Turkish/English intent parser with fuzzy card-name matching; answers built from `core/finance` functions.
-- Kipp mascot component (SVG) whose color and mood reflect overall health; insight cards on the dashboard; chat bar with suggested questions.
-- Debit: Kipp's limit, utilization and debt insights are credit-only; spending and subscription insights cover both; the parser understands "banka kartı" / "debit card".
-
-### Phase 6 — PDF import
-- `pdfjs-dist` with a locally bundled worker; password prompt for protected PDFs.
-- Generic heuristic adapter, then bank adapters one at a time (Garanti BBVA, Yapı Kredi, İş Bankası, Akbank, QNB, Enpara). Each adapter needs an anonymized sample fixture and tests. Ask Kerem for samples before writing an adapter; never commit real statements.
-
-### Phase 7 — Backup, settings, polish
-- Encrypted export/restore (PBKDF2 + AES-GCM, replace or merge), Clear All Data with confirmation.
-- Debit: backup and restore include the card type.
-- Settings: language, theme, monthly income, primary currency, storage persistence status, privacy explanation.
-- First-run onboarding with Kipp, empty states, accessibility pass (contrast, labels, touch targets ≥ 44px), Lighthouse PWA check.
+The phases live in **`PLAN.md`**. Work phase by phase, finish each phase with passing checks and a pull request titled after the phase, and do not start a later phase's features early.
 
 ## Working style
 
@@ -93,6 +46,7 @@ Work phase by phase. Finish each phase with passing checks and a pull request (o
 
 These rules apply to every commit message and every pull request (title, description and comments):
 
+- Every commit message ends its body with the phase its work comes from, as `From PLAN.md: Phase N — <name>` (for example `From PLAN.md: Phase 4.5 — Design pass`). Work outside a phase says `From PLAN.md: maintenance`.
 - Always write in the first person plural ("we add", "we skip") or the imperative mood ("add", "skip").
 - Never append "🤖 Generated with Claude Code", "Generated with Claude Code" or any similar signature, footer or trailer.
 - Never refer to Kerem in the third person (e.g. not "Kerem's bank exports records like this"). Describe the thing neutrally ("the bank's export", "the sample export") or say "we".

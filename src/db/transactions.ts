@@ -1,4 +1,11 @@
-import { firstDueMonth, normalizeDescription, transactionFingerprint } from '../core/finance';
+import {
+  addMonths,
+  firstDueMonth,
+  hasCycle,
+  monthOf,
+  normalizeDescription,
+  transactionFingerprint,
+} from '../core/finance';
 import type { Card, InstallmentPlan, IsoDate, Transaction } from '../types/domain';
 import { db, newId } from './database';
 
@@ -72,7 +79,10 @@ export const transactionsRepo = {
       totalAmount: amount,
       count: installments,
       purchaseDate: date,
-      firstDueMonth: firstDueMonth(date, card.statementDay, card.dueDay),
+      // Without statement days, the first installment is due the month after (D20).
+      firstDueMonth: hasCycle(card)
+        ? firstDueMonth(date, card.statementDay, card.dueDay)
+        : addMonths(monthOf(date), 1),
       currency: card.currency,
     };
     await db.transaction('rw', db.transactions, db.installmentPlans, async () => {

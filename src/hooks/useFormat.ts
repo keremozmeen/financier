@@ -15,6 +15,8 @@ export function useFormat() {
       locale,
       money: (amount: number, currency: CurrencyCode) => formatMoney(amount, currency, locale),
       date: (date: IsoDate) => formatDate(date, locale),
+      /** "20 Kas" / "Nov 20": a date in the next weeks, without the year. */
+      dayMonth: (date: IsoDate) => formatDate(date, locale, { day: 'numeric', month: 'short' }),
       percent: (ratio: number) => percentFormat.format(ratio),
     };
   }, [locale]);

@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { cardsRepo, db, transactionsRepo } from '../db';
 import { CREDIT_CARD_CSV, DEBIT_CARD_CSV } from '../parsers/csv/fixtures';
@@ -44,6 +44,8 @@ function rowFor(text: string) {
 
 describe('import flow (D3, D16)', () => {
   it('maps, reviews, imports, re-imports and undoes a statement', async () => {
+    // The columns read and how "used" is worked out show in the detailed view (D20).
+    window.localStorage.setItem('financier.detailedView', 'on');
     await seedCredit();
     renderApp('/import');
 
@@ -100,17 +102,20 @@ describe('import flow (D3, D16)', () => {
     expect(within(rowFor('NETFLIX.COM')).getByText('New entry')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Choose another file' }));
 
-    // Undo the first import from the history.
+    // Undo the first import from the history, folded to one line.
+    await user.click(await screen.findByText('History'));
     await user.click(await screen.findByRole('button', { name: 'Undo import of ekstre.csv' }));
     const dialog = screen.getByRole('dialog', { name: 'Undo this import?' });
     await user.click(within(dialog).getByRole('button', { name: 'Undo import' }));
-    expect(await screen.findByText('No imports yet.')).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText('History')).not.toBeInTheDocument());
     expect(await db.transactions.count()).toBe(1);
     expect(await db.payments.count()).toBe(0);
     expect(await db.installmentPlans.count()).toBe(0);
   });
 
   it("asks only for the columns it can't read, by their header names, and remembers them", async () => {
+    // The columns read and how "used" is worked out show in the detailed view (D20).
+    window.localStorage.setItem('financier.detailedView', 'on');
     await seedCredit();
     renderApp('/import');
     const file = 'Gün;Ne;Kaç TL\n15.09.2026;MIGROS KADIKOY;1.234,56\n16.09.2026;SHELL;850,00\n';
@@ -140,6 +145,8 @@ describe('import flow (D3, D16)', () => {
   });
 
   it('lets the user change a row type and unmerge a manual entry', async () => {
+    // Every row with its controls shows in the detailed view (D20).
+    window.localStorage.setItem('financier.detailedView', 'on');
     const card = await seedCredit();
     await transactionsRepo.addManual({
       card,
@@ -181,6 +188,8 @@ describe('import flow (D3, D16)', () => {
   });
 
   it('imports a debit card file without installment or payment rows', async () => {
+    // Every row with its controls shows in the detailed view (D20).
+    window.localStorage.setItem('financier.detailedView', 'on');
     await cardsRepo.create({
       type: 'debit',
       name: 'Maaş',
@@ -219,5 +228,71 @@ describe('import flow (D3, D16)', () => {
     expect(
       await screen.findByText('Add a card first, then import its statement.'),
     ).toBeInTheDocument();
+  });
+
+  it('fills a new card’s statement and due days from the statement (D20)', async () => {
+    const id = await cardsRepo.create({
+      type: 'credit',
+      name: 'Bonus',
+      bank: 'Garanti BBVA',
+      last4: '',
+      currency: 'TRY',
+      limit: 10_000_000,
+      color: '#1f7a4d',
+    });
+    renderApp('/import');
+    await upload(
+      csvFile(
+        CREDIT_CARD_CSV.replace(
+          'Hesap Kesim Tarihi;10.10.2026',
+          'Hesap Kesim Tarihi;10.10.2026\nSon Ödeme Tarihi;20.10.2026',
+        ),
+      ),
+    );
+
+    expect(
+      await screen.findByText(
+        'Added to your card from this statement: statement day 10, due day 20.',
+      ),
+    ).toBeInTheDocument();
+    expect(await cardsRepo.get(id)).toMatchObject({ statementDay: 10, dueDay: 20 });
+  });
+
+  it('opens the review on the rows needing a look, with the rest a tap away (D20)', async () => {
+    await seedCredit();
+    renderApp('/import');
+    await upload(csvFile(CREDIT_CARD_CSV));
+
+    const review = await screen.findByRole('region', { name: 'Review' }, { timeout: 5000 });
+    expect(within(review).getByText(/^\d+ rows ready$/)).toBeInTheDocument();
+    // Every row of this file was read with confidence: nothing to check, no rows listed.
+    expect(within(review).getByText('Everything looks right.')).toBeInTheDocument();
+    expect(within(review).queryByText('MIGROS KADIKOY')).not.toBeInTheDocument();
+
+    await user.click(within(review).getByRole('button', { name: /^Show all rows \(\d+\)$/ }));
+    const migros = rowFor('MIGROS KADIKOY');
+    // Rows open their controls on tap.
+    expect(within(migros).queryByRole('combobox')).not.toBeInTheDocument();
+    await user.click(within(migros).getByRole('button', { name: /^Change row \d+$/ }));
+    expect(within(migros).getByRole('combobox', { name: /^Type of row/ })).toBeInTheDocument();
+  });
+
+  it('lists a row with a guessed value first, with its controls open', async () => {
+    await seedCredit();
+    renderApp('/import');
+    await upload(
+      csvFile(`İşlem Tarihi;Açıklama;Tutar (TL)
+20.10.2026;SHELL MASLAK;1.100,00
+21.10.2026;ACME AVM;-250,00
+`),
+    );
+
+    const review = await screen.findByRole('region', { name: 'Review' }, { timeout: 5000 });
+    expect(within(review).getByText('1 need a look')).toBeInTheDocument();
+    // A refund without a refund keyword is a medium-confidence guess (D16).
+    const acme = rowFor('ACME AVM');
+    expect(within(acme).getByText('Check this')).toBeInTheDocument();
+    expect(within(acme).getByRole('combobox', { name: /^Type of row/ })).toBeInTheDocument();
+    expect(within(review).queryByText('SHELL MASLAK')).not.toBeInTheDocument();
   });
 });

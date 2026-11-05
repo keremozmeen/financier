@@ -1,3 +1,4 @@
+import { cardColor } from '../cards/colors';
 import { Link } from 'react-router';
 import { useEntryLabel } from '../../hooks/useEntryLabel';
 import { useFormat } from '../../hooks/useFormat';
@@ -16,15 +17,13 @@ export function RecentActivity({
 
   return (
     <section aria-labelledby="recent-title">
-      <h2 id="recent-title" className="mb-2 text-sm font-medium text-muted">
+      <h2 id="recent-title" className="mb-3 font-display text-lg font-bold tracking-tight">
         {t('dashboard.recent.title')}
       </h2>
       {items.length === 0 ? (
-        <p className="rounded-xl border border-border bg-surface p-4 text-sm text-muted">
-          {t('dashboard.recent.empty')}
-        </p>
+        <p className="panel p-4 text-sm text-muted">{t('dashboard.recent.empty')}</p>
       ) : (
-        <ul className="divide-y divide-border rounded-xl border border-border bg-surface">
+        <ul className="divide-y divide-border panel">
           {items.map(({ transaction: tx, card }) => (
             <li key={tx.id}>
               <Link
@@ -34,7 +33,7 @@ export function RecentActivity({
                 <span
                   aria-hidden="true"
                   className="size-2.5 shrink-0 rounded-full"
-                  style={{ backgroundColor: card.color }}
+                  style={{ backgroundColor: cardColor(card) }}
                 />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">{entryLabel(tx)}</p>

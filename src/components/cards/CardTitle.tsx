@@ -1,7 +1,8 @@
 import { useT } from '../../i18n';
+import { BankMark } from './BankMark';
 import type { Card } from '../../types/domain';
 
-/** Card name with its color dot and "Bank · •••• 1234" subtitle; debit cards say so (D13). */
+/** Card name with its bank mark and "Bank · •••• 1234" subtitle; debit cards say so (D13). */
 export function CardTitle({
   card,
   as: Tag = 'h2',
@@ -23,11 +24,7 @@ export function CardTitle({
   if (!showName && !subtitle) return null;
   return (
     <div className="flex min-w-0 items-center gap-3">
-      <span
-        aria-hidden="true"
-        className="size-3 shrink-0 rounded-full"
-        style={{ backgroundColor: card.color }}
-      />
+      <BankMark card={card} />
       <div className="min-w-0">
         {showName && <Tag className="truncate font-semibold">{card.name}</Tag>}
         {subtitle && <p className="truncate text-sm text-muted">{subtitle}</p>}

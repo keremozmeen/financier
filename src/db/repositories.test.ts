@@ -327,3 +327,50 @@ describe('debit cards (D13)', () => {
     expect(await db.transactions.count()).toBe(0);
   });
 });
+
+describe('cards without statement days (D20)', () => {
+  const short = {
+    type: 'credit',
+    name: 'Yeni',
+    bank: '',
+    last4: '',
+    currency: 'TRY',
+    color: '#17694a',
+    limit: 2_000_000,
+  } as const;
+
+  it('fills only the missing days from a statement and keeps the others', async () => {
+    const id = await cardsRepo.create({ ...short, dueDay: 25 });
+    expect(await cardsRepo.fillCycle(id, { statementDay: 10, dueDay: 20 })).toEqual({
+      statementDay: 10,
+    });
+    expect(await cardsRepo.get(id)).toMatchObject({ statementDay: 10, dueDay: 25 });
+    expect(await cardsRepo.fillCycle(id, { statementDay: 3 })).toEqual({});
+  });
+
+  it('counts usage but has no bills until both days are known', async () => {
+    const id = await cardsRepo.create(short);
+    const card = (await cardsRepo.get(id)) as CreditCard;
+    await transactionsRepo.addManual({
+      card,
+      date: '2026-11-01',
+      description: 'Market',
+      amount: 50_000,
+      kind: 'charge',
+      installments: 1,
+    });
+    await transactionsRepo.addManual({
+      card,
+      date: '2026-11-01',
+      description: 'Telefon',
+      amount: 120_000,
+      kind: 'charge',
+      installments: 3,
+    });
+    const [summary] = await loadCardSummaries([card], '2026-11-05');
+    expect(summary).toMatchObject({ usage: { used: 170_000 }, bills: [] });
+    // The first installment is assumed due the month after the purchase.
+    const [plan] = await db.installmentPlans.toArray();
+    expect(plan!.firstDueMonth).toBe('2026-12');
+  });
+});

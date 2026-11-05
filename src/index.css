@@ -1,51 +1,103 @@
-@import '@fontsource-variable/inter';
+@import '@fontsource-variable/dm-sans';
+@import '@fontsource-variable/bricolage-grotesque';
 @import 'tailwindcss';
 
-/* Theme tokens. Dark is the default; [data-theme] is set on <html> by ThemeProvider. */
+/*
+ * Theme tokens (D21). Light by default; theme-init.js and ThemeProvider set
+ * [data-theme] on <html> from the saved choice or the device setting.
+ * Status text colors pass 4.5:1 on both the ground and the panels.
+ */
 :root,
-:root[data-theme='dark'] {
-  color-scheme: dark;
-  --bg: #0b1120;
-  --surface: #131c2e;
-  --surface-raised: #1b2740;
-  --border: #26334d;
-  --fg: #e6ebf5;
-  --muted: #94a3b8;
-  --accent: #34d399;
-  --accent-fg: #06291d;
-  --success: #34d399;
-  --warn: #fbbf24;
-  --alert: #f87171;
-}
-
 :root[data-theme='light'] {
   color-scheme: light;
-  --bg: #f6f8fb;
+  --bg: #eef0f3;
   --surface: #ffffff;
-  --surface-raised: #eef2f7;
-  --border: #d6dde8;
-  --fg: #0f172a;
-  --muted: #526077;
-  --accent: #047857;
+  --surface-raised: #f4f5f7;
+  --selected: #ffffff;
+  --border: #e3e6ea;
+  --fg: #14161b;
+  --muted: #555a66;
+  --accent: #2f6b22;
   --accent-fg: #ffffff;
-  --success: #047857;
-  --warn: #a16207;
-  --alert: #b91c1c;
+  --accent-soft: #e4f2d8;
+  --success: #2f6b22;
+  --warn: #8a5300;
+  --warn-soft: #fdf0d5;
+  --alert: #a1251a;
+  --alert-soft: #fde4e1;
+  --nav: #ffffff;
+  --nav-fg: #14161b;
+  --nav-muted: #6b7080;
+  --nav-active: #b8e986;
+  --nav-active-fg: #142010;
+  --nav-shadow: 0 8px 28px rgb(20 22 27 / 0.14);
+  --nav-add: #b8e986;
+  --nav-add-fg: #142010;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #121412;
+  --surface: #1c1f1b;
+  --surface-raised: #262a25;
+  --selected: #3d4339;
+  --border: #2e332c;
+  --fg: #ecefe8;
+  --muted: #a3a89e;
+  --accent: #b8e986;
+  --accent-fg: #142010;
+  --accent-soft: #26331b;
+  --success: #b8e986;
+  --warn: #f2b84b;
+  --warn-soft: #3a2e14;
+  --alert: #ff8a7a;
+  --alert-soft: #3a1d1a;
+  --nav-shadow: 0 10px 30px rgb(0 0 0 / 0.35);
+  --nav: #2a2e28;
+  --nav-fg: #ecefe8;
+  --nav-muted: #a3a89e;
+  --nav-active: #ffffff;
+  --nav-active-fg: #121412;
+  --nav-add: #ffffff;
+  --nav-add-fg: #121412;
 }
 
 @theme inline {
-  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'DM Sans Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Bricolage Grotesque Variable', 'DM Sans Variable', ui-sans-serif, sans-serif;
   --color-bg: var(--bg);
   --color-surface: var(--surface);
   --color-surface-raised: var(--surface-raised);
+  /* The pressed option of a switch: lighter than its track in both themes. */
+  --color-selected: var(--selected);
   --color-border: var(--border);
   --color-fg: var(--fg);
   --color-muted: var(--muted);
   --color-accent: var(--accent);
   --color-accent-fg: var(--accent-fg);
+  --color-accent-soft: var(--accent-soft);
   --color-success: var(--success);
   --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
   --color-alert: var(--alert);
+  --color-alert-soft: var(--alert-soft);
+  /*
+   * The floating tab bar: white in light, raised charcoal in dark. The open tab and the
+   * "+" share one color: Kipp green in light, white in dark (D21).
+   */
+  --color-nav: var(--nav);
+  --color-nav-fg: var(--nav-fg);
+  --color-nav-muted: var(--nav-muted);
+  --color-nav-active: var(--nav-active);
+  --color-nav-active-fg: var(--nav-active-fg);
+  --color-nav-add: var(--nav-add);
+  --color-nav-add-fg: var(--nav-add-fg);
+}
+
+/* A section: a rounded panel on the ground, no border (D21). */
+@utility panel {
+  border-radius: 1.125rem;
+  background-color: var(--surface);
 }
 
 .theme-switching *,
@@ -62,6 +114,7 @@ body {
 
 body {
   font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
 }

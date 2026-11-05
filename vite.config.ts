@@ -41,14 +41,14 @@ export default defineConfig({
         scope: '/financier/',
         display: 'standalone',
         orientation: 'portrait',
-        theme_color: '#0b1120',
-        background_color: '#0b1120',
+        theme_color: '#121412',
+        background_color: '#121412',
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
         // Only Latin subsets are needed offline (Turkish lives in latin-ext);
         // other scripts fall back to the system font when offline.
-        globIgnores: ['**/inter-{cyrillic,cyrillic-ext,greek,greek-ext,vietnamese}-*'],
+        globIgnores: ['**/*-vietnamese-*'],
         navigateFallback: 'index.html',
         cleanupOutdatedCaches: true,
       },

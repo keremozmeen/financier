@@ -41,7 +41,7 @@ export function BalanceOverrideForm({
       onSubmit={submit}
       noValidate
       aria-label={t('balance.title')}
-      className="space-y-4 rounded-xl border border-border bg-surface p-4"
+      className="space-y-4 panel p-4"
     >
       <h2 className="font-semibold">{t('balance.title')}</h2>
       <p className="text-sm text-muted">{t('balance.help')}</p>

@@ -24,7 +24,9 @@ export function ScreenHeader({
           <ArrowLeft aria-hidden="true" size={22} />
         </Link>
       )}
-      <h1 className="min-w-0 flex-1 truncate text-2xl font-semibold">{title}</h1>
+      <h1 className="min-w-0 flex-1 truncate font-display text-[1.625rem] font-bold tracking-tight">
+        {title}
+      </h1>
       {actions}
     </div>
   );

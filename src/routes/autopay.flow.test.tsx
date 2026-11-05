@@ -55,8 +55,19 @@ describe('auto-pay (D14)', () => {
     expect(saved).toMatchObject({ autoPay: true, autoPaySince: today });
   });
 
-  it('shows "Paid automatically" instead of asking, and no due-soon banner', async () => {
+  it('shows "Paid automatically" instead of asking, tagged plainly', async () => {
     // Closed yesterday, due in 6 days (at most 8 when moved off a weekend).
+    await seedAutoPayCard(1);
+    renderApp('/');
+
+    await user.click(await screen.findByRole('button', { name: /^Axess, ₺1,000\.00, Automatic$/ }));
+    const dialog = screen.getByRole('dialog', { name: 'Axess' });
+    expect(within(dialog).getByText('Paid automatically')).toBeInTheDocument();
+    expect(within(dialog).queryByRole('button', { name: 'Mark as paid' })).not.toBeInTheDocument();
+  });
+
+  it('shows "Paid automatically" in the detailed payments list', async () => {
+    window.localStorage.setItem('financier.detailedView', 'on');
     await seedAutoPayCard(1);
     renderApp('/');
 
@@ -65,7 +76,6 @@ describe('auto-pay (D14)', () => {
     expect(
       within(upcoming).queryByRole('button', { name: /Mark as paid/ }),
     ).not.toBeInTheDocument();
-    expect(screen.queryByRole('region', { name: 'Due soon' })).not.toBeInTheDocument();
   });
 
   it('records a past-due bill as paid automatically when the app opens', async () => {

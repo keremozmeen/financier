@@ -1,6 +1,12 @@
 import type { Card, CurrencyCode, IsoMonth } from '../../types/domain';
 import { addMonths } from './dates';
-import { billsThrough, computeBill, statementPeriodDueIn, type BillingInput } from './statements';
+import {
+  billsThrough,
+  computeBill,
+  hasCycle,
+  statementPeriodDueIn,
+  type BillingInput,
+} from './statements';
 import type { CardUsage } from './usage';
 
 export interface MonthAmount {
@@ -40,7 +46,8 @@ export function projectTotalLiabilities(
 ): Record<CurrencyCode, MonthAmount[]> {
   const totals: Record<CurrencyCode, MonthAmount[]> = {};
   for (const { card, ...rest } of inputs) {
-    if (card.type !== 'credit') continue;
+    // Cards without statement days have no bills to project yet (D20).
+    if (card.type !== 'credit' || !hasCycle(card)) continue;
     const projection = projectLiabilities({ ...rest, card }, fromMonth, months);
     const running = (totals[card.currency] ??= projection.map(({ month }) => ({
       month,

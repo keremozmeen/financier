@@ -60,23 +60,32 @@ async function seedDebit() {
 }
 
 describe('dashboard (Phase 2)', () => {
-  it('shows due-soon payments, upcoming bills of credit cards only, and recent activity of both types', async () => {
+  it('leads with what is due in 30 days, then card tiles and recent activity of both types (D20)', async () => {
     await seedCredit('Axess', 3, 185_050);
     await seedCredit('Bonus', 20, 42_000);
     await seedDebit();
     renderApp('/');
 
-    const banner = await screen.findByRole('region', { name: 'Due soon' });
-    expect(within(banner).getByText(/^Axess: ₺1,850\.50 due /)).toBeInTheDocument();
-    expect(within(banner).queryByText(/Bonus/)).not.toBeInTheDocument();
-
-    const upcoming = screen.getByRole('region', { name: 'Upcoming payments' });
+    const due = await screen.findByRole('region', { name: 'Due in the next 30 days' });
+    expect(within(due).getByText('₺2,270.50')).toBeInTheDocument();
     expect(
-      within(upcoming)
-        .getAllByRole('listitem')
-        .map((li) => li.textContent),
-    ).toEqual([expect.stringContaining('Axess'), expect.stringContaining('Bonus')]);
-    expect(within(upcoming).queryByText('Maaş kartı')).not.toBeInTheDocument();
+      within(due)
+        .getAllByRole('button', { name: /^(Axess|Bonus), / })
+        .map((button) => button.getAttribute('aria-label')),
+    ).toEqual([
+      expect.stringMatching(/^Axess, ₺1,850\.50, /),
+      expect.stringMatching(/^Bonus, ₺420\.00, /),
+    ]);
+    expect(within(due).queryByText('Maaş kartı')).not.toBeInTheDocument();
+
+    const tiles = screen.getByRole('region', { name: 'Your cards' });
+    expect(
+      within(tiles).getByRole('link', { name: /Maaş kartı.*This month.*₺12,500\.00/ }),
+    ).toBeInTheDocument();
+    expect(within(tiles).getByRole('link', { name: /Axess.*Available/ })).toBeInTheDocument();
+    // The simple dashboard has no gauges, no full payments list and no chart.
+    expect(screen.queryByRole('meter')).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Upcoming payments' })).not.toBeInTheDocument();
 
     const recent = screen.getByRole('region', { name: 'Recent activity' });
     for (const label of ['Axess charge', 'Bonus charge', 'Kira']) {
@@ -84,25 +93,52 @@ describe('dashboard (Phase 2)', () => {
     }
   });
 
-  it('records a payment from the dashboard and clears the due-soon banner', async () => {
+  it('shows a payment due within 2 days in amber and a later one plain (D20)', async () => {
+    await seedCredit('Axess', 1, 185_050);
+    await seedCredit('Bonus', 20, 42_000);
+    renderApp('/');
+
+    const due = await screen.findByRole('region', { name: 'Due in the next 30 days' });
+    const [first, second] = within(due).getAllByRole('button', { name: /^(Axess|Bonus), / });
+    // Due tomorrow, or on Monday when tomorrow is a weekend day (up to 3 days).
+    expect(first).toHaveAccessibleName(/^Axess, ₺1,850\.50, (Tomorrow|In \d days)$/);
+    expect(second).toHaveAccessibleName(/^Bonus, ₺420\.00, \w{3} \d+$/);
+  });
+
+  it('records a payment from the payment dialog', async () => {
     await seedCredit('Axess', 3, 185_050);
     renderApp('/');
 
-    await user.click(await screen.findByRole('button', { name: 'Mark as paid: Axess' }));
-    const dialog = screen.getByRole('dialog', { name: 'Record a payment: Axess' });
+    await user.click(await screen.findByRole('button', { name: /^Axess, ₺1,850\.50, / }));
+    const dialog = screen.getByRole('dialog', { name: 'Axess' });
+    await user.click(within(dialog).getByRole('button', { name: 'Mark as paid' }));
     expect(within(dialog).getByLabelText('Amount paid')).toHaveValue('1850.50');
     await user.click(within(dialog).getByRole('button', { name: 'Save' }));
 
-    await waitFor(() =>
-      expect(screen.queryByRole('region', { name: 'Due soon' })).not.toBeInTheDocument(),
-    );
-    const upcoming = screen.getByRole('region', { name: 'Upcoming payments' });
-    expect(within(upcoming).getByText('Nothing to pay')).toBeInTheDocument();
+    const due = screen.getByRole('region', { name: 'Due in the next 30 days' });
+    expect(await within(due).findByText('Nothing to pay in the next 30 days.')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('shows the cash-flow projection with a 3/6/12 month toggle', async () => {
+  it('opens the card from the payment dialog', async () => {
+    const card = await seedCredit('Axess', 3, 185_050);
+    const { router } = renderApp('/');
+
+    await user.click(await screen.findByRole('button', { name: /^Axess, / }));
+    await user.click(screen.getByRole('button', { name: 'Open card' }));
+    expect(router.state.location.pathname).toBe(`/cards/${card.id}`);
+  });
+
+  it('shows gauges, the full payments list and the cash-flow chart in the detailed view', async () => {
+    window.localStorage.setItem('financier.detailedView', 'on');
     await seedCredit('Axess', 3, 185_050);
     renderApp('/');
+
+    expect(await screen.findByRole('meter', { name: /^Axess: / })).toBeInTheDocument();
+    const upcoming = screen.getByRole('region', { name: 'Upcoming payments' });
+    expect(
+      within(upcoming).getByRole('button', { name: 'Mark as paid: Axess' }),
+    ).toBeInTheDocument();
 
     const table = await screen.findByRole('table', { name: 'Cash flow' });
     expect(within(table).getAllByRole('row')).toHaveLength(1 + 6);
@@ -112,6 +148,16 @@ describe('dashboard (Phase 2)', () => {
     expect(within(table).getAllByRole('row')).toHaveLength(1 + 12);
     await user.click(screen.getByRole('button', { name: '3 mo' }));
     expect(within(table).getAllByRole('row')).toHaveLength(1 + 3);
+  });
+
+  it('turns the detailed view on and off from Settings', async () => {
+    await seedCredit('Axess', 3, 185_050);
+    renderApp('/settings');
+
+    await user.click(await screen.findByRole('checkbox', { name: 'Detailed view' }));
+    expect(window.localStorage.getItem('financier.detailedView')).toBe('on');
+    await user.click(screen.getByRole('link', { name: 'Dashboard' }));
+    expect(await screen.findByRole('meter', { name: /^Axess: / })).toBeInTheDocument();
   });
 
   it('downloads a local .ics file with one event per credit card', async () => {

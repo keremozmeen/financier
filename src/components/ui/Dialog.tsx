@@ -38,9 +38,9 @@ export function Dialog({ title, onClose, children }: DialogProps) {
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-2xl border border-border bg-surface p-5 shadow-xl"
+        className="max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-3xl bg-surface p-5 shadow-xl"
       >
-        <h2 id={titleId} className="text-lg font-semibold">
+        <h2 id={titleId} className="font-display text-xl font-bold tracking-tight">
           {title}
         </h2>
         <div className="mt-3 space-y-4">{children}</div>

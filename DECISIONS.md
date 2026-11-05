@@ -151,6 +151,7 @@ Turkish banks block the full value of an installment purchase against the card l
 - The user can enter the card's current balance from their banking app, saved with the date it was entered ("as of" date).
 - When an override exists: used = override balance + single charges dated after the as-of date + the full remaining value of installment plans created after the as-of date. Everything before the as-of date is assumed to be included in the override.
 - Without an override, used is calculated from the recorded transactions alone.
+- **Older statements count as paid:** statements that closed before the latest closed one are treated as paid, as overdue bills are in D14. Their single charges and the payments made for them are left out, and installments billed in them no longer block the limit; installments billed later still do. So used covers the latest closed statement, the open one and the unbilled installments. An imported year of history without payments would otherwise show a year of charges as debt. A bank balance override dated after the latest settled statement still applies; an older one is replaced by this rule.
 - Updating the override (for example after paying the bill) replaces the previous one. Keep a history of past overrides so later phases can use it.
 - The card screen shows whether used is "calculated" or "from your bank balance on <date>", and suggests updating it if the as-of date is more than 30 days old.
 
@@ -207,7 +208,7 @@ D11 deferred payments to Phase 2. Credit cards only (D13).
 - Effect on used (extends D11): a payment dated after the override as-of date reduces used by its amount. A full payment also marks the installments in that statement as paid, so the limit they blocked is released. A partial payment reduces used but marks no installments as paid. Interest on unpaid balances is out of scope; the user reflects it with the bank balance override.
 - Due dates: if the computed due date falls on a Saturday or Sunday, show the next Monday, labelled as moved. Public holidays are out of scope for now.
 - Debit cards have no statements or payments; their spending counts only in spending totals.
-- **Overdue bills:** a bill whose due date has passed and is not fully paid stays visible as "Overdue" / "Gecikmiş" on the card screen, in the upcoming payments list and in the due-soon banner, ahead of the open statement, until it is paid or the user marks it "Paid outside the app" / "Uygulama dışında ödendi". That records a payment of the full remaining amount dated on the due date (flagged `outside`), so it settles the statement and appears in the payment history, where it can be deleted. Statements covered by a bank balance override (closing on or before its as-of date) are never overdue.
+- **Overdue bills:** the latest closed statement, when its due date has passed and it is not fully paid, stays visible as "Overdue" / "Gecikmiş" on the card screen, in the upcoming payments list and in the due-soon banner, ahead of the open statement, until it is paid, the next statement closes, or the user marks it "Paid outside the app" / "Uygulama dışında ödendi". That records a payment of the full remaining amount dated on the due date (flagged `outside`), so it settles the statement and appears in the payment history, where it can be deleted. Statements covered by a bank balance override (closing on or before its as-of date) are never overdue. Older statements are never overdue: once a newer statement closes, the bank carries any unpaid amount into it, and an imported history (often a year of statements) has no payments in the app because they were made at the bank, so flagging each one would list a year of paid bills as overdue.
 - **Auto-pay:** each credit card has an "Automatic payment" / "Otomatik ödeme" setting. When it is on, each closed bill counts as fully paid on its due date: the app stores a payment of the remaining amount dated on the due date, flagged `automatic`, so it appears in the payment history and can be deleted. The dashboard and card screen show "Paid automatically" instead of asking, and auto-pay bills stay out of the due-soon banner and badge. Overdue never applies to auto-pay cards.
 
 **Auto-pay implementation notes:**
@@ -330,7 +331,24 @@ Financier is for everyday users as much as for people who track every kuruş. A 
 - **Alerts only when worth acting on:** red is for things the user should do something about. Small changes are shown quietly and still counted (D19 price increases).
 - **Ask only what can't be inferred:** prefer values the app can read from an import or compute over form fields, and never ask the user to confirm something the app can safely assume (Sub-Radar has no confirm step).
 - **Plain words:** no technical terms on screen ("mapping", "fingerprint", "detected"); the same idea uses the same word everywhere, in both languages.
-- **Scope:** applied to Sub-Radar and to import column mapping (D3) in Phase 4. The design pass before Phase 5 applies it to cards, the import review screen (opening on the rows needing a look, with less text) and the dashboard; every later phase follows it.
+- **Detailed view:** a setting, off by default, for people who track every kuruş. When it is on, the full sections come back inline (a limit gauge per card, the cash-flow chart, every transaction and import row). Simple screens never hide a function: everything stays reachable on tap.
+- **Dashboard:** leads with the total due in the next 30 days and the list of those payments. A payment is plain text until 2 days before its due date, amber from then until the due date, and red only once overdue. There is no separate due-soon panel; the app icon badge still counts payments due within 7 days (D5).
+- **Card setup:** asks for the name, the type and, for a credit card, the limit. Bank, last 4 digits, currency, statement and due days, automatic payment and color fold under "More options"; a new card takes its bank's color unless the user picks one. The statement and due days come from the first imported statement when it states them ("Hesap Kesim Tarihi", "Son Ödeme Tarihi" and English equivalents above the header); only missing days are filled, and the review screen says which. Until both days are known the card has no bills, due dates, auto-pay or calendar event, counts in usage like any other, bills new installments from the following month, and shows one line asking for its days. No schema version change: the fields were already unindexed.
+- **Scope:** applied to Sub-Radar and to import column mapping (D3) in Phase 4. The Phase 4.5 design pass applies it to cards, the import review screen (opening on the rows needing a look, with less text) and the dashboard; every later phase follows it.
+
+---
+
+## D21. Visual identity
+
+Testers found the first look generic ("looks AI-made"): navy, Inter, mint and a bordered box around every section. Phase 4.5 replaces it; Phase 8 tunes it.
+
+- **Layout:** white (or charcoal) rounded panels on a soft ground, no borders around sections; lists separated by hairlines; one large figure per screen. Cards appear as small colored cards in their own color.
+- **Type:** Bricolage Grotesque for headings and large figures, DM Sans for text; both self-hosted (D8) and checked to contain ₺ and every Turkish letter. Figures use tabular numbers.
+- **Colors:** light ground #eef0f3 with white panels; dark is warm charcoal (#121412 ground, #1c1f1b panels), never navy. Kipp green (#b8e986 in dark, a deeper green in light) is the accent. Status colors are amber for "soon" and red for "act now", each with a tinted label background, and pass 4.5:1 contrast in both themes.
+- **Theme:** follows the device setting until the user picks light or dark in Settings.
+- **Navigation:** a floating pill (white with a soft shadow in light, raised charcoal in dark) with four tabs (Dashboard, Cards, Sub-Radar, Settings) around a round "+". Only the current tab shows its name. The open tab and the "+" share one color: Kipp green in light mode, white in dark mode. The "+" opens "Upload a statement" (the import screen) and "Add an entry" (asks which card when there are several), so import is the main action rather than a tab.
+- **Import start:** one line of intro, the cards as chips with their bank marks, one large "Choose file" button that also takes a dropped file, and the import history folded into one line (hidden before the first import).
+- **Bank marks:** a card shows a mark next to its name. The app ships a local list of Turkish banks (name, initials, brand color, card brands such as Bonus or Axess); the card's bank text, then its name, is matched against it, so no data changes. A known bank shows its initials on its brand color; any other card shows a simple outline of its type on its own color (a card for credit, a wallet for debit, which stands for its bank account, D17). No bank logo files are used.
 
 ---
 
@@ -338,7 +356,7 @@ Financier is for everyday users as much as for people who track every kuruş. A 
 
 | Table | Key fields |
 | :--- | :--- |
-| `cards` | `id`, `type` (`credit` / `debit`), `name`, `bank`, `last4`, `currency`, `color`, `archived`; credit only: `limit`, `statementDay`, `dueDay`, `autoPay?`, `autoPaySince?` (D14) |
+| `cards` | `id`, `type` (`credit` / `debit`), `name`, `bank`, `last4`, `currency`, `color`, `archived`; credit only: `limit`, `statementDay?`, `dueDay?` (missing until entered or read from a statement, D20), `autoPay?`, `autoPaySince?` (D14) |
 | `transactions` | `id`, `cardId`, `date`, `description`, `normalizedMerchant`, `amount`, `currency`, `category`, `installmentPlanId?`, `fingerprint`, `source` (`manual` / `csv` / `pdf`), `importId?`, `fee?` (interest or bank fee, D16), `income?`, `bill?`, `transfer?` (account statements, D17; income is excluded from spending) |
 | `installmentPlans` | `id`, `cardId`, `description`, `totalAmount`, `count`, `purchaseDate`, `firstDueMonth`, `currency`, `importId?` (created by an import, D16; indexed in schema v4) |
 | `balanceOverrides` | `id`, `cardId`, `balance` (negative for a credit balance, D15), `currency`, `asOf`, `createdAt` (history of bank balances entered by the user, D11) |

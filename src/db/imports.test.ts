@@ -7,7 +7,7 @@ import { db } from './database';
 import { importsRepo } from './imports';
 import { paymentsRepo } from './payments';
 import { transactionsRepo } from './transactions';
-import { loadUsageInputs } from './usage';
+import { billingInput, loadUsageInputs } from './usage';
 import { computeCardUsage } from '../core/finance';
 
 const TODAY = '2026-10-15';
@@ -183,9 +183,9 @@ describe('importsRepo (D16)', () => {
   it('skips a payment already recorded by hand', async () => {
     const card = await createCredit();
     await seedAugustCharge(card);
-    const [input] = await loadUsageInputs([card], TODAY);
+    const input = billingInput((await loadUsageInputs([card], TODAY))[0]!)!;
     const { computeBill, statementPeriodFor } = await import('../core/finance');
-    const bill = computeBill(statementPeriodFor('2026-09-10', card), input!);
+    const bill = computeBill(statementPeriodFor('2026-09-10', input.card), input);
     await paymentsRepo.record(card, bill, 425_000, '2026-09-18');
 
     await commit(card, rowsFrom(CREDIT_CARD_CSV, card));
@@ -248,9 +248,9 @@ describe('importsRepo (D16)', () => {
     const card = await createCredit();
     await seedAugustCharge(card);
     const importId = await commit(card, rowsFrom(CREDIT_CARD_CSV, card));
-    const [input] = await loadUsageInputs([card], TODAY);
+    const input = billingInput((await loadUsageInputs([card], TODAY))[0]!)!;
     const { computeBill, statementPeriodFor } = await import('../core/finance');
-    const october = computeBill(statementPeriodFor('2026-10-10', card), input!);
+    const october = computeBill(statementPeriodFor('2026-10-10', input.card), input);
     await paymentsRepo.record(card, october, 10_000, '2026-10-12');
 
     await importsRepo.undo(importId);

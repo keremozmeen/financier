@@ -1,7 +1,7 @@
 import { autoPaymentsDue, isFullyPaid, type Bill } from '../core/finance';
 import type { Card, CreditCard, IsoDate, Payment, PaymentMethod, Statement } from '../types/domain';
 import { db, newId } from './database';
-import { loadUsageInputs } from './usage';
+import { billingInput, loadUsageInputs } from './usage';
 
 export const paymentsRepo = {
   /** Newest first. */
@@ -101,7 +101,10 @@ export const paymentsRepo = {
         (card): card is CreditCard => card.type === 'credit' && !card.archived && !!card.autoPay,
       );
       let count = 0;
-      for (const input of await loadUsageInputs(cards, today)) {
+      for (const loaded of await loadUsageInputs(cards, today)) {
+        // Auto-pay needs the card's statement and due days (D20).
+        const input = billingInput(loaded);
+        if (!input) continue;
         for (const bill of autoPaymentsDue(input, today)) {
           await paymentsRepo.record(input.card, bill, bill.remaining, bill.dueDate, {
             method: 'automatic',

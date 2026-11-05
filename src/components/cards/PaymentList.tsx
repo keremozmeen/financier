@@ -18,7 +18,7 @@ export function PaymentList({
   return (
     <div>
       <h2 className="mb-2 text-sm font-medium text-muted">{t('payments.title')}</h2>
-      <ul className="divide-y divide-border rounded-xl border border-border bg-surface">
+      <ul className="divide-y divide-border panel">
         {payments.map((payment) => {
           const label = `${t('payments.label')} ${format.date(payment.date)}`;
           return (

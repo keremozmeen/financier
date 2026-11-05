@@ -20,6 +20,8 @@ import {
   statementPeriodFor,
   transactionFingerprint,
   type BillingInput,
+  hasCycle,
+  type CycleDays,
 } from '../finance';
 import { signedAmount, type DraftRow } from './draft';
 import { similarDescriptions } from './similar';
@@ -222,6 +224,8 @@ export function planImport(rows: readonly DraftRow[], context: ImportContext): P
     amount: number,
   ): RowOutcome {
     const { card: credit } = target;
+    // A card without its statement and due days has no bills to pay yet (D20).
+    if (!hasCycle(credit)) return { kind: 'skip', reason: 'nothingToPay' };
     const recorded = target.payments.some(
       (p) =>
         p.currency === credit.currency &&
@@ -308,11 +312,13 @@ export function importDueMonth(rows: readonly DraftRow[], card: Card): IsoMonth 
     .map((row) => row.date as IsoDate)
     .sort();
   const latest = dates.at(-1) ?? '1970-01-01';
-  return card.type === 'credit' ? statementPeriodFor(latest, card).dueMonth : latest.slice(0, 7);
+  if (card.type === 'credit' && hasCycle(card)) return statementPeriodFor(latest, card).dueMonth;
+  // Without statement days, a credit card's statement is assumed due the month after.
+  return card.type === 'credit' ? addMonths(latest.slice(0, 7), 1) : latest.slice(0, 7);
 }
 
 /** The statement a payment on `date` pays: the latest one that closed before it. */
-export function statementPaidBy(date: IsoDate, card: CreditCard) {
+export function statementPaidBy(date: IsoDate, card: CycleDays) {
   const open = statementPeriodFor(date, card);
   return statementPeriodFor(addDays(open.periodStart, -1), card);
 }

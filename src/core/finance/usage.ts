@@ -5,9 +5,18 @@ import type {
   IsoDate,
   Transaction,
 } from '../../types/domain';
-import { daysBetween } from './dates';
+import { addDays, daysBetween } from './dates';
 import { currentOverride } from './overrides';
-import { paidInstallments, sum, type BillingPayment, type BillingStatement } from './statements';
+import {
+  installmentKey,
+  installmentSchedule,
+  paidInstallments,
+  statementPeriodFor,
+  sum,
+  type CycleDays,
+  type BillingPayment,
+  type BillingStatement,
+} from './statements';
 
 /** An override older than this many days should be refreshed (D11). */
 export const OVERRIDE_STALE_DAYS = 30;
@@ -33,7 +42,9 @@ export interface CardUsage {
 }
 
 export interface CardUsageInput {
-  card: Pick<CreditCard, 'limit' | 'currency'>;
+  /** With the statement and due days, older statements count as paid (D11). */
+  card: Pick<CreditCard, 'limit' | 'currency'> &
+    Partial<Pick<CreditCard, 'statementDay' | 'dueDay'>>;
   transactions: readonly UsageTransaction[];
   plans: readonly UsagePlan[];
   overrides: readonly Pick<BalanceOverride, 'balance' | 'currency' | 'asOf' | 'createdAt'>[];
@@ -51,7 +62,23 @@ export type UsageTransaction = Pick<
 export type UsagePlan = Pick<
   InstallmentPlan,
   'purchaseDate' | 'totalAmount' | 'count' | 'currency'
-> & { id?: string };
+> &
+  Partial<Pick<InstallmentPlan, 'firstDueMonth'>> & { id?: string };
+
+/**
+ * Statements closed before the latest closed one count as paid (D11): the bank carried
+ * anything unpaid into a newer statement, and an imported history has no payments in
+ * the app. Returns the last day they cover and the due month of the last of them.
+ */
+export function settledThrough(
+  card: CycleDays,
+  today: IsoDate,
+): { date: IsoDate; dueMonth: string } {
+  const open = statementPeriodFor(today, card);
+  const latestClosed = statementPeriodFor(addDays(open.periodStart, -1), card);
+  const settled = statementPeriodFor(addDays(latestClosed.periodStart, -1), card);
+  return { date: settled.periodEnd, dueMonth: settled.dueMonth };
+}
 
 /** Card limit usage per D11, including installment blocking and the balance override. */
 export function computeCardUsage(input: CardUsageInput): CardUsage {
@@ -60,28 +87,61 @@ export function computeCardUsage(input: CardUsageInput): CardUsage {
     items.filter((item) => item.currency === card.currency);
 
   const override = currentOverride(inCurrency(input.overrides));
-  const after = (date: IsoDate) => !override || date > override.asOf;
+  const cycle =
+    card.statementDay && card.dueDay
+      ? settledThrough({ statementDay: card.statementDay, dueDay: card.dueDay }, today)
+      : undefined;
+  // A newer cut-off than the override replaces it: the override's balance was billed in
+  // statements that now count as paid.
+  const settled = cycle && (!override || override.asOf < cycle.date) ? cycle : undefined;
+  const cutoff = settled?.date ?? override?.asOf;
+  const after = (date: IsoDate) => !cutoff || date > cutoff;
 
   const singles = inCurrency(input.transactions)
     .filter((tx) => !tx.installmentPlanId && after(tx.date))
     .reduce((sum, tx) => sum + tx.amount, 0);
 
   // Remaining unpaid balance of the plans: installments in fully paid statements no
-  // longer block the limit (D11, D14).
+  // longer block the limit (D11, D14). Under the settled cut-off, every plan counts and
+  // its installments billed in settled statements are paid; under an override, plans
+  // bought before its date are in its balance.
   const statements = input.statements ?? [];
-  const counted = inCurrency(input.plans).filter((plan) => after(plan.purchaseDate));
+  const counted = inCurrency(input.plans).filter(
+    (plan) => settled !== undefined || after(plan.purchaseDate),
+  );
   const countedIds = new Set(counted.map((plan) => plan.id));
   const isCounted = (ref: { planId: string }) => countedIds.has(ref.planId);
-  const plans =
-    counted.reduce((total, plan) => total + plan.totalAmount, 0) -
-    sum(paidInstallments(statements).filter(isCounted));
+  const released = new Map(
+    paidInstallments(statements).map((ref) => [installmentKey(ref), ref.amount]),
+  );
+  if (settled) {
+    for (const plan of counted) {
+      if (!plan.id || !plan.firstDueMonth) continue;
+      for (const item of installmentSchedule({
+        ...plan,
+        id: plan.id,
+        firstDueMonth: plan.firstDueMonth,
+      })) {
+        if (item.dueMonth <= settled.dueMonth) released.set(installmentKey(item), item.amount);
+      }
+    }
+  }
+  const releasedAmount = (plan: UsagePlan) =>
+    [...released.entries()]
+      .filter(([key]) => plan.id !== undefined && key.startsWith(`${plan.id}:`))
+      .reduce((total, [, amount]) => total + amount, 0);
+  const plans = counted.reduce((total, plan) => total + plan.totalAmount - releasedAmount(plan), 0);
 
-  // A payment after the as-of date reduces used by its amount (D14). The part of a
-  // settling payment that paid installments of counted plans was released above, so
-  // it is not subtracted twice.
-  const payments = inCurrency(input.payments ?? []);
+  // A payment after the cut-off reduces used by its amount (D14), unless it paid a
+  // settled statement. The part of a settling payment that paid installments of counted
+  // plans was released above, so it is not subtracted twice.
+  const settledIds = new Set(
+    statements.filter((s) => settled && s.periodEnd <= settled.date).map((s) => s.id),
+  );
+  const payments = inCurrency(input.payments ?? []).filter((p) => !settledIds.has(p.statementId));
   let paid = sum(payments.filter((p) => after(p.date)));
   for (const statement of statements) {
+    if (settledIds.has(statement.id)) continue;
     const settling = latestPayment(payments.filter((p) => p.statementId === statement.id));
     if (statement.paid && settling && after(settling.date)) {
       paid -= sum(statement.installments.filter(isCounted));
@@ -90,7 +150,8 @@ export function computeCardUsage(input: CardUsageInput): CardUsage {
 
   // The signed balance: below zero the bank owes the user a credit balance, which adds
   // to the spending power without changing the limit (D15).
-  const balance = (override?.balance ?? 0) + singles + plans - paid;
+  const base = settled ? 0 : (override?.balance ?? 0);
+  const balance = base + singles + plans - paid;
   const used = Math.max(balance, 0);
   const overLimit = balance > card.limit;
 
@@ -101,13 +162,14 @@ export function computeCardUsage(input: CardUsageInput): CardUsage {
     overLimit,
     utilization: card.limit > 0 ? Math.min(used / card.limit, 1) : null,
     level: utilizationLevel(used, card.limit),
-    source: override
-      ? {
-          kind: 'override',
-          asOf: override.asOf,
-          stale: daysBetween(override.asOf, today) > OVERRIDE_STALE_DAYS,
-        }
-      : { kind: 'calculated' },
+    source:
+      override && !settled
+        ? {
+            kind: 'override',
+            asOf: override.asOf,
+            stale: daysBetween(override.asOf, today) > OVERRIDE_STALE_DAYS,
+          }
+        : { kind: 'calculated' },
   };
 }
 

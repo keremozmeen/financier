@@ -22,7 +22,21 @@ import {
 import { splitInstallments } from './installments';
 import { currentOverride } from './overrides';
 
-type CycleDays = Pick<CreditCard, 'statementDay' | 'dueDay'>;
+/** A credit card's statement and due days, once both are known (D20). */
+export interface CycleDays {
+  statementDay: number;
+  dueDay: number;
+}
+
+/** A credit card whose statement and due days are known, so it has bills (D14, D20). */
+export type CycledCard<C extends Pick<CreditCard, 'statementDay' | 'dueDay'> = CreditCard> = C &
+  CycleDays;
+
+export function hasCycle<C extends Pick<CreditCard, 'statementDay' | 'dueDay'>>(
+  card: C,
+): card is CycledCard<C> {
+  return card.statementDay !== undefined && card.dueDay !== undefined;
+}
 
 export interface StatementPeriod {
   /** The day after the previous statement day. */
@@ -88,7 +102,7 @@ export type BillingPayment = Pick<
 >;
 
 export interface BillingInput {
-  card: Pick<CreditCard, 'statementDay' | 'dueDay' | 'currency' | 'autoPay' | 'autoPaySince'>;
+  card: CycleDays & Pick<CreditCard, 'currency' | 'autoPay' | 'autoPaySince'>;
   transactions: readonly Pick<Transaction, 'date' | 'amount' | 'currency' | 'installmentPlanId'>[];
   plans: readonly ScheduledPlan[];
   /** Statements stored when payments were recorded. */
@@ -119,10 +133,7 @@ export interface Bill extends StatementPeriod {
 }
 
 /** The statement after `period`. */
-export function nextStatementPeriod(
-  period: StatementPeriod,
-  days: Pick<CreditCard, 'statementDay' | 'dueDay'>,
-): StatementPeriod {
+export function nextStatementPeriod(period: StatementPeriod, days: CycleDays): StatementPeriod {
   return statementPeriodFor(addDays(period.periodEnd, 1), days);
 }
 
@@ -232,9 +243,9 @@ export interface CardBill {
 }
 
 /**
- * The bills a credit card shows (D14): every overdue bill, oldest first, then the next
- * bill — the last closed statement while it is due and not fully paid, otherwise the
- * statement that is still open. A bill stays overdue until payments cover it (including
+ * The bills a credit card shows (D14): the latest closed statement when it is overdue,
+ * then the next bill — the last closed statement while it is due and not fully paid,
+ * otherwise the statement that is still open. A bill stays overdue until payments cover it (including
  * "Paid outside the app"); statements covered by a bank balance override never are.
  */
 export function cardBills(input: BillingInput, today: IsoDate): CardBill[] {
@@ -244,11 +255,18 @@ export function cardBills(input: BillingInput, today: IsoDate): CardBill[] {
     chain.at(-2) ??
     computeBill(statementPeriodFor(addDays(current.periodStart, -1), input.card), input);
   const autoPay = Boolean(input.card.autoPay);
-  // Overdue never applies to auto-pay cards: the bank pays on the due date.
-  const overdue = autoPay ? [] : chain.filter((bill) => bill.dueDate < today && bill.remaining > 0);
+  // Only the latest closed statement can be overdue: once a newer statement closes, the
+  // bank has carried any unpaid amount into it, and older statements without a payment
+  // in the app are history (usually imported, paid at the bank). Overdue never applies
+  // to auto-pay cards: the bank pays on the due date.
+  const latestClosed = chain.at(-2);
+  const overdue =
+    !autoPay && latestClosed && latestClosed.dueDate < today && latestClosed.remaining > 0
+      ? latestClosed
+      : undefined;
   const next = previous.dueDate >= today && previous.remaining > 0 ? previous : current;
   return [
-    ...overdue.map((bill) => ({ bill, overdue: true, autoPay })),
+    ...(overdue ? [{ bill: overdue, overdue: true, autoPay }] : []),
     { bill: next, overdue: false, autoPay },
   ];
 }
@@ -286,7 +304,7 @@ export function upcomingBills<C extends Card>(
 ): ({ card: Extract<C, CreditCard> } & CardBill)[] {
   return inputs
     .flatMap(({ card, ...rest }) =>
-      card.type === 'credit'
+      card.type === 'credit' && hasCycle(card)
         ? cardBills({ ...rest, card }, today).map((item) => ({
             card: card as Extract<C, CreditCard>,
             ...item,

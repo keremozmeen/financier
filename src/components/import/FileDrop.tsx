@@ -1,8 +1,8 @@
-import { FileUp } from 'lucide-react';
+import { Upload } from 'lucide-react';
 import { useId, useState, type DragEvent } from 'react';
 import { useT } from '../../i18n';
 
-/** A file picker that also accepts a dropped file. */
+/** One large "Choose file" button that also takes a dropped file (D20, D21). */
 export function FileDrop({ onFile }: { onFile: (file: File) => void }) {
   const t = useT();
   const id = useId();
@@ -16,34 +16,36 @@ export function FileDrop({ onFile }: { onFile: (file: File) => void }) {
   }
 
   return (
-    <label
-      htmlFor={id}
-      onDragOver={(event) => {
-        event.preventDefault();
-        setOver(true);
-      }}
-      onDragLeave={() => setOver(false)}
-      onDrop={drop}
-      className={`flex min-h-36 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-6 text-center transition-colors ${
-        over ? 'border-accent bg-accent/10' : 'border-border bg-surface hover:bg-surface-raised'
-      }`}
-    >
-      <FileUp aria-hidden="true" size={28} className="text-accent" />
-      <span className="font-semibold">{t('import.drop.title')}</span>
-      <span className="text-sm text-muted">{t('import.drop.hint')}</span>
-      <input
-        id={id}
-        type="file"
-        aria-label={t('import.drop.label')}
-        // Excel and PDF are accepted only to explain that they are not supported yet.
-        accept=".csv,.tsv,.txt,text/csv,.xlsx,.xls,.pdf"
-        className="sr-only"
-        onChange={(event) => {
-          const file = event.target.files?.[0];
-          event.target.value = '';
-          if (file) onFile(file);
+    <div className="space-y-2.5">
+      <label
+        htmlFor={id}
+        onDragOver={(event) => {
+          event.preventDefault();
+          setOver(true);
         }}
-      />
-    </label>
+        onDragLeave={() => setOver(false)}
+        onDrop={drop}
+        className={`flex h-14 cursor-pointer items-center justify-center gap-2.5 rounded-full bg-fg text-base font-semibold text-bg transition-opacity hover:opacity-90 ${
+          over ? 'ring-4 ring-accent' : ''
+        }`}
+      >
+        <Upload aria-hidden="true" size={20} />
+        {t('import.choose')}
+        <input
+          id={id}
+          type="file"
+          aria-label={t('import.drop.label')}
+          // PDF is accepted only to explain that it is not supported yet.
+          accept=".csv,.tsv,.txt,text/csv,.xlsx,.xls,.pdf"
+          className="sr-only"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.target.value = '';
+            if (file) onFile(file);
+          }}
+        />
+      </label>
+      <p className="text-center text-sm text-muted">{t('import.note')}</p>
+    </div>
   );
 }

@@ -28,10 +28,14 @@ interface CardBase {
 export interface CreditCard extends CardBase {
   type: 'credit';
   limit: number;
-  /** Day of month the statement closes (1–31, clamped to month length). */
-  statementDay: number;
-  /** Day of month the payment is due (1–31, clamped to month length). */
-  dueDay: number;
+  /**
+   * Day of month the statement closes (1–31, clamped to month length). Missing until the
+   * user enters it or the first imported statement states it; the card has no bills
+   * until both days are known (D20).
+   */
+  statementDay?: number;
+  /** Day of month the payment is due (1–31, clamped to month length). Missing as above. */
+  dueDay?: number;
   /** The bank pays each statement in full on its due date (D14). */
   autoPay?: boolean;
   /** When auto-pay was turned on; bills due before it are not paid automatically. */

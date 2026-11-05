@@ -51,7 +51,7 @@ export function PaymentForm({
       onSubmit={submit}
       noValidate
       aria-label={t('payment.title')}
-      className={bare ? 'space-y-4' : 'space-y-4 rounded-xl border border-border bg-surface p-4'}
+      className={bare ? 'space-y-4' : 'space-y-4 panel p-4'}
     >
       {!bare && <h2 className="font-semibold">{t('payment.title')}</h2>}
       <p className="text-sm">

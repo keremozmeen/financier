@@ -27,7 +27,7 @@ export function RadarAlerts({
   if (alerts.length === 0) return null;
 
   return (
-    <details className="group rounded-xl border border-alert/40 bg-alert/10">
+    <details className="group rounded-[1.125rem] bg-alert-soft">
       <summary className="flex min-h-12 cursor-pointer list-none items-center gap-3 px-4 font-medium [&::-webkit-details-marker]:hidden">
         <span aria-hidden="true" className="size-2.5 shrink-0 rounded-full bg-alert" />
         <span className="flex-1">{t('radar.attention', { count: alerts.length })}</span>

@@ -1,5 +1,7 @@
 import {
   Archive,
+  CalendarDays,
+  ChevronRight,
   ArchiveRestore,
   Info,
   Pencil,
@@ -9,7 +11,7 @@ import {
   TriangleAlert,
 } from 'lucide-react';
 import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router';
+import { Link, useNavigate, useParams } from 'react-router';
 import { BalanceOverrideForm } from '../components/cards/BalanceOverrideForm';
 import { CardTitle } from '../components/cards/CardTitle';
 import { CardUsagePanel } from '../components/cards/CardUsagePanel';
@@ -21,9 +23,10 @@ import { TransactionList } from '../components/cards/TransactionList';
 import { Button, ButtonLink } from '../components/ui/Button';
 import { Dialog } from '../components/ui/Dialog';
 import { ScreenHeader } from '../components/ui/ScreenHeader';
-import type { CardUsage } from '../core/finance';
+import { hasCycle, type CardUsage } from '../core/finance';
 import { balanceOverridesRepo, cardsRepo, paymentsRepo, transactionsRepo } from '../db';
 import { useEntryLabel } from '../hooks/useEntryLabel';
+import { useDetailedView } from '../hooks/useDetailedView';
 import { useCardDetail } from '../hooks/useFinance';
 import { useFormat } from '../hooks/useFormat';
 import { useT } from '../i18n';
@@ -42,6 +45,7 @@ export function CardDetailScreen() {
   const [pendingDelete, setPendingDelete] = useState<Transaction>();
   const [pendingPaymentDelete, setPendingPaymentDelete] = useState<Payment>();
   const format = useFormat();
+  const [detailed] = useDetailedView();
 
   if (detail === undefined) return <p className="text-muted">{t('common.loading')}</p>;
   if (detail === null) {
@@ -81,17 +85,33 @@ export function CardDetailScreen() {
         </p>
       )}
 
-      <div className="rounded-xl border border-border bg-surface p-4">
+      <div className="panel p-4">
         <CardTitle card={card} showName={false} />
         <div className="mt-3">
           <CardUsagePanel summary={summary} gaugeSize={128} />
         </div>
-        {'usage' in summary ? (
-          <UsageSource usage={summary.usage} />
-        ) : (
-          <p className="mt-3 text-xs text-muted">{t('debit.note')}</p>
-        )}
+        {'usage' in summary
+          ? // How "used" is worked out is detail (D20); a stale bank balance still shows.
+            (detailed ||
+              (summary.usage.source.kind === 'override' && summary.usage.source.stale)) && (
+              <UsageSource usage={summary.usage} />
+            )
+          : detailed && <p className="mt-3 text-xs text-muted">{t('debit.note')}</p>}
       </div>
+
+      {card.type === 'credit' && !hasCycle(card) && (
+        <Link
+          to={`/cards/${card.id}/edit`}
+          className="panel flex min-h-16 items-center gap-3 px-4 py-3"
+        >
+          <CalendarDays aria-hidden="true" size={20} className="shrink-0 text-warn" />
+          <span className="min-w-0 flex-1">
+            <span className="block font-semibold">{t('cards.cycle.missing')}</span>
+            <span className="block text-sm text-muted">{t('cards.cycle.missing.hint')}</span>
+          </span>
+          <ChevronRight aria-hidden="true" size={18} className="shrink-0 text-muted" />
+        </Link>
+      )}
 
       {/* Debit cards have no statements or payments (D13, D14). */}
       {'bills' in summary &&
