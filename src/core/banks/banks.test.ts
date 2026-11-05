@@ -1,4 +1,4 @@
-import { BANKS, initials, matchBank } from '.';
+import { BANKS, matchBank } from '.';
 
 describe('matchBank', () => {
   it('finds a bank by its name, with Turkish letters folded', () => {
@@ -28,13 +28,5 @@ describe('matchBank', () => {
   it('gives every bank a unique id and a mark', () => {
     expect(new Set(BANKS.map((bank) => bank.id)).size).toBe(BANKS.length);
     for (const bank of BANKS) expect(bank.mark.length).toBeGreaterThan(0);
-  });
-});
-
-describe('initials', () => {
-  it('takes the first letter of up to two words, upper-cased the Turkish way', () => {
-    expect(initials('ziraat katılım')).toBe('ZK');
-    expect(initials('istanbul')).toBe('İ');
-    expect(initials('  ')).toBe('');
   });
 });

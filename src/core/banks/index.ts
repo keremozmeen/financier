@@ -1,8 +1,8 @@
 import { foldText } from '../../parsers/common/text';
 
 /**
- * A bank (or card issuer) the app knows (D21): its display name, a short mark shown
- * until its logo is added, and its brand color for the mark and card tiles. Colors are
+ * A bank (or card issuer) the app knows (D21): its display name, its initials as its
+ * mark, and its brand color for the mark and card tiles. Colors are
  * deep enough for white text unless `ink` says otherwise.
  */
 export interface Bank {
@@ -121,14 +121,4 @@ export function matchBank(...texts: readonly (string | undefined)[]): Bank | und
     if (bank) return bank;
   }
   return undefined;
-}
-
-/** Up to two initials for a bank the app does not know ("Ziraat Katılım" → "ZK"). */
-export function initials(text: string): string {
-  return text
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((word) => word.charAt(0).toLocaleUpperCase('tr'))
-    .join('');
 }
