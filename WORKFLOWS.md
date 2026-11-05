@@ -72,7 +72,8 @@ financier/
 │   └── main.tsx         # Entry point
 ├── public/              # PWA Manifest, Service Worker
 ├── DECISIONS.md         # Binding architecture decisions
-├── CLAUDE.md            # Build instructions and phased plan for the AI developer
+├── CLAUDE.md            # Build rules for the AI developer
+├── PLAN.md              # Phased build plan
 ├── WORKFLOWS.md         # Workflow and developer roles document
 └── README.md            # Public project overview & Zero-Cloud manifesto
 ```
