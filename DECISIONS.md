@@ -151,6 +151,7 @@ Turkish banks block the full value of an installment purchase against the card l
 - The user can enter the card's current balance from their banking app, saved with the date it was entered ("as of" date).
 - When an override exists: used = override balance + single charges dated after the as-of date + the full remaining value of installment plans created after the as-of date. Everything before the as-of date is assumed to be included in the override.
 - Without an override, used is calculated from the recorded transactions alone.
+- **Older statements count as paid:** statements that closed before the latest closed one are treated as paid, as overdue bills are in D14. Their single charges and the payments made for them are left out, and installments billed in them no longer block the limit; installments billed later still do. So used covers the latest closed statement, the open one and the unbilled installments. An imported year of history without payments would otherwise show a year of charges as debt. A bank balance override dated after the latest settled statement still applies; an older one is replaced by this rule.
 - Updating the override (for example after paying the bill) replaces the previous one. Keep a history of past overrides so later phases can use it.
 - The card screen shows whether used is "calculated" or "from your bank balance on <date>", and suggests updating it if the as-of date is more than 30 days old.
 
