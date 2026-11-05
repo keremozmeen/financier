@@ -1,4 +1,4 @@
-import { Undo2 } from 'lucide-react';
+import { ChevronDown, Undo2 } from 'lucide-react';
 import { useState } from 'react';
 import { todayIso } from '../../core/finance';
 import { importsRepo } from '../../db';
@@ -16,39 +16,46 @@ export function ImportHistory() {
   const [undoing, setUndoing] = useState<ImportRecord | null>(null);
 
   return (
-    <section aria-labelledby="import-history" className="mt-8">
-      <h2 id="import-history" className="mb-2 text-lg font-semibold">
-        {t('history.title')}
-      </h2>
-      {history === undefined ? (
-        <p className="text-muted">{t('common.loading')}</p>
-      ) : history.length === 0 ? (
-        <p className="panel p-4 text-muted">{t('history.empty')}</p>
-      ) : (
-        <ul className="divide-y divide-border panel">
-          {history.map(({ record, card }) => (
-            <li key={record.id} className="flex items-center gap-3 py-2 pr-2 pl-4">
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-medium">{record.fileName}</p>
-                <p className="text-xs text-muted">
-                  {t('history.meta', {
-                    card: card?.name ?? '—',
-                    date: format.date(todayIso(new Date(record.importedAt))),
-                  })}
-                </p>
-                <p className="text-xs text-muted">{t('history.counts', { ...record.counts })}</p>
-              </div>
-              <Button
-                variant="ghost"
-                onClick={() => setUndoing(record)}
-                aria-label={t('history.undoLabel', { file: record.fileName })}
-              >
-                <Undo2 aria-hidden="true" size={18} />
-                {t('history.undo')}
-              </Button>
-            </li>
-          ))}
-        </ul>
+    <>
+      {/* Folded to one line; nothing shows before the first import (D20). */}
+      {history && history.length > 0 && (
+        <details className="group panel">
+          <summary className="flex min-h-14 cursor-pointer list-none items-center gap-3 px-4 [&::-webkit-details-marker]:hidden">
+            <span className="flex-1">
+              <span className="font-semibold">{t('history.title')}</span>{' '}
+              <span className="text-muted">· {t('history.count', { count: history.length })}</span>
+            </span>
+            <ChevronDown
+              aria-hidden="true"
+              size={18}
+              className="shrink-0 text-muted transition-transform group-open:rotate-180"
+            />
+          </summary>
+          <ul className="divide-y divide-border border-t border-border">
+            {history.map(({ record, card }) => (
+              <li key={record.id} className="flex items-center gap-3 py-2 pr-2 pl-4">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium">{record.fileName}</p>
+                  <p className="text-xs text-muted">
+                    {t('history.meta', {
+                      card: card?.name ?? '—',
+                      date: format.date(todayIso(new Date(record.importedAt))),
+                    })}
+                  </p>
+                  <p className="text-xs text-muted">{t('history.counts', { ...record.counts })}</p>
+                </div>
+                <Button
+                  variant="ghost"
+                  onClick={() => setUndoing(record)}
+                  aria-label={t('history.undoLabel', { file: record.fileName })}
+                >
+                  <Undo2 aria-hidden="true" size={18} />
+                  {t('history.undo')}
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </details>
       )}
       {undoing && (
         <Dialog title={t('history.undo.title')} onClose={() => setUndoing(null)}>
@@ -71,6 +78,6 @@ export function ImportHistory() {
           </div>
         </Dialog>
       )}
-    </section>
+    </>
   );
 }

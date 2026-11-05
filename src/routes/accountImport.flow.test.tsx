@@ -50,10 +50,7 @@ describe('account statement import flow (D17, D18)', () => {
   it('reads an HTML-as-.xls account statement and pays the credit card', async () => {
     await seed();
     renderApp('/import');
-    await user.selectOptions(
-      await screen.findByLabelText('Card', {}, { timeout: 5000 }),
-      'İş Bankası · Debit card',
-    );
+    await user.click(await screen.findByRole('radio', { name: 'İş Bankası' }, { timeout: 5000 }));
     await openFile(xls('html'));
 
     // The info rows above the header are skipped and the columns read on their own.
@@ -88,10 +85,7 @@ describe('account statement import flow (D17, D18)', () => {
   it('recognizes the same statement in another format through the saved mapping', async () => {
     await seed();
     renderApp('/import');
-    await user.selectOptions(
-      await screen.findByLabelText('Card', {}, { timeout: 5000 }),
-      'İş Bankası · Debit card',
-    );
+    await user.click(await screen.findByRole('radio', { name: 'İş Bankası' }, { timeout: 5000 }));
     await openFile(xls('xlsx'));
     await screen.findByRole('region', { name: 'Review' }, { timeout: 5000 });
     await user.click(screen.getByRole('button', { name: 'Import' }));
@@ -124,7 +118,9 @@ describe('account statement import flow (D17, D18)', () => {
     });
     const debitId = (await cardsRepo.list()).find((c) => c.type === 'debit')!.id;
     renderApp('/import');
-    await user.selectOptions(await screen.findByLabelText('Card', {}, { timeout: 5000 }), debitId);
+    await user.click(await screen.findByRole('radio', { name: 'İş Bankası' }, { timeout: 5000 }));
+    expect(screen.getByRole('radio', { name: 'İş Bankası' })).toHaveAttribute('value', debitId);
+    expect(screen.getByRole('radio', { name: 'İş Bankası' })).toBeChecked();
     await openFile(xls('xlsx'));
     await screen.findByRole('region', { name: 'Review' }, { timeout: 5000 });
 
@@ -141,10 +137,7 @@ describe('account statement import flow (D17, D18)', () => {
   it('asks for a debit card when an account statement is opened on a credit card', async () => {
     await seed();
     renderApp('/import');
-    await user.selectOptions(
-      await screen.findByLabelText('Card', {}, { timeout: 5000 }),
-      'Maximum · Credit card',
-    );
+    await user.click(await screen.findByRole('radio', { name: 'Maximum' }, { timeout: 5000 }));
     await openFile(xls('xls'));
     expect(await screen.findByRole('alert')).toHaveTextContent('bank account statement');
   });

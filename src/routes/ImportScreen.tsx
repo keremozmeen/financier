@@ -1,12 +1,12 @@
-import { CheckCircle2, ShieldCheck } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 import { useState } from 'react';
+import { CardPicker } from '../components/import/CardPicker';
 import { FileDrop } from '../components/import/FileDrop';
 import { ImportHistory } from '../components/import/ImportHistory';
 import { MappingWizard, type MappingResult } from '../components/import/MappingWizard';
 import { ReviewList } from '../components/import/ReviewList';
 import { Button, ButtonLink } from '../components/ui/Button';
 import { ScreenHeader } from '../components/ui/ScreenHeader';
-import { SelectField } from '../components/ui/TextField';
 import { draftRows, type DraftRow } from '../core/import';
 import {
   autoMap,
@@ -167,10 +167,7 @@ export function ImportScreen() {
   return (
     <section>
       <ScreenHeader title={t('import.title')} />
-      <p className="mb-4 flex items-center gap-2 text-sm text-muted">
-        <ShieldCheck aria-hidden="true" size={16} className="shrink-0 text-success" />
-        {t('import.privacy')}
-      </p>
+      {step.kind === 'start' && <p className="-mt-2 mb-6 text-muted">{t('import.intro')}</p>}
 
       {!card ? (
         <div className="space-y-3 panel p-4">
@@ -180,19 +177,11 @@ export function ImportScreen() {
           </ButtonLink>
         </div>
       ) : step.kind === 'start' ? (
-        <div className="space-y-4">
-          <SelectField
-            label={t('import.card')}
-            value={card.id}
-            onChange={setCardId}
-            options={cards.map((c) => ({
-              value: c.id,
-              label: `${c.name} · ${t(c.type === 'credit' ? 'cards.type.credit' : 'cards.type.debit')}`,
-            }))}
-          />
+        <div className="space-y-6">
+          <CardPicker cards={cards} value={card.id} onChange={setCardId} />
           <FileDrop onFile={(file) => void openFile(file)} />
           {error && (
-            <p role="alert" className="rounded-xl border border-alert/40 bg-alert/10 p-4 text-sm">
+            <p role="alert" className="rounded-2xl bg-alert-soft p-4 text-sm">
               {t(error)}
             </p>
           )}

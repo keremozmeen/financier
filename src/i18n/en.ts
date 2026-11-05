@@ -10,6 +10,12 @@ export const en = {
   'nav.subRadar': 'Sub-Radar',
   'nav.subRadar.short': 'Sub-Radar',
   'nav.settings': 'Settings',
+  'nav.add': 'Add',
+  'add.statement': 'Upload a statement',
+  'add.statement.hint': 'CSV or Excel from your bank',
+  'add.entry': 'Add an entry',
+  'add.entry.hint': 'One purchase or refund, by hand',
+  'add.pickCard': 'Which card?',
 
   'common.cancel': 'Cancel',
   'common.save': 'Save',
@@ -208,12 +214,10 @@ export const en = {
   'tx.delete.bodyPlan': 'This removes "{description}" and its installment plan from this card.',
 
   'import.title': 'Import',
-  'import.privacy': 'Files are read on this device. Nothing is uploaded.',
-  'import.card': 'Card',
   'import.noCards': 'Add a card first, then import its statement.',
-  'import.drop.title': 'Choose a CSV or Excel file',
-  'import.drop.hint':
-    'or drop it here. Download the statement as CSV or Excel (.xls, .xlsx) from your bank.',
+  'import.intro': 'Download your statement from your bank and add it here.',
+  'import.choose': 'Choose file',
+  'import.note': 'CSV or Excel · The file stays on this device',
   'import.drop.label': 'Statement file',
   'import.reading': 'Reading {file}…',
   'import.error.pdf':
@@ -303,8 +307,8 @@ export const en = {
   'done.title': 'Import complete',
   'done.viewCard': 'View card',
   'done.another': 'Import another file',
-  'history.title': 'Import history',
-  'history.empty': 'No imports yet.',
+  'history.title': 'History',
+  'history.count': '{count} imports',
   'history.meta': '{card} · {date}',
   'history.counts':
     '{transactions} entries · {plans} plans · {payments} payments · {merged} merged · {linked} linked · {skipped} skipped',

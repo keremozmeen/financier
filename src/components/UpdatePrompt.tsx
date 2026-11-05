@@ -20,7 +20,7 @@ export function UpdatePrompt() {
   return (
     <div
       role="status"
-      className="fixed inset-x-4 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-20 mx-auto flex max-w-md items-center gap-3 rounded-xl border border-border bg-surface-raised p-3 shadow-lg"
+      className="fixed inset-x-4 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-20 mx-auto flex max-w-md items-center gap-3 rounded-2xl bg-surface p-3 shadow-lg"
     >
       <p className="flex-1 text-sm">
         {needRefresh ? t('pwa.updateAvailable') : t('pwa.offlineReady')}

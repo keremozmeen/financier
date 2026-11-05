@@ -25,6 +25,13 @@
   --warn-soft: #fdf0d5;
   --alert: #a1251a;
   --alert-soft: #fde4e1;
+  --nav: #14161b;
+  --nav-fg: #ffffff;
+  --nav-muted: #a3a8b3;
+  --nav-active: #2b2e35;
+  --nav-active-fg: #ffffff;
+  --nav-add: #b8e986;
+  --nav-add-fg: #142010;
 }
 
 :root[data-theme='dark'] {
@@ -44,6 +51,13 @@
   --warn-soft: #3a2e14;
   --alert: #ff8a7a;
   --alert-soft: #3a1d1a;
+  --nav: #2a2e28;
+  --nav-fg: #ecefe8;
+  --nav-muted: #a3a89e;
+  --nav-active: #3d4339;
+  --nav-active-fg: #ffffff;
+  --nav-add: #b8e986;
+  --nav-add-fg: #142010;
 }
 
 @theme inline {
@@ -65,6 +79,14 @@
   --color-warn-soft: var(--warn-soft);
   --color-alert: var(--alert);
   --color-alert-soft: var(--alert-soft);
+  /* The floating tab bar is dark in both themes (D21). */
+  --color-nav: var(--nav);
+  --color-nav-fg: var(--nav-fg);
+  --color-nav-muted: var(--nav-muted);
+  --color-nav-active: var(--nav-active);
+  --color-nav-active-fg: var(--nav-active-fg);
+  --color-nav-add: var(--nav-add);
+  --color-nav-add-fg: var(--nav-add-fg);
 }
 
 /* A section: a rounded panel on the ground, no border (D21). */

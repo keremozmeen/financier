@@ -11,7 +11,7 @@ export function AppShell() {
     <div className="min-h-dvh bg-bg text-fg">
       {/* Each screen's title is its heading; the app name is for assistive tech (D21). */}
       <p className="sr-only">{t('app.name')}</p>
-      <main className="mx-auto max-w-xl px-4 pt-[calc(1.25rem+env(safe-area-inset-top))] pb-[calc(6rem+env(safe-area-inset-bottom))]">
+      <main className="mx-auto max-w-xl px-4 pt-[calc(1.25rem+env(safe-area-inset-top))] pb-[calc(7rem+env(safe-area-inset-bottom))]">
         <Outlet />
       </main>
       <TabBar />

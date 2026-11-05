@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { cardsRepo, db, transactionsRepo } from '../db';
 import { CREDIT_CARD_CSV, DEBIT_CARD_CSV } from '../parsers/csv/fixtures';
@@ -100,11 +100,12 @@ describe('import flow (D3, D16)', () => {
     expect(within(rowFor('NETFLIX.COM')).getByText('New entry')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Choose another file' }));
 
-    // Undo the first import from the history.
+    // Undo the first import from the history, folded to one line.
+    await user.click(await screen.findByText('History'));
     await user.click(await screen.findByRole('button', { name: 'Undo import of ekstre.csv' }));
     const dialog = screen.getByRole('dialog', { name: 'Undo this import?' });
     await user.click(within(dialog).getByRole('button', { name: 'Undo import' }));
-    expect(await screen.findByText('No imports yet.')).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText('History')).not.toBeInTheDocument());
     expect(await db.transactions.count()).toBe(1);
     expect(await db.payments.count()).toBe(0);
     expect(await db.installmentPlans.count()).toBe(0);
