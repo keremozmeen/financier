@@ -1,16 +1,69 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <!-- Placeholder app icon: a flat, geometric Kipp. Replaced by the hand-drawn Kipp later. -->
-  <rect width="512" height="512" rx="116" fill="#121412"/>
-  <!-- Curled tail -->
-  <path d="M316 336c70 12 118-28 114-80-4-44-42-70-80-62-32 7-48 38-38 64 9 22 34 30 52 20 14-8 16-26 6-36" fill="none" stroke="#b8e986" stroke-width="34" stroke-linecap="round"/>
-  <!-- Body with the pointed casque on the head -->
-  <path d="M90 304c0-64 34-114 92-136l78-44c34 38 70 72 92 108 12 22-2 48-28 48h-12c-8 0-14 6-14 14v34c0 22-18 40-40 40H130c-22 0-40-18-40-40z" fill="#b8e986"/>
-  <!-- Eye -->
-  <circle cx="196" cy="246" r="48" fill="#f6fbef"/>
-  <circle cx="210" cy="242" r="21" fill="#121412"/>
-  <circle cx="217" cy="235" r="7" fill="#f6fbef"/>
-  <!-- Mouth -->
-  <path d="M100 312c26 12 56 14 84 6" fill="none" stroke="#121412" stroke-width="11" stroke-linecap="round"/>
-  <!-- Feet -->
-  <path d="M146 368v34M240 368v34" stroke="#b8e986" stroke-width="26" stroke-linecap="round"/>
+  <!-- App icon: Kipp the chameleon on a branch. The in-app mascot is hand-drawn separately. -->
+  <defs>
+    <radialGradient id="ground" cx="50%" cy="38%" r="70%">
+      <stop offset="0" stop-color="#232921"/>
+      <stop offset="1" stop-color="#101210"/>
+    </radialGradient>
+    <linearGradient id="skin" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#d4f59b"/>
+      <stop offset="0.45" stop-color="#9fd65e"/>
+      <stop offset="1" stop-color="#3f7f24"/>
+    </linearGradient>
+    <linearGradient id="tail" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8ccb4f"/>
+      <stop offset="1" stop-color="#3f7f24"/>
+    </linearGradient>
+    <linearGradient id="bark" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#9a6d40"/>
+      <stop offset="1" stop-color="#5a3c22"/>
+    </linearGradient>
+    <radialGradient id="eye" cx="40%" cy="35%" r="70%">
+      <stop offset="0" stop-color="#e8fbc8"/>
+      <stop offset="1" stop-color="#6fae3c"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#ground)"/>
+  <!-- Shifted up and in so Android's round mask keeps the eye and the tail. -->
+  <g transform="translate(-8 -22)">
+
+  <!-- Curled tail, behind the branch -->
+  <path d="M376 296c52-4 88 26 84 70-4 40-46 56-70 34-18-17-8-44 14-42 15 1 20 16 12 24" fill="none" stroke="url(#tail)" stroke-width="26" stroke-linecap="round"/>
+
+  <!-- Branch -->
+  <path d="M34 384 474 330" stroke="url(#bark)" stroke-width="30" stroke-linecap="round"/>
+  <path d="M120 370l-18 30M392 340l22 26" stroke="#5a3c22" stroke-width="10" stroke-linecap="round"/>
+
+  <!-- Hind and front legs gripping the branch -->
+  <path d="M326 300c8 20 10 34 4 50" fill="none" stroke="#4f9330" stroke-width="24" stroke-linecap="round"/>
+  <path d="M176 298c-6 22-10 40-8 64" fill="none" stroke="#4f9330" stroke-width="24" stroke-linecap="round"/>
+  <ellipse cx="318" cy="356" rx="16" ry="10" fill="#3f7f24"/>
+  <ellipse cx="344" cy="350" rx="16" ry="10" fill="#3f7f24"/>
+  <ellipse cx="156" cy="372" rx="16" ry="10" fill="#3f7f24"/>
+  <ellipse cx="182" cy="368" rx="16" ry="10" fill="#3f7f24"/>
+
+  <!-- Body and head with the casque -->
+  <path d="M92 252c14-38 46-66 82-94l24-24c16 22 34 32 56 32 58-2 110 22 132 70 14 30 4 66-30 80-42 16-112 18-168 6-40-8-74-24-92-42-8-8-8-18-4-28z" fill="url(#skin)"/>
+  <!-- Dorsal crest -->
+  <path d="M232 160l8-14 10 14 10-13 10 14 11-12 9 15 12-10 7 16 13-8 5 17" fill="none" stroke="#bfe98a" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+  <!-- Pale side stripe and spots -->
+  <path d="M206 276c52-10 112-10 168 0" fill="none" stroke="#efffd6" stroke-width="12" stroke-linecap="round" opacity="0.55"/>
+  <circle cx="250" cy="238" r="9" fill="#5f9f35" opacity="0.55"/>
+  <circle cx="296" cy="226" r="7" fill="#5f9f35" opacity="0.55"/>
+  <circle cx="330" cy="250" r="8" fill="#5f9f35" opacity="0.55"/>
+  <circle cx="226" cy="300" r="6" fill="#3f7f24" opacity="0.5"/>
+  <circle cx="300" cy="306" r="7" fill="#3f7f24" opacity="0.5"/>
+  <!-- Casque ridge -->
+  <path d="M120 214c20-26 44-46 74-70" fill="none" stroke="#e3f9bd" stroke-width="6" stroke-linecap="round" opacity="0.7"/>
+
+  <!-- Eye turret -->
+  <circle cx="168" cy="226" r="36" fill="url(#eye)"/>
+  <circle cx="168" cy="226" r="36" fill="none" stroke="#3f7f24" stroke-width="3"/>
+  <circle cx="164" cy="224" r="24" fill="none" stroke="#4f9330" stroke-width="3" opacity="0.8"/>
+  <circle cx="160" cy="222" r="12" fill="#14160f"/>
+  <circle cx="156" cy="218" r="4" fill="#ffffff"/>
+
+  <!-- Smile -->
+  <path d="M98 262c26 14 56 18 86 10" fill="none" stroke="#2d5d18" stroke-width="5" stroke-linecap="round"/>
+  </g>
 </svg>
