@@ -1,3 +1,4 @@
+import { BANKS } from '../../core/banks';
 import { CARD_COLORS, cardColor, readableOnWhiteText } from './colors';
 
 describe('card colors (D21)', () => {
@@ -18,4 +19,13 @@ describe('card colors (D21)', () => {
   it('leaves text that is not a hex color alone', () => {
     expect(readableOnWhiteText('rebeccapurple')).toBe('rebeccapurple');
   });
+});
+
+describe('bank colors (D21)', () => {
+  it.each(BANKS.filter((bank) => !bank.ink).map((bank) => [bank.name, bank.color] as const))(
+    'reads with white text: %s',
+    (_name, color) => {
+      expect(readableOnWhiteText(color)).toBe(color);
+    },
+  );
 });

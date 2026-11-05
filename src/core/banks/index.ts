@@ -86,7 +86,7 @@ export const BANKS: readonly Bank[] = [
     keywords: ['denizbank', 'deniz bank'],
   },
   { id: 'teb', name: 'TEB', mark: 'TEB', color: '#00804a', keywords: ['teb', 'cepteteb'] },
-  { id: 'ing', name: 'ING', mark: 'ING', color: '#d24a00', keywords: ['ing'] },
+  { id: 'ing', name: 'ING', mark: 'ING', color: '#c04400', keywords: ['ing'] },
   {
     id: 'kuveytturk',
     name: 'Kuveyt Türk',

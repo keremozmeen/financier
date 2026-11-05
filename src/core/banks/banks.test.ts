@@ -30,3 +30,27 @@ describe('matchBank', () => {
     for (const bank of BANKS) expect(bank.mark.length).toBeGreaterThan(0);
   });
 });
+
+describe('every bank on the list (D21)', () => {
+  it.each(BANKS.map((bank) => [bank.name, bank] as const))(
+    'is found by its own name: %s',
+    (name, bank) => {
+      expect(matchBank(name)?.id).toBe(bank.id);
+      expect(matchBank(name.toLocaleUpperCase('tr'))?.id).toBe(bank.id);
+    },
+  );
+
+  it.each([
+    ['Bonus', 'garanti'],
+    ['World', 'yapikredi'],
+    ['Maximum', 'isbank'],
+    ['Axess', 'akbank'],
+    ['Wings', 'akbank'],
+    ['CardFinans', 'qnb'],
+    ['Bankkart', 'ziraat'],
+    ['Paraf', 'halkbank'],
+    ['Advantage', 'hsbc'],
+  ])('is found by its card brand: %s', (brand, id) => {
+    expect(matchBank('', `${brand} Platinum`)?.id).toBe(id);
+  });
+});
