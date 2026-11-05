@@ -85,6 +85,8 @@ describe('account statement import flow (D17, D18)', () => {
   });
 
   it('recognizes the same statement in another format through the saved mapping', async () => {
+    // Every row with its controls shows in the detailed view (D20).
+    window.localStorage.setItem('financier.detailedView', 'on');
     await seed();
     renderApp('/import');
     await user.click(await screen.findByRole('radio', { name: 'İş Bankası' }, { timeout: 5000 }));
@@ -106,6 +108,8 @@ describe('account statement import flow (D17, D18)', () => {
   });
 
   it('lets the user pick the credit card a payment paid', async () => {
+    // Every row with its controls shows in the detailed view (D20).
+    window.localStorage.setItem('financier.detailedView', 'on');
     await seed();
     await cardsRepo.create({
       type: 'credit',
