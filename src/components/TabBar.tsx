@@ -57,7 +57,7 @@ export function TabBar() {
         aria-label={t('nav.label')}
         className="fixed inset-x-4 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-10 mx-auto max-w-md"
       >
-        <ul className="flex h-16 items-center justify-between rounded-full bg-nav px-2 shadow-[0_10px_30px_rgba(0,0,0,0.25)]">
+        <ul className="flex h-16 items-center justify-between rounded-full bg-nav px-2 shadow-(--nav-shadow)">
           {LEFT.map(tab)}
           <li>
             <button

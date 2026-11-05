@@ -1,7 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="112" fill="#121412"/>
-  <path d="M120 300c0-88 64-152 150-152 72 0 122 50 122 116 0 54-40 94-92 94-42 0-72-28-72-64 0-30 22-52 50-52 22 0 38 16 38 36" fill="none" stroke="#b8e986" stroke-width="34" stroke-linecap="round"/>
-  <circle cx="318" cy="208" r="30" fill="#f6fbef"/>
-  <circle cx="326" cy="206" r="13" fill="#121412"/>
-  <path d="M150 330c-14 26-30 44-52 54" fill="none" stroke="#b8e986" stroke-width="26" stroke-linecap="round"/>
+  <!-- Placeholder app icon: a flat, geometric Kipp. Replaced by the hand-drawn Kipp later. -->
+  <rect width="512" height="512" rx="116" fill="#121412"/>
+  <!-- Curled tail -->
+  <path d="M316 336c70 12 118-28 114-80-4-44-42-70-80-62-32 7-48 38-38 64 9 22 34 30 52 20 14-8 16-26 6-36" fill="none" stroke="#b8e986" stroke-width="34" stroke-linecap="round"/>
+  <!-- Body with the pointed casque on the head -->
+  <path d="M90 304c0-64 34-114 92-136l78-44c34 38 70 72 92 108 12 22-2 48-28 48h-12c-8 0-14 6-14 14v34c0 22-18 40-40 40H130c-22 0-40-18-40-40z" fill="#b8e986"/>
+  <!-- Eye -->
+  <circle cx="196" cy="246" r="48" fill="#f6fbef"/>
+  <circle cx="210" cy="242" r="21" fill="#121412"/>
+  <circle cx="217" cy="235" r="7" fill="#f6fbef"/>
+  <!-- Mouth -->
+  <path d="M100 312c26 12 56 14 84 6" fill="none" stroke="#121412" stroke-width="11" stroke-linecap="round"/>
+  <!-- Feet -->
+  <path d="M146 368v34M240 368v34" stroke="#b8e986" stroke-width="26" stroke-linecap="round"/>
 </svg>

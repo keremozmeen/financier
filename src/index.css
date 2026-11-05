@@ -25,11 +25,12 @@
   --warn-soft: #fdf0d5;
   --alert: #a1251a;
   --alert-soft: #fde4e1;
-  --nav: #14161b;
-  --nav-fg: #ffffff;
-  --nav-muted: #a3a8b3;
-  --nav-active: #2b2e35;
+  --nav: #ffffff;
+  --nav-fg: #14161b;
+  --nav-muted: #6b7080;
+  --nav-active: #14161b;
   --nav-active-fg: #ffffff;
+  --nav-shadow: 0 8px 28px rgb(20 22 27 / 0.14);
   --nav-add: #b8e986;
   --nav-add-fg: #142010;
 }
@@ -51,6 +52,7 @@
   --warn-soft: #3a2e14;
   --alert: #ff8a7a;
   --alert-soft: #3a1d1a;
+  --nav-shadow: 0 10px 30px rgb(0 0 0 / 0.35);
   --nav: #2a2e28;
   --nav-fg: #ecefe8;
   --nav-muted: #a3a89e;
@@ -79,7 +81,7 @@
   --color-warn-soft: var(--warn-soft);
   --color-alert: var(--alert);
   --color-alert-soft: var(--alert-soft);
-  /* The floating tab bar is dark in both themes (D21). */
+  /* The floating tab bar: white in light, raised charcoal in dark (D21). */
   --color-nav: var(--nav);
   --color-nav-fg: var(--nav-fg);
   --color-nav-muted: var(--nav-muted);
