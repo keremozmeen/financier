@@ -1,14 +1,18 @@
 import { createContext, useContext } from 'react';
 
-export const THEMES = ['dark', 'light'] as const;
+/** What the user picked: follow the device, or a fixed theme (D21). */
+export const THEMES = ['system', 'light', 'dark'] as const;
 export type Theme = (typeof THEMES)[number];
+export type ResolvedTheme = Exclude<Theme, 'system'>;
 
 export function isTheme(value: unknown): value is Theme {
-  return value === 'dark' || value === 'light';
+  return THEMES.includes(value as Theme);
 }
 
 export interface ThemeValue {
   theme: Theme;
+  /** The theme on screen. */
+  resolved: ResolvedTheme;
   setTheme: (theme: Theme) => void;
 }
 

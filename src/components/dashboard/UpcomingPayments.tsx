@@ -38,7 +38,7 @@ export function UpcomingPayments({ bills }: { bills: readonly UpcomingBill[] }) 
       <h2 id="upcoming-title" className="mb-2 text-sm font-medium text-muted">
         {t('dashboard.upcoming.title')}
       </h2>
-      <ul className="divide-y divide-border rounded-xl border border-border bg-surface">
+      <ul className="divide-y divide-border panel">
         {bills.map(({ card, bill, overdue, autoPay }) => (
           <li
             key={`${card.id}:${bill.periodEnd}`}

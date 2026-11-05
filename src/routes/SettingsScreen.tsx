@@ -8,7 +8,7 @@ export function SettingsScreen() {
 
   return (
     <section className="space-y-4">
-      <h1 className="text-2xl font-semibold">{t('nav.settings')}</h1>
+      <h1 className="font-display text-[1.625rem] font-bold tracking-tight">{t('nav.settings')}</h1>
       <Segmented
         framed
         label={t('settings.language')}

@@ -369,6 +369,7 @@ export const en = {
   'settings.language': 'Language',
   'settings.theme': 'Theme',
   'settings.theme.dark': 'Dark',
+  'settings.theme.system': 'Device',
   'settings.theme.light': 'Light',
   'settings.privacy': 'Everything stays on this device. Nothing is sent anywhere.',
 

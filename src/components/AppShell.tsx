@@ -9,13 +9,9 @@ export function AppShell() {
   useDueSoonBadge();
   return (
     <div className="min-h-dvh bg-bg text-fg">
-      <header className="sticky top-0 z-10 border-b border-border bg-bg/95 pt-[env(safe-area-inset-top)] backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-xl items-center gap-2 px-4">
-          <img src={`${import.meta.env.BASE_URL}kipp.svg`} alt="" className="size-8 rounded-lg" />
-          <span className="text-lg font-semibold tracking-tight">{t('app.name')}</span>
-        </div>
-      </header>
-      <main className="mx-auto max-w-xl px-4 pt-4 pb-[calc(5rem+env(safe-area-inset-bottom))]">
+      {/* Each screen's title is its heading; the app name is for assistive tech (D21). */}
+      <p className="sr-only">{t('app.name')}</p>
+      <main className="mx-auto max-w-xl px-4 pt-[calc(1.25rem+env(safe-area-inset-top))] pb-[calc(6rem+env(safe-area-inset-bottom))]">
         <Outlet />
       </main>
       <TabBar />

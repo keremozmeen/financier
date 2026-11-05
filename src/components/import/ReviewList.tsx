@@ -79,11 +79,9 @@ export function ReviewList({
           ))}
       </ul>
       {drafts.length === 0 ? (
-        <p className="rounded-xl border border-border bg-surface p-4 text-muted">
-          {t('review.empty')}
-        </p>
+        <p className="panel p-4 text-muted">{t('review.empty')}</p>
       ) : (
-        <ul className="divide-y divide-border rounded-xl border border-border bg-surface">
+        <ul className="divide-y divide-border panel">
           {planned.map((item, i) => (
             <ReviewRow
               key={item.row.line}

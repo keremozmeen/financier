@@ -173,7 +173,7 @@ export function ImportScreen() {
       </p>
 
       {!card ? (
-        <div className="space-y-3 rounded-xl border border-border bg-surface p-4">
+        <div className="space-y-3 panel p-4">
           <p className="text-muted">{t('import.noCards')}</p>
           <ButtonLink to="/cards/new" variant="primary">
             {t('cards.add')}
@@ -251,7 +251,7 @@ export function ImportScreen() {
           )}
         </div>
       ) : (
-        <div className="space-y-4 rounded-xl border border-border bg-surface p-4">
+        <div className="space-y-4 panel p-4">
           <p className="flex items-center gap-2 font-semibold">
             <CheckCircle2 aria-hidden="true" size={20} className="text-success" />
             {t('done.title')}

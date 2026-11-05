@@ -81,7 +81,7 @@ export function CardDetailScreen() {
         </p>
       )}
 
-      <div className="rounded-xl border border-border bg-surface p-4">
+      <div className="panel p-4">
         <CardTitle card={card} showName={false} />
         <div className="mt-3">
           <CardUsagePanel summary={summary} gaugeSize={128} />

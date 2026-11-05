@@ -21,11 +21,13 @@ export function DashboardScreen() {
 
   return (
     <section className="space-y-5">
-      <h1 className="text-2xl font-semibold">{t('nav.dashboard')}</h1>
+      <h1 className="font-display text-[1.625rem] font-bold tracking-tight">
+        {t('nav.dashboard')}
+      </h1>
       {dashboard === undefined ? (
         <p className="text-muted">{t('common.loading')}</p>
       ) : dashboard.summaries.length === 0 ? (
-        <div className="rounded-xl border border-border bg-surface p-6 text-center">
+        <div className="panel p-6 text-center">
           <CreditCard aria-hidden="true" className="mx-auto text-muted" size={32} />
           <h2 className="mt-3 font-semibold">{t('dashboard.empty.title')}</h2>
           <p className="mt-1 text-sm text-muted">{t('dashboard.empty.body')}</p>
@@ -44,7 +46,7 @@ export function DashboardScreen() {
                 <li key={summary.card.id}>
                   <Link
                     to={`/cards/${summary.card.id}`}
-                    className="block rounded-xl border border-border bg-surface p-4 transition-colors hover:border-muted"
+                    className="block panel p-4 transition-colors hover:border-muted"
                   >
                     <CardTitle card={summary.card} as="h3" />
                     <div className="mt-3">

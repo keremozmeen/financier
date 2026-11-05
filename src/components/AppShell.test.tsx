@@ -28,6 +28,9 @@ describe('AppShell', () => {
     expect(document.documentElement.lang).toBe('tr');
     expect(window.localStorage.getItem('financier.locale')).toBe('tr');
 
+    await userEvent.click(screen.getByRole('button', { name: 'Koyu' }));
+    expect(document.documentElement.dataset.theme).toBe('dark');
+    expect(window.localStorage.getItem('financier.theme')).toBe('dark');
     await userEvent.click(screen.getByRole('button', { name: 'Açık' }));
     expect(document.documentElement.dataset.theme).toBe('light');
   });

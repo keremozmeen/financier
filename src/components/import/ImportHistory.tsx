@@ -23,11 +23,9 @@ export function ImportHistory() {
       {history === undefined ? (
         <p className="text-muted">{t('common.loading')}</p>
       ) : history.length === 0 ? (
-        <p className="rounded-xl border border-border bg-surface p-4 text-muted">
-          {t('history.empty')}
-        </p>
+        <p className="panel p-4 text-muted">{t('history.empty')}</p>
       ) : (
-        <ul className="divide-y divide-border rounded-xl border border-border bg-surface">
+        <ul className="divide-y divide-border panel">
           {history.map(({ record, card }) => (
             <li key={record.id} className="flex items-center gap-3 py-2 pr-2 pl-4">
               <div className="min-w-0 flex-1">

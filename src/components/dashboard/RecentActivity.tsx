@@ -20,11 +20,9 @@ export function RecentActivity({
         {t('dashboard.recent.title')}
       </h2>
       {items.length === 0 ? (
-        <p className="rounded-xl border border-border bg-surface p-4 text-sm text-muted">
-          {t('dashboard.recent.empty')}
-        </p>
+        <p className="panel p-4 text-sm text-muted">{t('dashboard.recent.empty')}</p>
       ) : (
-        <ul className="divide-y divide-border rounded-xl border border-border bg-surface">
+        <ul className="divide-y divide-border panel">
           {items.map(({ transaction: tx, card }) => (
             <li key={tx.id}>
               <Link

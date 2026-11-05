@@ -42,7 +42,7 @@ export default function CashFlowChart({
       <h2 id="cash-flow-title" className="text-sm font-medium text-muted">
         {t('dashboard.cashFlow.title')}
       </h2>
-      <div className="space-y-3 rounded-xl border border-border bg-surface p-4">
+      <div className="space-y-3 panel p-4">
         <p className="text-sm text-muted">{t('dashboard.cashFlow.help')}</p>
         <Segmented
           label={t('dashboard.cashFlow.range')}

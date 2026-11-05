@@ -35,7 +35,9 @@ export function SubRadarScreen() {
   if (data === undefined) {
     return (
       <section>
-        <h1 className="text-2xl font-semibold">{t('nav.subRadar')}</h1>
+        <h1 className="font-display text-[1.625rem] font-bold tracking-tight">
+          {t('nav.subRadar')}
+        </h1>
         <p className="mt-3 text-muted">{t('common.loading')}</p>
       </section>
     );
@@ -59,8 +61,10 @@ export function SubRadarScreen() {
   if (radar.subscriptions.length + radar.bills.length + past.length === 0) {
     return (
       <section className="space-y-5">
-        <h1 className="text-2xl font-semibold">{t('nav.subRadar')}</h1>
-        <div className="rounded-xl border border-border bg-surface p-6 text-center">
+        <h1 className="font-display text-[1.625rem] font-bold tracking-tight">
+          {t('nav.subRadar')}
+        </h1>
+        <div className="panel p-6 text-center">
           <RadarIcon aria-hidden="true" className="mx-auto text-muted" size={32} />
           <h2 className="mt-3 font-semibold">{t('radar.empty.title')}</h2>
           <p className="mt-1 text-sm text-muted">{t('radar.empty.body')}</p>
@@ -71,14 +75,11 @@ export function SubRadarScreen() {
 
   return (
     <section className="space-y-4">
-      <h1 className="text-2xl font-semibold">{t('nav.subRadar')}</h1>
+      <h1 className="font-display text-[1.625rem] font-bold tracking-tight">{t('nav.subRadar')}</h1>
       <Total totals={radar.totals} count={radar.subscriptions.length} />
       <RadarAlerts alerts={radar.alerts} actions={alertActions} />
       {radar.subscriptions.length > 0 && (
-        <ul
-          aria-label={t('radar.section.subscriptions')}
-          className="divide-y divide-border rounded-xl border border-border bg-surface"
-        >
+        <ul aria-label={t('radar.section.subscriptions')} className="divide-y divide-border panel">
           {rows(radar.subscriptions)}
         </ul>
       )}
@@ -123,7 +124,7 @@ function Total({ totals, count }: { totals: readonly RadarTotals[]; count: numbe
   const increases = joinMoney(totals, (total) => total.increasesMonthly, money);
 
   return (
-    <div className="rounded-xl border border-border bg-surface p-4">
+    <div className="panel p-4">
       <p className="text-sm text-muted">{t('radar.total.label')}</p>
       <p className="text-2xl font-semibold tabular-nums">
         {t('radar.perMonth', { amount: monthly })}
@@ -155,9 +156,7 @@ function Group({
     <details className="group">
       <summary
         className={`flex min-h-12 cursor-pointer list-none items-center gap-3 [&::-webkit-details-marker]:hidden ${
-          quiet
-            ? 'text-sm text-muted'
-            : 'rounded-xl border border-border bg-surface px-4 font-medium group-open:rounded-b-none'
+          quiet ? 'text-sm text-muted' : 'panel px-4 font-medium group-open:rounded-b-none'
         }`}
       >
         <span className="flex-1">{title}</span>

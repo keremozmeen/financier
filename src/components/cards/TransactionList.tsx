@@ -19,13 +19,11 @@ export function TransactionList({
   const planCounts = new Map(plans.map((plan) => [plan.id, plan.count]));
 
   if (transactions.length === 0) {
-    return (
-      <p className="rounded-xl border border-border bg-surface p-4 text-muted">{t('tx.empty')}</p>
-    );
+    return <p className="panel p-4 text-muted">{t('tx.empty')}</p>;
   }
 
   return (
-    <ul className="divide-y divide-border rounded-xl border border-border bg-surface">
+    <ul className="divide-y divide-border panel">
       {transactions.map((tx) => {
         const count = tx.installmentPlanId ? planCounts.get(tx.installmentPlanId) : undefined;
         const refund = tx.amount < 0;

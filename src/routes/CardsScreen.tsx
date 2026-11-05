@@ -28,11 +28,9 @@ export function CardsScreen() {
       {active === undefined ? (
         <p className="text-muted">{t('common.loading')}</p>
       ) : active.length === 0 ? (
-        <p className="rounded-xl border border-border bg-surface p-4 text-muted">
-          {t('cards.empty')}
-        </p>
+        <p className="panel p-4 text-muted">{t('cards.empty')}</p>
       ) : (
-        <ul className="divide-y divide-border rounded-xl border border-border bg-surface">
+        <ul className="divide-y divide-border panel">
           {active.map((summary) => (
             <li key={summary.card.id}>
               <Link
@@ -69,7 +67,7 @@ export function CardsScreen() {
       {archived && archived.length > 0 && (
         <>
           <h2 className="mt-6 mb-2 text-sm font-medium text-muted">{t('cards.archivedTitle')}</h2>
-          <ul className="divide-y divide-border rounded-xl border border-border bg-surface opacity-80">
+          <ul className="divide-y divide-border panel opacity-80">
             {archived.map((card) => (
               <li key={card.id}>
                 <Link

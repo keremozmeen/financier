@@ -37,13 +37,23 @@ export function TabBar() {
               to={to}
               end={to === '/'}
               className={({ isActive }) =>
-                `flex min-h-14 flex-col items-center justify-center gap-0.5 px-1 text-[11px] font-medium transition-colors ${
-                  isActive ? 'text-accent' : 'text-muted hover:text-fg'
+                `flex min-h-14 flex-col items-center justify-center gap-1 px-1 text-[11px] transition-colors ${
+                  isActive ? 'font-semibold text-fg' : 'font-medium text-muted hover:text-fg'
                 }`
               }
             >
-              <Icon aria-hidden="true" size={22} strokeWidth={2} />
-              <span className="max-w-full truncate">{t(label)}</span>
+              {({ isActive }) => (
+                <>
+                  <span
+                    className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
+                      isActive ? 'bg-accent-soft' : ''
+                    }`}
+                  >
+                    <Icon aria-hidden="true" size={20} strokeWidth={isActive ? 2.25 : 1.75} />
+                  </span>
+                  <span className="max-w-full truncate">{t(label)}</span>
+                </>
+              )}
             </NavLink>
           </li>
         ))}

@@ -369,6 +369,7 @@ export const tr: Record<MessageKey, string> = {
   'settings.language': 'Dil',
   'settings.theme': 'Tema',
   'settings.theme.dark': 'Koyu',
+  'settings.theme.system': 'Cihaz',
   'settings.theme.light': 'Açık',
   'settings.privacy': 'Her şey bu cihazda kalır. Hiçbir veri dışarı gönderilmez.',
 

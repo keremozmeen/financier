@@ -17,24 +17,19 @@ export function Segmented<T extends string>({
   disabled = false,
 }: SegmentedProps<T>) {
   return (
-    <fieldset
-      disabled={disabled}
-      className={`disabled:opacity-60 ${framed ? 'rounded-xl border border-border bg-surface p-4' : ''}`}
-    >
+    <fieldset disabled={disabled} className={`disabled:opacity-60 ${framed ? 'panel p-4' : ''}`}>
       <legend className={`text-sm font-medium ${framed ? 'px-1 text-muted' : 'mb-1'}`}>
         {label}
       </legend>
-      <div className="grid grid-flow-col gap-2">
+      <div className="grid grid-flow-col gap-1 rounded-full bg-surface-raised p-1">
         {options.map((option) => (
           <button
             key={option.value}
             type="button"
             aria-pressed={option.value === value}
             onClick={() => onChange(option.value)}
-            className={`min-h-11 rounded-lg px-3 text-sm font-medium transition-colors ${
-              option.value === value
-                ? 'bg-accent text-accent-fg'
-                : 'bg-surface-raised text-fg hover:bg-border'
+            className={`min-h-10 rounded-full px-3 text-sm font-medium transition-colors ${
+              option.value === value ? 'bg-surface text-fg shadow-sm' : 'text-muted hover:text-fg'
             }`}
           >
             {option.label}
