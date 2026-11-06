@@ -96,7 +96,7 @@ describe('cards flow', () => {
       await user.click(screen.getByRole('button', { name: 'Save' }));
       await screen.findByText(description);
     }
-    expect(screen.getByText('-₺400.00')).toBeInTheDocument();
+    expect(screen.getByText('+₺400.00')).toBeInTheDocument();
     expect(screen.getAllByText('₺600.00').length).toBeGreaterThan(0);
   });
 

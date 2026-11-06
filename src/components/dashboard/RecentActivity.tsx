@@ -4,6 +4,7 @@ import { useEntryLabel } from '../../hooks/useEntryLabel';
 import { useFormat } from '../../hooks/useFormat';
 import { useT } from '../../i18n';
 import type { Card, Transaction } from '../../types/domain';
+import { EntryAmount } from '../ui/EntryAmount';
 
 /** The latest entries on credit and debit cards together (D13). */
 export function RecentActivity({
@@ -41,11 +42,16 @@ export function RecentActivity({
                     {card.name} · {format.date(tx.date)}
                   </p>
                 </div>
-                <span
-                  className={`shrink-0 font-semibold tabular-nums ${tx.amount < 0 ? 'text-success' : ''}`}
-                >
-                  {format.money(tx.amount, tx.currency)}
-                </span>
+                <EntryAmount
+                  amount={tx.amount}
+                  currency={tx.currency}
+                  // Without a description the label already reads "Income" or "Refund".
+                  label={
+                    tx.amount < 0 && tx.description.trim()
+                      ? t(tx.income ? 'tx.badge.income' : 'tx.badge.refund')
+                      : undefined
+                  }
+                />
               </Link>
             </li>
           ))}

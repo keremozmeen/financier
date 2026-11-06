@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { cardsRepo, db, transactionsRepo } from '../db';
 import { accountFile } from '../parsers/sheet/fixtures';
@@ -82,6 +82,35 @@ describe('account statement import flow (D17, D18)', () => {
     expect(await screen.findByText('Import complete')).toBeInTheDocument();
     expect(await db.payments.count()).toBe(1);
     expect((await db.transactions.toArray()).some((t) => t.transfer)).toBe(true);
+  });
+
+  it('shows income as "+" in green and spending plain, in review and on the card', async () => {
+    window.localStorage.setItem('financier.detailedView', 'on');
+    await seed();
+    const { router } = renderApp('/import');
+    await user.click(await screen.findByRole('radio', { name: 'İş Bankası' }, { timeout: 5000 }));
+    await openFile(xls('xlsx'));
+    await screen.findByRole('region', { name: 'Review' }, { timeout: 5000 });
+
+    const salary = within(rowFor('ACME A.Ş. EKİM MAAŞ')).getByText('+₺45,000.00');
+    expect(salary).toHaveClass('text-success');
+    // Screen readers hear the type too, not just the sign.
+    expect(salary).toHaveTextContent('Income: +₺45,000.00');
+    const spending = within(rowFor('MIGROS KADIKOY')).getByText('₺1,234.56');
+    expect(spending).not.toHaveClass('text-success');
+    // A skipped ATM withdrawal reads like spending too: no minus anywhere.
+    expect(within(rowFor('ATM KADIKOY')).queryByText(/[-−]₺/)).not.toBeInTheDocument();
+    expect(screen.queryAllByText(/^[-−]₺/)).toHaveLength(0);
+
+    await user.click(screen.getByRole('button', { name: 'Import' }));
+    expect(await screen.findByText('Import complete')).toBeInTheDocument();
+    const account = (await db.cards.toArray()).find((card) => card.type === 'debit')!;
+    await act(() => router.navigate(`/cards/${account.id}`));
+    const income = (await screen.findByText('ACME A.Ş. EKİM MAAŞ')).closest('li')!;
+    expect(within(income).getByText('+₺45,000.00')).toHaveClass('text-success');
+    expect(within(income).getByText('Income')).toBeInTheDocument();
+    const charge = screen.getByText('MIGROS KADIKOY').closest('li')!;
+    expect(within(charge).getByText('₺1,234.56')).not.toHaveClass('text-success');
   });
 
   it('recognizes the same statement in another format through the saved mapping', async () => {

@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { formatDate, formatMoney } from '../core/finance';
+import { formatDate, formatEntryAmount, formatMoney } from '../core/finance';
 import { useI18n } from '../i18n';
 import type { CurrencyCode, IsoDate } from '../types/domain';
 
@@ -14,6 +14,9 @@ export function useFormat() {
     return {
       locale,
       money: (amount: number, currency: CurrencyCode) => formatMoney(amount, currency, locale),
+      /** One stored entry: spending plain, money in with "+" (see `formatEntryAmount`). */
+      entry: (amount: number, currency: CurrencyCode) =>
+        formatEntryAmount(amount, currency, locale),
       date: (date: IsoDate) => formatDate(date, locale),
       /** "20 Kas" / "Nov 20": a date in the next weeks, without the year. */
       dayMonth: (date: IsoDate) => formatDate(date, locale, { day: 'numeric', month: 'short' }),
