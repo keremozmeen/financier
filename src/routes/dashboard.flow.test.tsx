@@ -7,7 +7,6 @@ import { renderApp } from '../test/renderApp';
 import type { Card } from '../types/domain';
 
 const user = userEvent.setup();
-const today = todayIso();
 const dayOfMonth = (date: string) => Number(date.slice(8, 10));
 
 /**
@@ -15,6 +14,7 @@ const dayOfMonth = (date: string) => Number(date.slice(8, 10));
  * (plus at most two days when that falls on a weekend), with one charge today.
  */
 async function seedCredit(name: string, dueIn: number, amount: number) {
+  const today = todayIso();
   const id = await cardsRepo.create({
     type: 'credit',
     name,
@@ -39,6 +39,7 @@ async function seedCredit(name: string, dueIn: number, amount: number) {
 }
 
 async function seedDebit() {
+  const today = todayIso();
   const id = await cardsRepo.create({
     type: 'debit',
     name: 'Maaş kartı',
@@ -94,15 +95,20 @@ describe('dashboard (Phase 2)', () => {
   });
 
   it('shows a payment due within 2 days in amber and a later one plain (D20)', async () => {
-    await seedCredit('Axess', 1, 185_050);
-    await seedCredit('Bonus', 20, 42_000);
-    renderApp('/');
+    // A Wednesday, so "tomorrow" is never moved past a weekend (on a Friday it would be 3 days).
+    vi.useFakeTimers({ toFake: ['Date'], now: new Date(2026, 9, 14, 12) });
+    try {
+      await seedCredit('Axess', 1, 185_050);
+      await seedCredit('Bonus', 20, 42_000);
+      renderApp('/');
 
-    const due = await screen.findByRole('region', { name: 'Due in the next 30 days' });
-    const [first, second] = within(due).getAllByRole('button', { name: /^(Axess|Bonus), / });
-    // Due tomorrow, or on Monday when tomorrow is a weekend day (up to 3 days).
-    expect(first).toHaveAccessibleName(/^Axess, ₺1,850\.50, (Tomorrow|In \d days)$/);
-    expect(second).toHaveAccessibleName(/^Bonus, ₺420\.00, \w{3} \d+$/);
+      const due = await screen.findByRole('region', { name: 'Due in the next 30 days' });
+      const [first, second] = within(due).getAllByRole('button', { name: /^(Axess|Bonus), / });
+      expect(first).toHaveAccessibleName('Axess, ₺1,850.50, Tomorrow');
+      expect(second).toHaveAccessibleName(/^Bonus, ₺420\.00, \w{3} \d+$/);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('records a payment from the payment dialog', async () => {
