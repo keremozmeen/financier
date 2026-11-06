@@ -352,12 +352,64 @@ Testers found the first look generic ("looks AI-made"): navy, Inter, mint and a 
 
 ---
 
+## D22. Categories
+
+Spending is easier to understand by kind ("eating out", "groceries") than by merchant. Real banking apps get this from the card network's merchant category code (MCC), which Turkish CSV and Excel exports do not include, so Financier works it out on the phone from the merchant's name, the bank's labels and the user's own corrections. The logic lives in `src/core/categories/` as pure, tested functions; nothing leaves the device (D8).
+
+- **Two levels:** about a dozen main categories with an icon each: Groceries, Eating out, Transport, Bills, Subscriptions, Shopping, Health, Entertainment, Travel, Education, Cash, Fees and Other. Each has a few subcategories (Transport: fuel, public transport, taxi, parking). The simple view (D20) shows main categories only; the detailed view adds subcategories. Ids are stable English slugs; names come from `src/i18n/` in both languages.
+- **Computed, not stored:** like Sub-Radar (D19), an entry's category is worked out every time it is read, so a better brand list improves old entries too. Only the user's choices are stored: `transactions.category` holds a category the user picked for that one entry; `uncategorized`, the value every entry has stored so far, means no pick, so existing data needs no migration, and `merchantRules` holds "this merchant is always X".
+- **Order of evidence** (the first that answers wins):
+  1. the user's pick for this entry;
+  2. the user's rule for this merchant;
+  3. the entry's own flags: fee → Fees, bill → Bills (D17), an ATM withdrawal → Cash, a transfer counted as spending → Other (D17);
+  4. a Sub-Radar subscription series → Subscriptions (D19);
+  5. the built-in brand list (`brands.ts`: a few hundred Turkish and global brands, for example Migros → Groceries, Yemeksepeti → Eating out, Opet → Transport/fuel, Turkcell → Bills/phone, Netflix → Subscriptions);
+  6. keywords in the description (`RESTORAN`, `CAFE`, `ECZANE`, `OTOPARK`, `AKARYAKIT`, `MARKET`…);
+  7. Other.
+- **Merchant name:** the merchant key and display name from D19 (processor prefixes such as İyzico and PayTR, city names, card digits and web noise removed) are shared through one module used by both Sub-Radar and categories, so "IYZICO/4AOTOMAT.COM ISTANBUL 3411" is matched as `4aotomat`.
+- **Which entries:** charges, bills, fees, installment purchases and counted transfers on credit and debit cards (D13). A refund takes its merchant's category and lowers that category's total. Income, uncounted transfers and bill payments have no spending category.
+- **Correcting:** the category shows as a quiet chip on each entry; tapping it opens the list. After a change the app asks once "Apply to all entries from <merchant>?"; yes stores a merchant rule. Rules are listed in Settings (detailed view) and can be removed.
+- **Import review:** shows each row's category and lets **Change** set it, but a category never makes a row "need a look"; the review stays about whether a row is imported (D20).
+- **Screens:** the dashboard gets one "Where your money went" line for the month with the top three categories; tapping it opens the breakdown. The detailed view adds subcategories and a month-by-month comparison. Kipp's insights (D4, Phase 5) read the same totals.
+- **Debit:** categories cover credit and debit cards alike; limits, statements and bills are untouched.
+- **Not now:** budgets per category, machine-learned categories and receipt splitting stay out of scope (see the end of this file).
+
+---
+
+## D23. Security, permissions and trust
+
+Financier holds a person's whole financial life on their phone. Phase S makes that safe and makes the user feel it, with the procedures people expect from a serious finance app.
+
+- **Threats in scope:** someone holding the unlocked phone or using a shared device; a lost or stolen phone; a crafted statement file; a compromised dependency; a backup file that leaks. No server exists, so there is no server to attack (D8).
+- **App lock:** offered on the first run with "Turn on" as the highlighted choice and "Not now" next to it, and always available in Settings. It needs a 6-digit passcode; Face ID or Touch ID (WebAuthn with the device's platform authenticator, no server) can then unlock it faster where the device supports it. The app locks again after a chosen time in the background (default 5 minutes). The lock screen shows Kipp and no numbers.
+- **Encryption at rest:** with the lock on, the database contents are encrypted with AES-256-GCM under a random data key. That key is wrapped by a key derived from the passcode (PBKDF2-SHA256, 600,000 iterations, as D6) and, where WebAuthn PRF is available, by a key from Face ID / Touch ID. Phase S starts with a short spike that fixes the exact scheme (which fields stay readable for indexes, and the cost on large databases) and records it here. If full encryption proves infeasible on iOS, the setting is named "Screen lock" and makes no stronger claim. A forgotten passcode cannot be recovered; turning the lock on says so and offers a backup first.
+- **Privacy in public:** contents are hidden when the app goes to the background, so the app switcher shows no amounts. A "Hide amounts" switch shows •••• until the user taps a figure.
+- **Permissions:** asked only when a feature needs them, never on the first launch. Each request is preceded by one plain sentence in the app saying why ("to remind you before a payment is due"), and the feature still works, or explains what it cannot do, when the user says no. Settings → **Privacy & permissions** lists what is granted (persistent storage, notifications and photos when those features exist, Face ID), what is stored and how much space it uses.
+- **First run:** what Financier does in one screen, the privacy promise (nothing leaves the phone, no account, no tracking), links to the privacy notice and terms, then the app lock offer. Continuing accepts the terms; there is no checkbox wall. The privacy notice and terms ship inside the app in Turkish and English. The privacy notice states that the developer receives no personal data, as KVKK expects it to be said. A later change to the terms is shown once.
+- **Data rights:** encrypted backup and restore, and "Delete all data", follow D6. A readable export (CSV) lets users take their data elsewhere; it warns that the file is not encrypted, and cells starting with `=`, `+`, `-` or `@` are escaped so a spreadsheet cannot run them as formulas.
+- **Hardening:** the CSP (D8) gains `require-trusted-types-for 'script'`, and no component renders imported text as HTML. Imported files are capped (10 MB) and parsed as data only. CI adds `npm audit` (high severity fails the build) next to the zero-cloud and vendor checks. A new service worker never activates without the update prompt. `SECURITY.md` explains how to report a vulnerability.
+- **Debit and credit:** all of the above protects every card and entry the same way.
+
+---
+
+## D24. Screenshot import
+
+Many users only have their bank app, not a statement file, and take screenshots of the transaction list. Phase 6 lets them import those, without breaking Zero-Cloud (D8).
+
+- **Paste text first:** iOS and Android can copy the text out of any screenshot (Live Text, Lens). A **Paste text** import reads pasted lines with the existing date, amount and description parsers. It needs no permission, no new library and no extra download.
+- **Choose screenshot:** the photo picker (`<input type="file" accept="image/*">`) hands over only the images the user picks. There is no gallery permission and the app never browses photos. Text is read on the phone with Tesseract compiled to WebAssembly, with its worker and Turkish and English language data vendored and served from our own origin, never a CDN. It loads only when a screenshot is opened, like SheetJS (D18).
+- **Reading lines:** a bank app list is grouped into rows by position (merchant, date, amount), with the Turkish number and date formats from D3. A row the reader is unsure of (a digit that could be 0 or O, a missing date) is marked as needing a look; nothing is saved before review, and rows are deduplicated by fingerprint like every import.
+- **Privacy:** the image stays in memory for the import and is never stored. The first screenshot import says in one sentence that the picture is read on the phone and not uploaded (D23 permissions).
+- **Tests:** synthetic screenshots with made-up values are the fixtures; real screenshots are used only locally and never committed.
+
+---
+
 ## Data model (v4)
 
 | Table | Key fields |
 | :--- | :--- |
 | `cards` | `id`, `type` (`credit` / `debit`), `name`, `bank`, `last4`, `currency`, `color`, `archived`; credit only: `limit`, `statementDay?`, `dueDay?` (missing until entered or read from a statement, D20), `autoPay?`, `autoPaySince?` (D14) |
-| `transactions` | `id`, `cardId`, `date`, `description`, `normalizedMerchant`, `amount`, `currency`, `category`, `installmentPlanId?`, `fingerprint`, `source` (`manual` / `csv` / `pdf`), `importId?`, `fee?` (interest or bank fee, D16), `income?`, `bill?`, `transfer?` (account statements, D17; income is excluded from spending) |
+| `transactions` | `id`, `cardId`, `date`, `description`, `normalizedMerchant`, `amount`, `currency`, `category` (the user's pick for this entry; `uncategorized` means none, D22), `installmentPlanId?`, `fingerprint`, `source` (`manual` / `csv` / `pdf`), `importId?`, `fee?` (interest or bank fee, D16), `income?`, `bill?`, `transfer?` (account statements, D17; income is excluded from spending) |
 | `installmentPlans` | `id`, `cardId`, `description`, `totalAmount`, `count`, `purchaseDate`, `firstDueMonth`, `currency`, `importId?` (created by an import, D16; indexed in schema v4) |
 | `balanceOverrides` | `id`, `cardId`, `balance` (negative for a credit balance, D15), `currency`, `asOf`, `createdAt` (history of bank balances entered by the user, D11) |
 | `statements` | `id`, `cardId`, `periodStart`, `periodEnd`, `dueDate`, `totalDue`, `minimumDue?`, `paid`, `installments`, `autoPaySkipped?` (stored when a payment is recorded, D14) |
@@ -365,7 +417,8 @@ Testers found the first look generic ("looks AI-made"): navy, Inter, mint and a 
 | `subscriptions` | `id` (series key, D19), `normalizedMerchant`, `currency`, `status` (`active` / `ignored` / `cancelled`), `cancelledAt?`, `hikeSeenAmount?`, `dismissedDuplicates?` (only the user's Sub-Radar choices; series, cadence and amounts are computed, D19) |
 | `importProfiles` | `id`, `name`, `bank`, `kind` (`csv` / `pdf`), `headerSignature`, `columnMap` (date, description, amount or debit/credit, installment, reference, İşlem Türü, İşlem), `options` (header row, decimal separator, date order, sign convention) |
 | `imports` | `id`, `fileName`, `importedAt`, `rowCount`, `profileId?`, `cardId`, `counts` (per outcome), `restore` (descriptions to put back on undo, D16) (lets the user undo a whole import) |
-| `settings` | key/value: `locale`, `theme`, `monthlyIncome?`, `primaryCurrency`, `onboardingDone` |
+| `settings` | key/value: `locale`, `theme`, `monthlyIncome?`, `primaryCurrency`, `onboardingDone`; Phase S adds `lock` (off / screen / encrypted), `autoLockMinutes`, `hideAmounts`, `termsVersion` (D23) |
+| `merchantRules` | Phase C, schema v5: `id` (merchant key, D19/D22), `category`, `createdAt` (the user's "always this category" choices) |
 
 ---
 
