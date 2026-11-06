@@ -85,6 +85,17 @@ export function editDraft(row: DraftRow, patch: Partial<DraftRow>): DraftRow {
   return next;
 }
 
+/**
+ * The row's amount as one entry on screen, with the stored sign (money in is negative)
+ * for `formatEntryAmount`. Only refunds and income read as money in. A payment's
+ * direction depends on the card (it lowers a credit card's debt but leaves a debit
+ * account), so it is shown plain like every other row, and its outcome line says what it pays.
+ */
+export function reviewAmount(row: Pick<DraftRow, 'amount' | 'type'>): number {
+  const amount = row.amount ?? 0;
+  return row.type === 'refund' || row.type === 'income' ? -amount : amount;
+}
+
 /** The row's amount with its direction: money in (refunds, payments, income) is negative. */
 export function signedAmount(row: Pick<DraftRow, 'amount' | 'type'>): number {
   const amount = row.amount ?? 0;

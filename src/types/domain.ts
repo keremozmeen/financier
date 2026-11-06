@@ -55,7 +55,7 @@ export interface Transaction {
   date: IsoDate;
   description: string;
   normalizedMerchant: string;
-  /** Positive for a charge, negative for a refund. */
+  /** Positive for a charge, negative for a refund or income (D17). Screens show money in with "+" (`formatEntryAmount`). */
   amount: number;
   currency: CurrencyCode;
   category: string;

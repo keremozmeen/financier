@@ -1,4 +1,5 @@
 export * from './activity';
+export * from './amountDisplay';
 export * from './calendar';
 export * from './dates';
 export * from './due';

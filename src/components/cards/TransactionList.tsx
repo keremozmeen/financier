@@ -3,6 +3,7 @@ import { useEntryLabel } from '../../hooks/useEntryLabel';
 import { useFormat } from '../../hooks/useFormat';
 import { useT } from '../../i18n';
 import type { InstallmentPlan, Transaction } from '../../types/domain';
+import { EntryAmount } from '../ui/EntryAmount';
 
 export function TransactionList({
   transactions,
@@ -63,9 +64,7 @@ export function TransactionList({
                 )}
               </p>
             </div>
-            <span className={`shrink-0 font-semibold tabular-nums ${refund ? 'text-success' : ''}`}>
-              {format.money(tx.amount, tx.currency)}
-            </span>
+            <EntryAmount amount={tx.amount} currency={tx.currency} />
             <button
               type="button"
               onClick={() => onDelete(tx)}

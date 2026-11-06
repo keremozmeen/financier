@@ -5,7 +5,7 @@ import {
   countOutcomes,
   editDraft,
   planImport,
-  signedAmount,
+  reviewAmount,
   type DraftRow,
   type ImportContext,
   type PlannedRow,
@@ -17,6 +17,7 @@ import { useFormat } from '../../hooks/useFormat';
 import { useI18n, type MessageKey } from '../../i18n';
 import type { Card, CreditCard, StatementKind } from '../../types/domain';
 import { Button } from '../ui/Button';
+import { EntryAmount } from '../ui/EntryAmount';
 import { inputClass, TextField } from '../ui/TextField';
 
 /**
@@ -165,7 +166,7 @@ function ReviewRow({
   const [editing, setEditing] = useState(false);
   const [open, setOpen] = useState(detailed || needsLook(item));
   const types = rowTypesFor(card.type, statement);
-  const credit = row.type === 'refund' || row.type === 'income';
+  const moneyIn = row.type === 'refund' || row.type === 'income';
   // A bill payment from a debit account is recorded on a credit card (D17).
   const pickCard = card.type === 'debit' && row.type === 'payment' && creditCards.length > 0;
   const paidCard =
@@ -196,11 +197,15 @@ function ReviewRow({
             )}
           </p>
         </div>
-        <span className={`shrink-0 font-semibold tabular-nums ${credit ? 'text-success' : ''}`}>
-          {row.amount === null
-            ? t('mapping.unreadable')
-            : format.money(signedAmount(row), card.currency)}
-        </span>
+        {row.amount === null ? (
+          <span className="shrink-0 font-semibold">{t('mapping.unreadable')}</span>
+        ) : (
+          <EntryAmount
+            amount={reviewAmount(row)}
+            currency={card.currency}
+            label={moneyIn ? t(`review.type.${row.type}`) : undefined}
+          />
+        )}
       </div>
       {!open && (
         <div className="flex items-center gap-2 pl-9">
