@@ -2,6 +2,8 @@
 
 The phased plan for building Financier. `CLAUDE.md` holds the rules every phase follows; `DECISIONS.md` holds the architecture decisions the phases refer to.
 
+Phases run in this order: 0, 1, 2, 3, 4, 4.5, **C**, **S**, 5, 6, 7, 8. Phase C (categories) and Phase S (security) come before Kipp because Kipp's insights read categories and run on data that Phase S protects.
+
 Work phase by phase. Finish each phase with passing checks and a pull request (or commit) titled after the phase, then summarize what was built and what is next. Do not start a later phase's features early.
 
 Every commit message names the phase it comes from with a line `From PLAN.md: Phase N — <name>` (see `CLAUDE.md`, "Commits and pull requests").
@@ -45,6 +47,25 @@ Every commit message names the phase it comes from with a line `From PLAN.md: Ph
 - Card setup asks for name, type and (credit) limit; statement and due days come from the first import when the file has them.
 - Import review opens on the rows needing a look.
 
+## Phase C — Categories
+- `core/categories` per `DECISIONS.md` D22: the category list with subcategories, the brand list, keywords and the order of evidence, all pure and tested. The merchant key and display name from D19 move to one shared module for Sub-Radar and categories.
+- Dexie schema v5: the `merchantRules` table; `transactions.category` keeps the user's pick for one entry (`uncategorized` means none).
+- A category chip on entry rows, the category list on tap, and "Apply to all entries from <merchant>?" that stores a rule; rules listed and removable in Settings (detailed view).
+- The import review shows each row's category and lets **Change** set it, without adding rows to "need a look".
+- Dashboard: one "Where your money went" line with the month's top three categories, opening a breakdown; the detailed view adds subcategories and a month-by-month comparison.
+- Debit: categories cover credit and debit cards alike; limits, statements and bills are untouched.
+
+## Phase S — Security and trust
+- A spike first: the encryption-at-rest scheme for D23 (which fields stay readable for indexes, cost on a large database, WebAuthn PRF support on iOS). Record the result in D23 before building.
+- App lock: 6-digit passcode, optional Face ID / Touch ID (WebAuthn platform authenticator), auto-lock after time in the background, lock screen without numbers. Offered on the first run with "Turn on" highlighted.
+- Encryption at rest when the lock is on, per the spike; a forgotten passcode cannot be recovered and turning the lock on offers a backup first.
+- Privacy screen in the app switcher and a "Hide amounts" switch.
+- First run: what the app does, the privacy promise, the in-app privacy notice (KVKK) and terms in Turkish and English, then the app lock offer.
+- Permissions asked only when needed, each after one plain sentence explaining why; Settings → Privacy & permissions lists what is granted, what is stored and the storage used.
+- Moved here from Phase 7: encrypted export and restore (D6, replace or merge), Clear All Data with confirmation, and the privacy explanation (D8). A readable CSV export that escapes formula characters.
+- Hardening: Trusted Types in the CSP, a 10 MB cap on imported files, `npm audit` in CI, `SECURITY.md`.
+- Debit: backup, restore, export and encryption include every card of both types.
+
 ## Phase 5 — Kipp
 - `core/insights`: the rules listed in `DECISIONS.md` D4, ranked by severity, each with its numbers and a suggested action.
 - `core/kipp`: Turkish/English intent parser with fuzzy card-name matching; answers built from `core/finance` functions.
@@ -55,11 +76,10 @@ Every commit message names the phase it comes from with a line `From PLAN.md: Ph
 - `pdfjs-dist` with a locally bundled worker; password prompt for protected PDFs.
 - Generic heuristic adapter, then bank adapters one at a time (Garanti BBVA, Yapı Kredi, İş Bankası, Akbank, QNB, Enpara). Each adapter needs an anonymized sample fixture and tests. Ask Kerem for samples before writing an adapter; never commit real statements.
 
-## Phase 7 — Backup, settings, polish
-- Encrypted export/restore (PBKDF2 + AES-GCM, replace or merge), Clear All Data with confirmation.
-- Debit: backup and restore include the card type.
-- Settings: language, theme, monthly income, primary currency, storage persistence status, privacy explanation.
-- First-run onboarding with Kipp, empty states, accessibility pass (contrast, labels, touch targets ≥ 44px), Lighthouse PWA check.
+## Phase 7 — Settings and polish
+- Encrypted backup, Clear All Data and the privacy explanation moved to Phase S.
+- Settings: language, theme, monthly income, primary currency, storage persistence status.
+- Kipp joins the first run from Phase S; empty states, accessibility pass (contrast, labels, touch targets ≥ 44px), Lighthouse PWA check.
 
 ## Phase 8 — Final UI polish
 - After every functional phase is in: a last pass over every screen with tester feedback (spacing, motion, empty and loading states, copy, icons, bank logos), in light and dark, at phone and desktop widths.
