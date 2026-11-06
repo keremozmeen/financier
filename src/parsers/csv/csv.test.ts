@@ -10,6 +10,7 @@ import {
   guessOptions,
   headerSignature,
   isAccountStatement,
+  isNoteRow,
   parseCsv,
 } from './csv';
 import { CREDIT_CARD_CSV, DEBIT_CARD_CSV } from './fixtures';
@@ -108,7 +109,39 @@ describe('header and mapping', () => {
   });
 });
 
+describe('isNoteRow', () => {
+  it('finds footnotes and disclaimers written in one cell', () => {
+    expect(isNoteRow(["(*) Çekilen tutar '-' ile gösterilmiştir.", '', ''])).toBe(true);
+    expect(isNoteRow(['', 'Bu belge bilgi amaçlıdır.'])).toBe(true);
+    expect(isNoteRow(['Mersis No: 0000000000000000'])).toBe(true);
+  });
+
+  it('keeps anything that could be a movement', () => {
+    expect(isNoteRow(['03.10.2026', 'MIGROS', '-1.234,56'])).toBe(false);
+    expect(isNoteRow(['MIGROS', '-1.234,56'])).toBe(false);
+    // A lone date or amount may be a broken row: the review shows it as needing a fix.
+    expect(isNoteRow(['03.10.2026'])).toBe(false);
+    expect(isNoteRow(['', '-1.234,56'])).toBe(false);
+    expect(isNoteRow(['', ''])).toBe(false);
+  });
+});
+
 describe('extractRows', () => {
+  it('leaves note lines out but keeps broken movements for the review', () => {
+    const rows = [
+      ['Tarih', 'Açıklama', 'Tutar'],
+      ['03.10.2026', 'MIGROS', '1.234,56'],
+      ['', 'BOZUK SATIR', 'abc'],
+      ['(*) Çekilen tutar eksi ile gösterilmiştir.'],
+    ];
+    const mapping = guessMapping(rows[0]!, rows.slice(1));
+    const parsed = extractRows(rows, mapping, guessOptions(rows, 0, mapping), 'TRY');
+    expect(parsed.map((row) => [row.description, row.date, row.amount])).toEqual([
+      ['MIGROS', '2026-10-03', 123_456],
+      ['BOZUK SATIR', null, null],
+    ]);
+  });
+
   it('reads signed amounts in minor units with Turkish formats', () => {
     const rows = parseCsv(CREDIT_CARD_CSV);
     const mapping = guessMapping(rows[2]!, rows.slice(3));

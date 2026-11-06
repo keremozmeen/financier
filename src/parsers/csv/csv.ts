@@ -271,7 +271,19 @@ function isConfident(
   return dates * 2 >= parsed.length && values * 2 >= parsed.length;
 }
 
-/** Reads the rows below the header with the mapping. Empty rows are left out. */
+/**
+ * A note line, not a movement: one filled cell that is neither a date nor an amount, such
+ * as a footnote ("(*) Çekilen tutar '-' ile gösterilmiştir.") or the bank's disclaimer
+ * below the movements. A real movement always fills more than one cell.
+ */
+export function isNoteRow(row: readonly string[]): boolean {
+  const filled = row.filter((cell) => cell.trim() !== '');
+  if (filled.length !== 1) return false;
+  const cell = filled[0] as string;
+  return !parseStatementDate(cell) && parseStatementAmount(cell, 'TRY') === null;
+}
+
+/** Reads the rows below the header with the mapping. Empty rows and note lines are left out. */
 export function extractRows(
   rows: readonly string[][],
   mapping: CsvMapping,
@@ -289,7 +301,7 @@ export function extractRows(
       mapping.debit,
       mapping.credit,
     ];
-    if (mapped.every((column) => cell(column) === '')) return;
+    if (mapped.every((column) => cell(column) === '') || isNoteRow(row)) return;
 
     const date = readDate(cell(mapping.date), options.dateOrder);
     const amount = readAmount(row, mapping, options, currency);

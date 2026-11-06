@@ -43,7 +43,9 @@ export type RowOutcome =
         /** A bill payment from the account whose credit card the user has not picked. */
         | 'pickCard'
         /** An outgoing transfer or ATM withdrawal, not counted as spending (D17). */
-        | 'transfer';
+        | 'transfer'
+        /** A zero amount, such as a card hold ("Blokaj"): no money moved. */
+        | 'zero';
     }
   /** Already imported: its fingerprint is stored (D3). */
   | { kind: 'duplicate' }
@@ -148,6 +150,7 @@ export function planImport(rows: readonly DraftRow[], context: ImportContext): P
   function decide(row: DraftRow, fingerprint: string): RowOutcome {
     if (row.dropped) return { kind: 'dropped' };
     if (row.type === 'summary') return { kind: 'skip', reason: 'summary' };
+    if (row.amount === 0) return { kind: 'skip', reason: 'zero' };
     if (!row.date) return { kind: 'invalid', problem: 'date' };
     if (!row.amount) return { kind: 'invalid', problem: 'amount' };
     const date = row.date;

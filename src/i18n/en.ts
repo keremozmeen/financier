@@ -351,6 +351,7 @@ export const en = {
   'review.outcome.addTransfer': 'Counted as spending',
   'review.outcome.paymentCard': 'Payment for the {card} bill due {date} ({amount})',
   'review.outcome.skip.transfer': 'Transfer or cash: not counted as spending',
+  'review.outcome.skip.zero': 'No money moved (for example a card hold): not imported',
   'review.outcome.skip.pickCard': 'Credit card payment: pick the card it paid',
 
   'radar.empty.title': 'No subscriptions found yet',

@@ -351,6 +351,7 @@ export const tr: Record<MessageKey, string> = {
   'review.outcome.addTransfer': 'Harcama olarak sayılır',
   'review.outcome.paymentCard': '{card} kartının {date} tarihli ekstresinin ödemesi ({amount})',
   'review.outcome.skip.transfer': 'Transfer veya nakit: harcamaya sayılmaz',
+  'review.outcome.skip.zero': 'Para hareketi yok (örneğin kart provizyonu): aktarılmaz',
   'review.outcome.skip.pickCard': 'Kredi kartı ödemesi: ödenen kartı seç',
 
   'radar.empty.title': 'Henüz abonelik bulunamadı',
