@@ -19,6 +19,7 @@ export const tr: Record<MessageKey, string> = {
   'add.pickCard': 'Hangi kart?',
 
   'common.cancel': 'Vazgeç',
+  'common.close': 'Kapat',
   'common.save': 'Kaydet',
   'common.back': 'Geri',
   'common.edit': 'Düzenle',

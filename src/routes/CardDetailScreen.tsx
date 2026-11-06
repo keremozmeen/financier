@@ -22,6 +22,7 @@ import { PaymentList } from '../components/cards/PaymentList';
 import { TransactionList } from '../components/cards/TransactionList';
 import { Button, ButtonLink } from '../components/ui/Button';
 import { Dialog } from '../components/ui/Dialog';
+import { leaveDialogHistory } from '../components/ui/dialogHistory';
 import { ScreenHeader } from '../components/ui/ScreenHeader';
 import { hasCycle, type CardUsage } from '../core/finance';
 import { balanceOverridesRepo, cardsRepo, paymentsRepo, transactionsRepo } from '../db';
@@ -62,8 +63,11 @@ export function CardDetailScreen() {
 
   async function archive(archived: boolean) {
     await cardsRepo.setArchived(card.id, archived);
+    // Archiving from the delete dialog: step back over its history entry before leaving.
+    const left = leaveDialogHistory();
     setDeleteCounts(undefined);
-    if (archived) navigate('/cards');
+    await left;
+    if (archived) await navigate('/cards');
   }
 
   return (
@@ -197,7 +201,8 @@ export function CardDetailScreen() {
           onArchive={() => void archive(true)}
           onDelete={async () => {
             await cardsRepo.deletePermanently(card.id);
-            navigate('/cards', { replace: true });
+            await leaveDialogHistory();
+            await navigate('/cards', { replace: true });
           }}
         />
       )}
