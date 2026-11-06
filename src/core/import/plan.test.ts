@@ -196,17 +196,32 @@ describe('planImport', () => {
 
     it('marks unreadable rows invalid and leaves dropped rows out', () => {
       expect(
-        outcomes([
-          row({ date: null }),
-          row({ amount: null }),
-          row({ amount: 0 }),
-          row({ dropped: true }),
-        ]),
+        outcomes([row({ date: null }), row({ amount: null }), row({ dropped: true })]),
       ).toEqual([
         { kind: 'invalid', problem: 'date' },
         { kind: 'invalid', problem: 'amount' },
-        { kind: 'invalid', problem: 'amount' },
         { kind: 'dropped' },
+      ]);
+    });
+
+    it('skips zero amounts such as card holds ("Blokaj"): no money moved', () => {
+      expect(
+        outcomes([
+          row({ amount: 0, description: 'BLK KAYD- 229.99-NETFLIX.COM' }),
+          row({ amount: 0, type: 'transfer' }),
+          row({ amount: 0, type: 'income' }),
+        ]),
+      ).toEqual([
+        { kind: 'skip', reason: 'zero' },
+        { kind: 'skip', reason: 'zero' },
+        { kind: 'skip', reason: 'zero' },
+      ]);
+    });
+
+    it('imports a zero row once the user types its amount', () => {
+      const held = row({ amount: 0 });
+      expect(outcomes([editDraft(held, { amount: 22_999 })])).toEqual([
+        { kind: 'add', fingerprint: expect.any(String) },
       ]);
     });
 

@@ -1,7 +1,7 @@
 import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { cardsRepo, db, transactionsRepo } from '../db';
-import { accountFile } from '../parsers/sheet/fixtures';
+import { accountFile, gridAccountFile } from '../parsers/sheet/fixtures';
 import { renderApp } from '../test/renderApp';
 import type { CreditCard } from '../types/domain';
 
@@ -112,6 +112,44 @@ describe('account statement import flow (D17, D18)', () => {
     const charge = screen.getByText('MIGROS KADIKOY').closest('li')!;
     expect(within(charge).getByText('₺1,234.56')).not.toHaveClass('text-success');
   });
+
+  it.each(['xls', 'xlsx'] as const)(
+    'imports a %s export with a label grid, card holds and footnotes without asking',
+    async (format) => {
+      window.localStorage.setItem('financier.detailedView', 'on');
+      await seed();
+      renderApp('/import');
+      await user.click(await screen.findByRole('radio', { name: 'İş Bankası' }, { timeout: 5000 }));
+      await openFile(new File([gridAccountFile(format)], `HesapOzeti.${format}`));
+      await screen.findByRole('region', { name: 'Review' }, { timeout: 5000 });
+
+      // Columns were read on their own: no mapping question.
+      expect(screen.getByText(/^Columns: Date: Tarih\/Saat/)).toBeInTheDocument();
+      expect(screen.queryByText(/need a look/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Needs a valid/)).not.toBeInTheDocument();
+      // The footnote and the disclaimer are not rows.
+      expect(screen.queryByText(/Çekilen tutar/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/bilgi amaçlıdır/)).not.toBeInTheDocument();
+      // Card holds are listed, but skipped.
+      for (const hold of ['BLK KAYD- 229.99-NETFLIX.COM', 'BLK İPTL- 229.99-NETFLIX.COM']) {
+        expect(
+          within(rowFor(hold)).getByText('No money moved (for example a card hold): not imported'),
+        ).toBeInTheDocument();
+      }
+
+      await user.click(screen.getByRole('button', { name: 'Import' }));
+      expect(await screen.findByText('Import complete')).toBeInTheDocument();
+      const saved = (await db.transactions.toArray()).filter((t) => t.source !== 'manual');
+      // The salary, MIGROS and Netflix; the rent and the ATM stay out (D17), holds too.
+      expect(saved.map((t) => [t.description, t.amount]).sort()).toEqual(
+        [
+          ['ACME A.Ş. EKİM MAAŞ', -4_500_000],
+          ['MIGROS/KADIKOY ISTANBUL TR', 123_456],
+          ['NETFLIX.COM', 22_999],
+        ].sort(),
+      );
+    },
+  );
 
   it('recognizes the same statement in another format through the saved mapping', async () => {
     // Every row with its controls shows in the detailed view (D20).

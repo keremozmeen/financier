@@ -61,7 +61,11 @@ export function draftRows(
       description: row.description,
       amount: row.amount === null ? null : Math.abs(row.amount),
       type: classified.type,
-      confidence: lowerConfidence(classified.confidence, row.guessed ? 'low' : 'high'),
+      // A zero amount (a card hold) is skipped whatever its type, so there is nothing to check.
+      confidence:
+        row.amount === 0
+          ? 'high'
+          : lowerConfidence(classified.confidence, row.guessed ? 'low' : 'high'),
       ...(classified.installment && classified.type === 'installment'
         ? { installment: classified.installment }
         : {}),
