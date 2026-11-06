@@ -1,7 +1,8 @@
-import { screen, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { cardsRepo } from '../db';
 import { renderApp } from '../test/renderApp';
+import { currentDialogDepth } from './ui/dialogHistory';
 
 describe('AppShell', () => {
   it('shows four tabs around an Add button and navigates between them (D21)', async () => {
@@ -31,6 +32,55 @@ describe('AppShell', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
+  it('navigates exactly once from Add, and going back does not bring the sheet back', async () => {
+    const { router } = renderApp('/cards');
+    await userEvent.click(screen.getByRole('button', { name: 'Add' }));
+    expect(currentDialogDepth()).toBe(1);
+    await userEvent.click(screen.getByRole('button', { name: /Upload a statement/ }));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/import'));
+    // The sheet's own history entry is gone before the import page is pushed.
+    expect(currentDialogDepth()).toBe(0);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    await act(() => router.navigate(-1));
+    expect(router.state.location.pathname).toBe('/cards');
+    expect(screen.getByRole('heading', { name: 'Cards' })).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('closes the Add sheet when the route changes underneath it', async () => {
+    const { router } = renderApp();
+    await userEvent.click(screen.getByRole('button', { name: 'Add' }));
+    expect(screen.getByRole('dialog', { name: 'Add' })).toBeInTheDocument();
+    await act(() => router.navigate('/settings'));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    await waitFor(() => expect(currentDialogDepth()).toBe(0));
+    // Coming back to the page it was opened on does not reopen it.
+    await act(() => router.navigate(-1));
+    expect(screen.getByRole('heading', { name: 'Dashboard' })).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('closes the Add sheet with the X, the backdrop and the back gesture', async () => {
+    renderApp();
+    const add = screen.getByRole('button', { name: 'Add' });
+
+    await userEvent.click(add);
+    await userEvent.click(screen.getByRole('button', { name: 'Close' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    await waitFor(() => expect(currentDialogDepth()).toBe(0));
+
+    await userEvent.click(add);
+    await userEvent.click(screen.getByTestId('dialog-backdrop'));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    await waitFor(() => expect(currentDialogDepth()).toBe(0));
+
+    await userEvent.click(add);
+    act(() => window.history.back());
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(screen.getByRole('heading', { name: 'Dashboard' })).toBeInTheDocument();
+  });
+
   it('asks which card before adding an entry when there are several', async () => {
     const base = {
       bank: '',
@@ -49,7 +99,8 @@ describe('AppShell', () => {
     await userEvent.click(screen.getByRole('button', { name: /Add an entry/ }));
     const sheet = screen.getByRole('dialog', { name: 'Which card?' });
     await userEvent.click(within(sheet).getByRole('button', { name: /Bonus/ }));
-    expect(router.state.location.pathname).toBe(`/cards/${bonus}/add`);
+    await waitFor(() => expect(router.state.location.pathname).toBe(`/cards/${bonus}/add`));
+    expect(currentDialogDepth()).toBe(0);
   });
 
   it('redirects unknown routes to the Dashboard', () => {

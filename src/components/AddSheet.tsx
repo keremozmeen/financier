@@ -5,6 +5,7 @@ import { useCards } from '../hooks/useFinance';
 import { useT } from '../i18n';
 import { BankMark } from './cards/BankMark';
 import { Dialog } from './ui/Dialog';
+import { leaveDialogHistory } from './ui/dialogHistory';
 
 const ROW =
   'flex min-h-14 w-full items-center gap-3 rounded-2xl bg-surface-raised px-4 text-left font-semibold hover:bg-border';
@@ -19,14 +20,17 @@ export function AddSheet({ onClose }: { onClose: () => void }) {
   const cards = useCards();
   const [picking, setPicking] = useState(false);
 
-  function go(path: string) {
+  /** Closes the sheet and opens `path` as exactly one new history entry. */
+  async function go(path: string) {
+    const left = leaveDialogHistory();
     onClose();
-    navigate(path);
+    await left;
+    await navigate(path);
   }
 
   function addEntry() {
-    if (!cards || cards.length === 0) return go('/cards/new');
-    if (cards.length === 1) return go(`/cards/${cards[0]!.id}/add`);
+    if (!cards || cards.length === 0) return void go('/cards/new');
+    if (cards.length === 1) return void go(`/cards/${cards[0]!.id}/add`);
     setPicking(true);
   }
 
@@ -36,7 +40,11 @@ export function AddSheet({ onClose }: { onClose: () => void }) {
         <ul className="grid gap-2">
           {cards?.map((card) => (
             <li key={card.id}>
-              <button type="button" className={ROW} onClick={() => go(`/cards/${card.id}/add`)}>
+              <button
+                type="button"
+                className={ROW}
+                onClick={() => void go(`/cards/${card.id}/add`)}
+              >
                 <BankMark card={card} size="sm" />
                 <span className="min-w-0 flex-1 truncate">{card.name}</span>
                 <ChevronRight aria-hidden="true" size={18} className="text-muted" />
@@ -46,7 +54,7 @@ export function AddSheet({ onClose }: { onClose: () => void }) {
         </ul>
       ) : (
         <div className="grid gap-2">
-          <button type="button" className={ROW} onClick={() => go('/import')}>
+          <button type="button" className={ROW} onClick={() => void go('/import')}>
             <Upload aria-hidden="true" size={20} />
             <span className="flex-1">
               <span className="block">{t('add.statement')}</span>

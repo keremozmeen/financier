@@ -18,6 +18,7 @@ export const en = {
   'add.pickCard': 'Which card?',
 
   'common.cancel': 'Cancel',
+  'common.close': 'Close',
   'common.save': 'Save',
   'common.back': 'Back',
   'common.edit': 'Edit',

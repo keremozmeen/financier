@@ -99,6 +99,7 @@ export function UpcomingPayments({ bills }: { bills: readonly UpcomingBill[] }) 
         <Dialog
           title={`${t('payment.title')}: ${paying.card.name}`}
           onClose={() => setPaying(undefined)}
+          dismissOnBackdrop={false}
         >
           <PaymentForm
             bare
