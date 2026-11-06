@@ -1,6 +1,6 @@
 import { CreditCard, LayoutDashboard, Plus, Radar, Settings, type LucideIcon } from 'lucide-react';
 import { useState } from 'react';
-import { NavLink } from 'react-router';
+import { NavLink, useLocation } from 'react-router';
 import { useT, type MessageKey } from '../i18n';
 import { AddSheet } from './AddSheet';
 
@@ -26,6 +26,14 @@ const RIGHT: readonly Tab[] = [
 export function TabBar() {
   const t = useT();
   const [adding, setAdding] = useState(false);
+  // Safety net: the sheet never stays on top of another page. The TabBar outlives route
+  // changes, so any navigation (back, a link, an import finishing) closes it.
+  const { key } = useLocation();
+  const [seenKey, setSeenKey] = useState(key);
+  if (seenKey !== key) {
+    setSeenKey(key);
+    setAdding(false);
+  }
 
   const tab = ({ to, label, icon: Icon }: Tab) => (
     <li key={to}>

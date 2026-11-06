@@ -15,6 +15,7 @@ import { useT } from '../../i18n';
 import { PaymentForm } from '../cards/PaymentForm';
 import { Button } from '../ui/Button';
 import { Dialog } from '../ui/Dialog';
+import { leaveDialogHistory } from '../ui/dialogHistory';
 import { useCalendarExport } from './useCalendarExport';
 
 const TAG_CLASS: Record<DueUrgency, string> = {
@@ -121,7 +122,7 @@ function BillDialog({ item, onClose }: { item: UpcomingBill; onClose: () => void
   const { card, bill, overdue, autoPay } = item;
 
   return (
-    <Dialog title={card.name} onClose={onClose}>
+    <Dialog title={card.name} onClose={onClose} dismissOnBackdrop={!paying}>
       {paying ? (
         <PaymentForm
           bare
@@ -169,7 +170,15 @@ function BillDialog({ item, onClose }: { item: UpcomingBill; onClose: () => void
               )}
             </div>
           )}
-          <Button variant="ghost" onClick={() => navigate(`/cards/${card.id}`)}>
+          <Button
+            variant="ghost"
+            onClick={async () => {
+              const left = leaveDialogHistory();
+              onClose();
+              await left;
+              await navigate(`/cards/${card.id}`);
+            }}
+          >
             {t('dashboard.due.openCard')}
             <ChevronRight aria-hidden="true" size={18} />
           </Button>
