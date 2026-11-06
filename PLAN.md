@@ -72,9 +72,12 @@ Every commit message names the phase it comes from with a line `From PLAN.md: Ph
 - Kipp mascot component (SVG) whose color and mood reflect overall health; insight cards on the dashboard; chat bar with suggested questions.
 - Debit: Kipp's limit, utilization and debt insights are credit-only; spending and subscription insights cover both; the parser understands "banka kartı" / "debit card".
 
-## Phase 6 — PDF import
+## Phase 6 — PDF and screenshot import
 - `pdfjs-dist` with a locally bundled worker; password prompt for protected PDFs.
 - Generic heuristic adapter, then bank adapters one at a time (Garanti BBVA, Yapı Kredi, İş Bankası, Akbank, QNB, Enpara). Each adapter needs an anonymized sample fixture and tests. Ask Kerem for samples before writing an adapter; never commit real statements.
+- Screenshot import per `DECISIONS.md` D24: **Paste text** first (text copied from a screenshot with the phone's Live Text, read by the existing parsers), then **Choose screenshot** with on-device OCR. Rows go through the same review, deduplication and categories as every import.
+- Screenshot test imports: synthetic screenshots of bank app lists (made-up values, rendered in code or drawn for the test) as fixtures for the OCR and line-reading tests, plus matching files in `synthetic/` for manual tests. Real screenshots are used only locally for diagnosis and never committed.
+- Debit and credit: screenshots of either card type import the same way; installment markers are read only for credit cards.
 
 ## Phase 7 — Settings and polish
 - Encrypted backup, Clear All Data and the privacy explanation moved to Phase S.

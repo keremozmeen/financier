@@ -392,6 +392,18 @@ Financier holds a person's whole financial life on their phone. Phase S makes th
 
 ---
 
+## D24. Screenshot import
+
+Many users only have their bank app, not a statement file, and take screenshots of the transaction list. Phase 6 lets them import those, without breaking Zero-Cloud (D8).
+
+- **Paste text first:** iOS and Android can copy the text out of any screenshot (Live Text, Lens). A **Paste text** import reads pasted lines with the existing date, amount and description parsers. It needs no permission, no new library and no extra download.
+- **Choose screenshot:** the photo picker (`<input type="file" accept="image/*">`) hands over only the images the user picks. There is no gallery permission and the app never browses photos. Text is read on the phone with Tesseract compiled to WebAssembly, with its worker and Turkish and English language data vendored and served from our own origin, never a CDN. It loads only when a screenshot is opened, like SheetJS (D18).
+- **Reading lines:** a bank app list is grouped into rows by position (merchant, date, amount), with the Turkish number and date formats from D3. A row the reader is unsure of (a digit that could be 0 or O, a missing date) is marked as needing a look; nothing is saved before review, and rows are deduplicated by fingerprint like every import.
+- **Privacy:** the image stays in memory for the import and is never stored. The first screenshot import says in one sentence that the picture is read on the phone and not uploaded (D23 permissions).
+- **Tests:** synthetic screenshots with made-up values are the fixtures; real screenshots are used only locally and never committed.
+
+---
+
 ## Data model (v4)
 
 | Table | Key fields |
