@@ -132,7 +132,7 @@ function Total({ totals, count }: { totals: readonly RadarTotals[]; count: numbe
       <p className="mt-1 text-sm text-muted">
         {[
           t('radar.total.yearly', { amount: yearly }),
-          t('radar.total.count', { count }),
+          t(count > 1 ? 'radar.total.count' : 'radar.total.one', { count }),
           increases && t('radar.total.increases', { amount: increases }),
         ]
           .filter(Boolean)

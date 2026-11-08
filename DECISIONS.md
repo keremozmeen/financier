@@ -304,7 +304,7 @@ Many Turkish banks (İş Bankası among them) export `.xls` rather than CSV, and
 
 Sub-Radar finds charges that repeat, shows what they cost per month and per year, and warns about price increases, double charges and charges after a cancellation. Small raises are the point: ten subscriptions that each go up by ₺10 cost ₺100 a month without anyone noticing, so no percentage threshold hides them. Detection is computed from the stored transactions every time, like statements (D14); only the user's choices are stored. The logic lives in `src/core/subscriptions/` as pure, tested functions.
 
-- **Which entries count:** charges on credit and debit cards (D13). Fees, counted transfers, income, refunds and installment purchases are never subscriptions. Refunds are used only to clear a double-charge alert.
+- **Which entries count:** charges on credit and debit cards (D13). Fees, counted transfers, income, refunds, installment purchases and grocery shopping (any merchant the built-in brand list or keywords place under Groceries, D22) are never subscriptions: a monthly-looking market run follows what the household needs, not a plan. Refunds are used only to clear a double-charge alert.
 - **Merchant key:** the description is folded (case and Turkish accents, as D3), then payment-processor prefixes (İyzico, PayTR, PayU, Param…), web and company noise (com, www, tr, ltd, şti…), city names and tokens with digits (references, card numbers) are dropped. The key is the first remaining word, or the first two when the first is a platform that bills several services (Google, Apple, Amazon, Microsoft, PayPal, Türk…). "NETFLIX.COM", "NETFLIX COM ISTANBUL" and "IYZICO *NETFLIX" share the key `netflix`. The key is shared across cards, so a subscription moved to another card stays one subscription. **Display name:** a known service's name ("Netflix", "YouTube Premium", "ChatGPT") from a short brand list, else the description's own words without processors, noise and billing words (fatura, abonelik…), in title case ("Kahve Dünyası"). The bank's text is kept in the details.
 - **Series:** charges with the same key and currency, by date. One merchant can bill several subscriptions (two Apple plans), so a charge joins the series whose latest amount is within 35% of it, else starts a new one; a price increase stays in its series. Bills are one series per merchant, whatever the amount.
 - **Bills:** a series is a bill when any of its charges is marked `bill` (D17) or its description has a bill keyword (`keywords.ts`). Bills appear in their own section with the average of their last 3 charges as the monthly cost, and get no price-increase alert, because their amount changes every month.
@@ -370,7 +370,7 @@ Spending is easier to understand by kind ("eating out", "groceries") than by mer
 - **Which entries:** charges, bills, fees, installment purchases and counted transfers on credit and debit cards (D13). A refund takes its merchant's category and lowers that category's total. Income, uncounted transfers and bill payments have no spending category.
 - **Correcting:** the category shows as a quiet chip on each entry; tapping it opens the list. After a change the app asks once "Apply to all entries from <merchant>?"; yes stores a merchant rule. Rules are listed in Settings (detailed view) and can be removed.
 - **Import review:** shows each row's category and lets **Change** set it, but a category never makes a row "need a look"; the review stays about whether a row is imported (D20).
-- **Screens:** the dashboard gets one "Where your money went" line for the month with the top three categories; tapping it opens the breakdown. The detailed view adds subcategories and a month-by-month comparison. Kipp's insights (D4, Phase 5) read the same totals.
+- **Screens:** the dashboard gets one "Where your money went" panel with a ring chart of the month: the top three categories and the rest, in percentages. Tapping it opens the full list. The detailed view shows every category with its amount and month-by-month stacked bars, adds subcategories to the list, and puts the cash-flow chart right after the panel. Slices are drawn in a fixed order that keeps warm and cool colors apart, with no gaps; categories without a color of their own fold into Other. Kipp's insights (D4, Phase 5) read the same totals.
 - **Debit:** categories cover credit and debit cards alike; limits, statements and bills are untouched.
 - **Not now:** budgets per category, machine-learned categories and receipt splitting stay out of scope (see the end of this file).
 
@@ -404,7 +404,7 @@ Many users only have their bank app, not a statement file, and take screenshots 
 
 ---
 
-## Data model (v4)
+## Data model (v5)
 
 | Table | Key fields |
 | :--- | :--- |

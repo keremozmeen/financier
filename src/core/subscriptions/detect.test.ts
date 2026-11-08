@@ -223,3 +223,20 @@ describe('detectSeries (D19)', () => {
     });
   });
 });
+
+describe('grocery shopping is never a subscription (D19)', () => {
+  it.each(['MIGROS KADIKOY', 'A101 YENI MAGAZACILIK', 'AYSE MARKET'])('%s', (description) => {
+    const rows = ['2026-08-04', '2026-09-04', '2026-10-04', '2026-11-04'].map((date) =>
+      tx(date, description, 22_999),
+    );
+    expect(detectSeries(rows, '2026-11-08')).toEqual([]);
+  });
+
+  it('still finds a monthly service next to it', () => {
+    const rows = ['2026-08-04', '2026-09-04', '2026-10-04', '2026-11-04'].flatMap((date) => [
+      tx(date, 'MIGROS', 22_999),
+      tx(date, 'NETFLIX.COM', 22_999),
+    ]);
+    expect(detectSeries(rows, '2026-11-08').map((series) => series.merchant)).toEqual(['netflix']);
+  });
+});

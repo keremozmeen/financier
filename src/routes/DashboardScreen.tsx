@@ -80,13 +80,13 @@ export function DashboardScreen() {
             <CardTiles summaries={dashboard.summaries} />
           )}
           <CategorySpending />
-          <SubscriptionsRow />
-          {detailed && <UpcomingPayments bills={dashboard.bills} />}
           {detailed && dashboard.bills.length > 0 && (
             <Suspense fallback={<div className="h-80" />}>
               <CashFlowChart projections={dashboard.projections} />
             </Suspense>
           )}
+          <SubscriptionsRow />
+          {detailed && <UpcomingPayments bills={dashboard.bills} />}
           <RecentActivity
             items={detailed ? dashboard.recent : dashboard.recent.slice(0, SIMPLE_RECENT)}
           />

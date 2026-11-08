@@ -125,6 +125,7 @@ describe('where your money went (D22)', () => {
     await entry('OPET', 30_000);
     await entry('STARBUCKS', 20_000);
     await entry('THY', 10_000);
+    await entry('GUL ECZANESI', 5_000);
     await entry('MAAS', 9_000_000, 'income');
   }
 
@@ -132,8 +133,11 @@ describe('where your money went (D22)', () => {
     await seedSpending();
     renderApp('/');
     const line = await screen.findByRole('button', { name: /Where your money went/ });
-    expect(line).toHaveTextContent('Groceries ₺400.00 · Transport ₺300.00 · Eating out ₺200.00');
+    for (const name of ['Groceries', 'Transport', 'Eating out', 'The rest']) {
+      expect(line).toHaveTextContent(name);
+    }
     expect(line).not.toHaveTextContent('Travel');
+    expect(line).not.toHaveTextContent('Month by month');
 
     await user.click(line);
     const dialog = await screen.findByRole('dialog');
@@ -147,10 +151,12 @@ describe('where your money went (D22)', () => {
     window.localStorage.setItem('financier.detailedView', 'on');
     await seedSpending();
     renderApp('/');
-    await user.click(await screen.findByRole('button', { name: /Where your money went/ }));
+    const panel = await screen.findByRole('button', { name: /Where your money went/ });
+    expect(panel).toHaveTextContent('Month by month');
+    expect(panel).toHaveTextContent('₺400.00');
+    await user.click(panel);
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText('Fuel')).toBeInTheDocument();
-    expect(within(dialog).getByText('Month by month')).toBeInTheDocument();
   });
 
   it('is absent with no spending this month', async () => {

@@ -2,6 +2,8 @@ import type { MessageKey } from './en';
 
 export const tr: Record<MessageKey, string> = {
   'app.name': 'Financier',
+  'app.error.title': 'Bu ekran açılamadı',
+  'app.error.reload': 'Yeniden yükle',
   'app.tagline': 'Gizli, çevrimdışı finans arkadaşın',
 
   'nav.label': 'Ana gezinme',
@@ -361,6 +363,7 @@ export const tr: Record<MessageKey, string> = {
   'radar.total.label': 'Aboneliklerin',
   'radar.total.yearly': 'yılda {amount}',
   'radar.total.count': '{count} abonelik',
+  'radar.total.one': '{count} abonelik',
   'radar.total.increases': 'zamlar ayda {amount} ekledi',
   'radar.perWeek': '{amount} / hafta',
   'radar.perMonth': '{amount} / ay',
@@ -468,6 +471,7 @@ export const tr: Record<MessageKey, string> = {
   'category.other': 'Diğer',
   'review.category': '{line}. satırın kategorisi',
   'dashboard.where.title': 'Paran nereye gitti',
+  'dashboard.where.rest': 'Geri kalan',
   'dashboard.where.general': 'Genel',
   'dashboard.where.compare': 'Aylara göre',
   'category.pick': 'Kategori seç',
