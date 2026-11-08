@@ -5,6 +5,7 @@ import type {
   ImportProfile,
   ImportRecord,
   InstallmentPlan,
+  MerchantRule,
   Payment,
   SettingRow,
   Statement,
@@ -46,6 +47,7 @@ export class FinancierDatabase extends Dexie {
   settings!: EntityTable<SettingRow, 'key'>;
   balanceOverrides!: EntityTable<BalanceOverride, 'id'>;
   payments!: EntityTable<Payment, 'id'>;
+  merchantRules!: EntityTable<MerchantRule, 'id'>;
 
   constructor(name = 'financier') {
     super(name);
@@ -61,6 +63,8 @@ export class FinancierDatabase extends Dexie {
       installmentPlans: 'id, cardId, importId',
       imports: 'id, importedAt, cardId',
     });
+    // v5 (D22): the user's merchant rules. Additive: no existing table or row changes.
+    this.version(5).stores({ merchantRules: 'id' });
   }
 }
 
