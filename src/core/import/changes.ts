@@ -36,14 +36,20 @@ export function importChanges(
     merges: [],
     links: [],
   };
-  const entry = (date: IsoDate, description: string, amount: number, fingerprint: string) => ({
+  const entry = (
+    date: IsoDate,
+    description: string,
+    amount: number,
+    fingerprint: string,
+    category = 'uncategorized',
+  ) => ({
     cardId: card.id,
     date,
     description,
     normalizedMerchant: normalizeDescription(description),
     amount,
     currency: card.currency,
-    category: 'uncategorized',
+    category,
     fingerprint,
     source,
   });
@@ -53,7 +59,7 @@ export function importChanges(
     switch (outcome.kind) {
       case 'add':
         changes.transactions.push({
-          ...entry(row.date!, description, signedAmount(row), outcome.fingerprint),
+          ...entry(row.date!, description, signedAmount(row), outcome.fingerprint, row.category),
           ...(outcome.flag ? { [outcome.flag]: true } : {}),
         });
         break;
@@ -68,7 +74,13 @@ export function importChanges(
             firstDueMonth: outcome.firstDueMonth,
             currency: card.currency,
           },
-          purchase: entry(row.date!, description, outcome.totalAmount, outcome.fingerprint),
+          purchase: entry(
+            row.date!,
+            description,
+            outcome.totalAmount,
+            outcome.fingerprint,
+            row.category,
+          ),
         });
         break;
       case 'payment':

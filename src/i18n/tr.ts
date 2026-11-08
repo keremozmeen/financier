@@ -466,6 +466,7 @@ export const tr: Record<MessageKey, string> = {
   'category.fees.interest': 'Faiz',
   'category.fees.bank': 'Banka masrafı',
   'category.other': 'Diğer',
+  'review.category': '{line}. satırın kategorisi',
   'category.pick': 'Kategori seç',
   'category.chip': 'Kategori: {name}. {entry} için değiştir',
   'category.applyAll': '{merchant} işlemlerinin tümüne uygulansın mı?',

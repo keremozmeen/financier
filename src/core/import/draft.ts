@@ -32,6 +32,8 @@ export interface DraftRow {
   targetCardId?: string;
   /** An outgoing transfer or ATM withdrawal the user counts as spending (D17). */
   countAsSpending?: boolean;
+  /** The category the user set on the review screen (D22). Never part of the fingerprint. */
+  category?: string;
 }
 
 /** Classifies parsed rows into review rows: card statements per D16, account statements per D17. */

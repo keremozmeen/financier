@@ -7,6 +7,7 @@ import type {
   Transaction,
 } from '../../types/domain';
 import { transactionFingerprint } from '../finance';
+import { reviewCategory } from './category';
 import { importChanges } from './changes';
 import { draftRows, editDraft, type DraftRow } from './draft';
 import {
@@ -755,5 +756,58 @@ describe('account statements (D17)', () => {
         'add',
       ]);
     });
+  });
+});
+
+describe('categories at review (D22)', () => {
+  const planned = (patch: Partial<DraftRow>, ctx = context()) => planImport([row(patch)], ctx)[0]!;
+
+  it('saves no pick unless the user set one', () => {
+    const changes = importChanges([planned({})], credit, 'csv');
+    expect(changes.transactions[0]!.category).toBe('uncategorized');
+  });
+
+  it('saves the category set on the review screen', () => {
+    const changes = importChanges([planned({ category: 'shopping' })], credit, 'csv');
+    expect(changes.transactions[0]!.category).toBe('shopping');
+  });
+
+  it('saves it on the purchase of a new plan too', () => {
+    const item = planned({
+      type: 'installment',
+      description: 'TEKNOSA TAKSİT 3/6',
+      installment: { index: 3, count: 6, keyword: true },
+      category: 'shopping/home',
+    });
+    expect(item.outcome.kind).toBe('newPlan');
+    expect(importChanges([item], credit, 'csv').plans[0]!.purchase.category).toBe('shopping/home');
+  });
+
+  it('never lets a category change the fingerprint or the outcome', () => {
+    const base = { date: '2026-09-15', description: 'MIGROS', amount: 10_000 };
+    const without = planned({ ...base, line: 500 });
+    const withCategory = planned({ ...base, line: 500, category: 'travel' });
+    expect(withCategory.outcome).toEqual(without.outcome);
+  });
+
+  it('still finds a duplicate of a row whose category was changed', () => {
+    const first = planned({ description: 'MIGROS', category: 'travel' });
+    const saved = importChanges([first], credit, 'csv').transactions[0]!;
+    const again = planned({ description: 'MIGROS' }, context({ transactions: [tx(saved)] }));
+    expect(again.outcome.kind).toBe('duplicate');
+  });
+
+  it('reads the row like a saved entry', () => {
+    expect(reviewCategory(planned({ description: 'MIGROS' }), {})?.main).toBe('groceries');
+    expect(reviewCategory(planned({ description: 'MIGROS', category: 'travel' }), {})).toEqual({
+      main: 'travel',
+      source: 'pick',
+    });
+    expect(reviewCategory(planned({ type: 'fee', description: 'BSMV' }), {})?.main).toBe('fees');
+  });
+
+  it('has no category for a row that saves no spending entry', () => {
+    expect(reviewCategory(planned({ type: 'summary', description: 'TOPLAM' }), {})).toBeNull();
+    expect(reviewCategory(planned({ dropped: true }), {})).toBeNull();
   });
 });
