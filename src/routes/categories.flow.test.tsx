@@ -1,5 +1,6 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { todayIso } from '../core/finance';
 import { cardsRepo, db, merchantRulesRepo, transactionsRepo } from '../db';
 import { renderApp } from '../test/renderApp';
 import type { Card } from '../types/domain';
@@ -109,5 +110,54 @@ describe('rules in Settings (D22)', () => {
 
     await user.click(within(section).getByRole('button', { name: 'Remove rule for Migros' }));
     await waitFor(async () => expect(await merchantRulesRepo.list()).toEqual([]));
+  });
+});
+
+describe('where your money went (D22)', () => {
+  afterEach(() => window.localStorage.removeItem('financier.detailedView'));
+
+  async function seedSpending() {
+    const card = await seedCard('debit');
+    const today = todayIso();
+    const entry = (description: string, amount: number, kind: 'charge' | 'income' = 'charge') =>
+      transactionsRepo.addManual({ card, date: today, description, amount, kind, installments: 1 });
+    await entry('MIGROS', 40_000);
+    await entry('OPET', 30_000);
+    await entry('STARBUCKS', 20_000);
+    await entry('THY', 10_000);
+    await entry('MAAS', 9_000_000, 'income');
+  }
+
+  it('shows the top three in one line and the rest in the breakdown', async () => {
+    await seedSpending();
+    renderApp('/');
+    const line = await screen.findByRole('button', { name: /Where your money went/ });
+    expect(line).toHaveTextContent('Groceries ₺400.00 · Transport ₺300.00 · Eating out ₺200.00');
+    expect(line).not.toHaveTextContent('Travel');
+
+    await user.click(line);
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('Travel')).toBeInTheDocument();
+    expect(within(dialog).queryByText('Fuel')).not.toBeInTheDocument();
+    expect(within(dialog).queryByText('Month by month')).not.toBeInTheDocument();
+    expect(within(dialog).queryByText(/90,000/)).not.toBeInTheDocument();
+  });
+
+  it('adds subcategories and the comparison in the detailed view', async () => {
+    window.localStorage.setItem('financier.detailedView', 'on');
+    await seedSpending();
+    renderApp('/');
+    await user.click(await screen.findByRole('button', { name: /Where your money went/ }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('Fuel')).toBeInTheDocument();
+    expect(within(dialog).getByText('Month by month')).toBeInTheDocument();
+  });
+
+  it('is absent with no spending this month', async () => {
+    const card = await seedCard('debit');
+    await add(card, 'MAAS', 'income');
+    renderApp('/');
+    await screen.findByText('Kart');
+    expect(screen.queryByText('Where your money went')).not.toBeInTheDocument();
   });
 });

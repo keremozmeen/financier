@@ -1,7 +1,8 @@
 import { categoryMerchantKey, merchantLabel } from '../core/merchant';
-import type { CategoryEvidence } from '../core/categories';
+import { categoryTotals, type CategoryEvidence, type CategoryTotal } from '../core/categories';
+import { addMonths, monthOf } from '../core/finance';
 import { detectSeries } from '../core/subscriptions';
-import type { IsoDate, MerchantRule } from '../types/domain';
+import type { CurrencyCode, IsoDate, IsoMonth, MerchantRule } from '../types/domain';
 import { cardsRepo } from './cards';
 import { db } from './database';
 import { merchantRulesRepo } from './merchantRules';
@@ -55,4 +56,37 @@ export async function loadMerchantRuleRows(): Promise<MerchantRuleRow[]> {
   return rules
     .map((rule) => ({ ...rule, name: names.get(rule.id) ?? rule.id }))
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export interface CurrencySpending {
+  currency: CurrencyCode;
+  /** The latest month first. */
+  months: { month: IsoMonth; totals: CategoryTotal[] }[];
+}
+
+const COMPARED_MONTHS = 3;
+
+/**
+ * Spending by category on the active cards, credit and debit (D22), for this month and the
+ * two before it, per currency (D2: no conversion), TRY first.
+ */
+export async function loadCategorySpending(today: IsoDate): Promise<CurrencySpending[]> {
+  const cards = await cardsRepo.list();
+  const ids = cards.map((card) => card.id);
+  const [transactions, plans, evidence] = await Promise.all([
+    db.transactions.where('cardId').anyOf(ids).toArray(),
+    db.installmentPlans.where('cardId').anyOf(ids).toArray(),
+    loadCategoryEvidence(today),
+  ]);
+  const currencies = [...new Set(cards.map((card) => card.currency))].sort((a, b) =>
+    a === 'TRY' ? -1 : b === 'TRY' ? 1 : a.localeCompare(b),
+  );
+  const current = monthOf(today);
+  return currencies.map((currency) => ({
+    currency,
+    months: Array.from({ length: COMPARED_MONTHS }, (_, back) => {
+      const month = addMonths(current, -back);
+      return { month, totals: categoryTotals(transactions, plans, month, currency, evidence) };
+    }),
+  }));
 }

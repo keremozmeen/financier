@@ -1,5 +1,11 @@
 export { balanceOverridesRepo } from './balanceOverrides';
-export { loadCategoryEvidence, loadMerchantRuleRows, type MerchantRuleRow } from './categories';
+export {
+  loadCategoryEvidence,
+  loadCategorySpending,
+  loadMerchantRuleRows,
+  type CurrencySpending,
+  type MerchantRuleRow,
+} from './categories';
 export { cardsRepo, type CardInput } from './cards';
 export { db } from './database';
 export { importsRepo, type CommitRequest } from './imports';

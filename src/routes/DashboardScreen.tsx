@@ -4,6 +4,7 @@ import { Link } from 'react-router';
 import { CardTitle } from '../components/cards/CardTitle';
 import { CardUsagePanel } from '../components/cards/CardUsagePanel';
 import { CardTiles } from '../components/dashboard/CardTiles';
+import { CategorySpending } from '../components/dashboard/CategorySpending';
 import { DuePanel } from '../components/dashboard/DuePanel';
 import { RecentActivity } from '../components/dashboard/RecentActivity';
 import { SubscriptionsRow } from '../components/dashboard/SubscriptionsRow';
@@ -78,6 +79,7 @@ export function DashboardScreen() {
           ) : (
             <CardTiles summaries={dashboard.summaries} />
           )}
+          <CategorySpending />
           <SubscriptionsRow />
           {detailed && <UpcomingPayments bills={dashboard.bills} />}
           {detailed && dashboard.bills.length > 0 && (
