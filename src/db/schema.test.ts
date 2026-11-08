@@ -55,7 +55,7 @@ describe('schema v2 upgrade (D13)', () => {
 
     const db = new FinancierDatabase(name);
     await db.open();
-    expect(db.verno).toBe(4);
+    expect(db.verno).toBe(5);
 
     const cards = await db.cards.orderBy('id').toArray();
     expect(cards).toEqual([
@@ -69,7 +69,7 @@ describe('schema v2 upgrade (D13)', () => {
   it('opens a fresh database at the latest version with a payments table', async () => {
     const db = new FinancierDatabase(name);
     await db.open();
-    expect(db.verno).toBe(4);
+    expect(db.verno).toBe(5);
     expect(await db.cards.count()).toBe(0);
     expect(await db.payments.count()).toBe(0);
     db.close();

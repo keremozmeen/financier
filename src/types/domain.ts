@@ -227,3 +227,12 @@ export interface SettingRow {
   key: string;
   value: unknown;
 }
+
+/** "This merchant is always this category" (D22). */
+export interface MerchantRule {
+  /** The merchant the rule applies to (`categoryMerchantKey`). */
+  id: string;
+  /** A category path: `transport` or `transport/fuel`. */
+  category: string;
+  createdAt: IsoTimestamp;
+}
