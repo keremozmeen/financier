@@ -1,6 +1,8 @@
 // English is the source dictionary: every key defined here must exist in tr.ts.
 export const en = {
   'app.name': 'Financier',
+  'app.error.title': "This screen didn't open",
+  'app.error.reload': 'Reload',
   'app.tagline': 'Your private, offline finance buddy',
 
   'nav.label': 'Main navigation',
@@ -361,6 +363,7 @@ export const en = {
   'radar.total.label': 'Your subscriptions',
   'radar.total.yearly': '{amount} a year',
   'radar.total.count': '{count} subscriptions',
+  'radar.total.one': '{count} subscription',
   'radar.total.increases': 'raises add {amount} a month',
   'radar.perWeek': '{amount} / week',
   'radar.perMonth': '{amount} / month',
@@ -468,6 +471,7 @@ export const en = {
   'category.other': 'Other',
   'review.category': 'Category for row {line}',
   'dashboard.where.title': 'Where your money went',
+  'dashboard.where.rest': 'The rest',
   'dashboard.where.general': 'General',
   'dashboard.where.compare': 'Month by month',
   'category.pick': 'Choose a category',

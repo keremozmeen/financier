@@ -1,6 +1,7 @@
 import { ACCOUNT_BILL_KEYWORDS, keywordRegex } from '../../parsers/common/keywords';
 import { foldText } from '../../parsers/common/text';
 import type { CurrencyCode, IsoDate, Transaction } from '../../types/domain';
+import { categorize } from '../categories';
 import { addDays, addMonths, daysBetween, dayOf, minorUnitDigits, monthOf } from '../finance';
 import { displayName, merchantKey } from './merchant';
 
@@ -227,6 +228,8 @@ export function detectSeries(
   >();
   for (const tx of transactions) {
     if (tx.fee || tx.transfer || tx.income || tx.installmentPlanId || tx.amount === 0) continue;
+    // Grocery runs follow what the household needs, however regular they look (D19).
+    if (!tx.bill && categorize({ description: tx.description })?.main === 'groceries') continue;
     const merchant = merchantKey(tx.description);
     if (!merchant) continue;
     const id = `${merchant}|${tx.currency}`;

@@ -1,5 +1,6 @@
 import { Navigate, type RouteObject } from 'react-router';
 import { AppShell } from '../components/AppShell';
+import { RouteError } from '../components/RouteError';
 import { AddTransactionScreen } from './AddTransactionScreen';
 import { CardDetailScreen } from './CardDetailScreen';
 import { EditCardScreen, NewCardScreen } from './CardFormScreen';
@@ -11,6 +12,7 @@ export const routes: RouteObject[] = [
   {
     path: '/',
     element: <AppShell />,
+    errorElement: <RouteError />,
     children: [
       { index: true, element: <DashboardScreen /> },
       { path: 'cards', element: <CardsScreen /> },
