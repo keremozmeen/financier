@@ -8,3 +8,7 @@ coverage
 
 # Synthetic import test files (local only)
 synthetic/
+
+# Local-only files (never pushed)
+CLAUDE.md
+.claude/settings.local.json
