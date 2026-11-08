@@ -1,3 +1,4 @@
+import { MerchantRules } from '../components/categories/MerchantRules';
 import { Checkbox } from '../components/ui/Checkbox';
 import { Segmented } from '../components/ui/Segmented';
 import { useDetailedView } from '../hooks/useDetailedView';
@@ -34,6 +35,7 @@ export function SettingsScreen() {
           onChange={setDetailed}
         />
       </div>
+      {detailed && <MerchantRules />}
       <p className="text-sm text-muted">{t('settings.privacy')}</p>
     </section>
   );

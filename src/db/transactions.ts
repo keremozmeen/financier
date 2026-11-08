@@ -92,6 +92,11 @@ export const transactionsRepo = {
     return transaction.id;
   },
 
+  /** Stores the user's category for this one entry (D22). Nothing else on the row changes. */
+  async setCategory(id: string, category: string): Promise<void> {
+    await db.transactions.update(id, { category });
+  },
+
   /** Removes a transaction; removing an installment purchase also removes its plan. */
   async remove(id: string): Promise<void> {
     await db.transaction('rw', db.transactions, db.installmentPlans, async () => {
