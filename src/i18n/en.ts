@@ -466,6 +466,7 @@ export const en = {
   'category.fees.interest': 'Interest',
   'category.fees.bank': 'Bank fees',
   'category.other': 'Other',
+  'review.category': 'Category for row {line}',
   'category.pick': 'Choose a category',
   'category.chip': 'Category: {name}. Change for {entry}',
   'category.applyAll': 'Apply to all entries from {merchant}?',

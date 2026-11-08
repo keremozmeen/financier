@@ -1,21 +1,31 @@
 import { Pencil } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import {
+  CATEGORIES,
+  MAIN_CATEGORY_IDS,
+  categoryPath,
+  parseCategory,
+  type Categorized,
+} from '../../core/categories';
 import { formatMoneyInput, isIsoDate, parseMoneyInput } from '../../core/finance';
 import {
   countOutcomes,
   editDraft,
   planImport,
   reviewAmount,
+  reviewCategory,
   type DraftRow,
   type ImportContext,
   type PlannedRow,
   type RowOutcome,
 } from '../../core/import';
 import { parseInstallmentColumn, rowTypesFor, type ImportRowType } from '../../parsers/common';
+import { useCategoryEvidence } from '../../hooks/useCategories';
 import { useDetailedView } from '../../hooks/useDetailedView';
 import { useFormat } from '../../hooks/useFormat';
 import { useI18n, type MessageKey } from '../../i18n';
 import type { Card, CreditCard, StatementKind } from '../../types/domain';
+import { categoryKey } from '../categories/categoryDisplay';
 import { Button } from '../ui/Button';
 import { EntryAmount } from '../ui/EntryAmount';
 import { inputClass, TextField } from '../ui/TextField';
@@ -50,6 +60,7 @@ export function ReviewList({
   // The simple view opens on the rows needing a look; the rest are a tap away (D20).
   const visible = detailed || showAll ? planned : toCheck;
   const counts = countOutcomes(planned);
+  const evidence = useCategoryEvidence();
   const planNames = new Map(context.plans.map((plan) => [plan.id, plan.description]));
   const creditCards = (context.creditCards ?? []).map((c) => c.card);
   const skipped = counts.skip + counts.duplicate + counts.paymentRecorded + counts.dropped;
@@ -116,6 +127,7 @@ export function ReviewList({
                   statement={statement}
                   creditCards={creditCards}
                   item={item}
+                  category={reviewCategory(item, evidence)}
                   detailed={detailed}
                   planName={(id) => planNames.get(id) || t('tx.fallback.installment')}
                   onChange={(patch) => update(index, patch)}
@@ -147,6 +159,7 @@ function ReviewRow({
   statement,
   creditCards,
   item,
+  category,
   detailed,
   planName,
   onChange,
@@ -155,6 +168,8 @@ function ReviewRow({
   statement: StatementKind;
   creditCards: readonly CreditCard[];
   item: PlannedRow;
+  /** Null when the row saves no new spending entry. */
+  category: Categorized | null;
   /** The detailed view shows every row's controls; the simple view opens them on tap. */
   detailed: boolean;
   planName: (id: string) => string;
@@ -190,6 +205,7 @@ function ReviewRow({
           <p className="flex flex-wrap items-center gap-x-2 text-xs text-muted">
             <span>{row.date ? format.date(row.date) : t('mapping.unreadable')}</span>
             {detailed && <span>{t('review.row', { line: row.line })}</span>}
+            {category && <span>{t(categoryKey(category, detailed))}</span>}
             {row.confidence !== 'high' && (
               <span className="rounded bg-warn/15 px-1.5 py-0.5 text-warn">
                 {t(row.confidence === 'low' ? 'review.confidence.low' : 'review.confidence.medium')}
@@ -236,6 +252,14 @@ function ReviewRow({
               </option>
             ))}
           </select>
+          {category && (
+            <CategorySelect
+              line={row.line}
+              category={category}
+              detailed={detailed}
+              onChange={(value) => onChange({ category: value })}
+            />
+          )}
           <button
             type="button"
             onClick={() => setEditing((open) => !open)}
@@ -291,6 +315,41 @@ function ReviewRow({
       )}
       {open && editing && <RowEditor card={card} row={row} onChange={onChange} />}
     </li>
+  );
+}
+
+/** Sets a row's category (D22); the simple view offers main categories only. */
+function CategorySelect({
+  line,
+  category,
+  detailed,
+  onChange,
+}: {
+  line: number;
+  category: Categorized;
+  detailed: boolean;
+  onChange: (category: string) => void;
+}) {
+  const { t } = useI18n();
+  const value = detailed ? categoryPath(category) : category.main;
+  return (
+    <select
+      value={parseCategory(value) ? value : 'other'}
+      onChange={(event) => onChange(event.target.value)}
+      aria-label={t('review.category', { line })}
+      className={`${inputClass} w-auto min-w-36 text-sm`}
+    >
+      {MAIN_CATEGORY_IDS.flatMap((main) => [
+        <option key={main} value={main}>
+          {t(categoryKey({ main }, false))}
+        </option>,
+        ...(detailed ? (CATEGORIES[main] as readonly string[]) : []).map((sub) => (
+          <option key={`${main}/${sub}`} value={`${main}/${sub}`}>
+            {`${t(categoryKey({ main }, false))} › ${t(categoryKey({ main, sub }, true))}`}
+          </option>
+        )),
+      ])}
+    </select>
   );
 }
 
